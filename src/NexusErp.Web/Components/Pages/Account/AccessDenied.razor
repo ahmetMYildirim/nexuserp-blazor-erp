@@ -1,0 +1,18 @@
+@page "/yetkisiz"
+@layout NexusErp.Web.Components.Layout.EmptyLayout
+@attribute [AllowAnonymous]
+
+<PageTitle>Yetkisiz Erişim · NexusERP</PageTitle>
+
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px">
+    <MudPaper Elevation="4" Class="pa-8" Style="max-width:460px;text-align:center">
+        <MudIcon Icon="@Icons.Material.Filled.Lock" Color="Color.Error" Size="Size.Large" />
+        <MudText Typo="Typo.h5" Class="mt-4 mb-2">Bu sayfaya erişim yetkiniz yok</MudText>
+        <MudText Typo="Typo.body2" Class="mb-6">
+            Bu işlem için farklı bir rol gerekiyor. Yetki talebi için sistem yöneticinize başvurun.
+        </MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/">
+            Genel Bakış'a dön
+        </MudButton>
+    </MudPaper>
+</div>

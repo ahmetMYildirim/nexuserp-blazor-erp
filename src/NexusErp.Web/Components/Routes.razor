@@ -1,6 +1,24 @@
-﻿<Router AppAssembly="typeof(Program).Assembly">
+@using Microsoft.AspNetCore.Components.Authorization
+
+<Router AppAssembly="typeof(Program).Assembly">
     <Found Context="routeData">
-        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
-        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        @* AuthorizeRouteView: [Authorize] olan sayfalarda yetki kontrolü yapar.
+           Yetkisizse NotAuthorized bloğu çalışır — anonimse giriş sayfasına yollarız. *@
+        <AuthorizeRouteView RouteData="@routeData" DefaultLayout="typeof(Layout.MainLayout)">
+            <NotAuthorized>
+                @if (context.User.Identity?.IsAuthenticated is not true)
+                {
+                    <RedirectToLogin />
+                }
+                else
+                {
+                    <NexusErp.Web.Components.Pages.Account.AccessDenied />
+                }
+            </NotAuthorized>
+            <Authorizing>
+                <MudProgressLinear Indeterminate Color="Color.Primary" />
+            </Authorizing>
+        </AuthorizeRouteView>
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
     </Found>
 </Router>

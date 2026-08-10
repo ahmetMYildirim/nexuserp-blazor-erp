@@ -17,6 +17,42 @@
                            Icon="@(_isDark ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
                            OnClick="@(() => _isDark = !_isDark)" />
         </MudTooltip>
+
+        <AuthorizeView>
+            <Authorized>
+                <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
+                         Class="ml-2">
+                    <ActivatorContent>
+                        <MudChip T="string" Color="Color.Primary" Variant="Variant.Filled"
+                                 Icon="@Icons.Material.Filled.Person" Style="cursor:pointer">
+                            @FullNameOf(context)
+                        </MudChip>
+                    </ActivatorContent>
+                    <ChildContent>
+                        <MudMenuItem Disabled>
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body2">@context.User.Identity?.Name</MudText>
+                                <MudText Typo="Typo.caption">Rol: @RoleOf(context)</MudText>
+                            </MudStack>
+                        </MudMenuItem>
+                        <MudDivider />
+                        <MudMenuItem>
+                            @* Çıkış da POST olmalı — cookie silmek HttpContext gerektiriyor *@
+                            <form method="post" action="/hesap/cikis" style="margin:0">
+                                <AntiforgeryToken />
+                                <button type="submit"
+                                        style="background:none;border:0;cursor:pointer;
+                                               display:flex;align-items:center;gap:8px;
+                                               font-size:14px;color:inherit;padding:0">
+                                    <MudIcon Icon="@Icons.Material.Filled.Logout" Size="Size.Small" />
+                                    Çıkış Yap
+                                </button>
+                            </form>
+                        </MudMenuItem>
+                    </ChildContent>
+                </MudMenu>
+            </Authorized>
+        </AuthorizeView>
     </MudAppBar>
 
     <MudDrawer @bind-Open="_drawerOpen" Elevation="1" ClipMode="DrawerClipMode.Always">
@@ -33,6 +69,14 @@
 @code {
     private bool _drawerOpen = true;
     private bool _isDark;
+
+    private static string FullNameOf(AuthenticationState state) =>
+        state.User.FindFirst("full_name")?.Value
+        ?? state.User.Identity?.Name
+        ?? "Kullanıcı";
+
+    private static string RoleOf(AuthenticationState state) =>
+        state.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "—";
 
     private readonly MudTheme _theme = new()
     {

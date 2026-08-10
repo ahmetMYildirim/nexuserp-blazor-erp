@@ -2,7 +2,10 @@ using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using NexusErp.Application.Abstractions;
 using NexusErp.Domain.Common;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using NexusErp.Domain.Entities;
+using NexusErp.Infrastructure.Identity;
 
 namespace NexusErp.Infrastructure.Persistence;
 
@@ -10,7 +13,7 @@ public class AppDbContext(
     DbContextOptions<AppDbContext> options,
     ITenantContext tenantContext,
     ICurrentUser currentUser)
-    : DbContext(options), IAppDbContext
+    : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>(options), IAppDbContext
 {
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<Party> Parties => Set<Party>();

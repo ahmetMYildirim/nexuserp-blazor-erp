@@ -3,6 +3,9 @@ using MudBlazor.Services;
 using NexusErp.Application;
 using NexusErp.Infrastructure;
 using NexusErp.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Identity;
+using NexusErp.Infrastructure.Identity;
+using NexusErp.Web;
 using NexusErp.Web.Components;
 
 // Türkçe kültür: 1234.56m.ToString("N2") → "1.234,56"
@@ -22,6 +25,8 @@ builder.Services.AddRazorComponents()
 builder.Services.AddMudServices();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
+builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
@@ -30,6 +35,10 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await DatabaseSeeder.SeedAsync(db);
+
+    await IdentitySeeder.SeedAsync(
+        scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>(),
+        scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>());
 
     // Demo fatura/tahsilat verisi — gerçek servisler üzerinden üretilir
     await scope.ServiceProvider.GetRequiredService<DemoDataSeeder>().SeedAsync();
@@ -42,7 +51,11 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseAntiforgery();
+
+app.MapAccountEndpoints();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()

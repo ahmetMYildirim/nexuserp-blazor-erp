@@ -1,0 +1,81 @@
+@page "/giris"
+@layout NexusErp.Web.Components.Layout.EmptyLayout
+@using NexusErp.Infrastructure.Identity
+@attribute [AllowAnonymous]
+
+<PageTitle>Giriş · NexusERP</PageTitle>
+
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;
+            background:linear-gradient(135deg,#0F172A 0%,#1E3A8A 100%);padding:16px">
+    <MudPaper Elevation="8" Class="pa-8" Style="max-width:420px;width:100%;border-radius:12px">
+        <MudStack AlignItems="AlignItems.Center" Class="mb-6">
+            <MudAvatar Color="Color.Primary" Size="Size.Large" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Receipt" />
+            </MudAvatar>
+            <MudText Typo="Typo.h5">NexusERP</MudText>
+            <MudText Typo="Typo.caption">Ön Muhasebe &amp; Abonelik Yönetimi</MudText>
+        </MudStack>
+
+        @if (!string.IsNullOrEmpty(Error))
+        {
+            <MudAlert Severity="Severity.Error" Dense Class="mb-4">@Error</MudAlert>
+        }
+
+        @* ⚠️ Düz HTML form + POST. Blazor'ın interaktif devresinde HttpContext yok;
+           cookie yazmak için isteğin sunucuya normal bir POST olarak gitmesi gerekiyor. *@
+        <form method="post" action="/hesap/giris">
+            <AntiforgeryToken />
+            <input type="hidden" name="returnUrl" value="@ReturnUrl" />
+
+            <div class="mb-4">
+                <label for="email" style="font-size:.8rem;display:block;margin-bottom:4px">
+                    E-posta
+                </label>
+                <input id="email" name="email" type="email" required autofocus
+                       class="mud-input-root"
+                       style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px"
+                       placeholder="admin@nexusdemo.com.tr" />
+            </div>
+
+            <div class="mb-4">
+                <label for="password" style="font-size:.8rem;display:block;margin-bottom:4px">
+                    Parola
+                </label>
+                <input id="password" name="password" type="password" required
+                       style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px" />
+            </div>
+
+            <button type="submit"
+                    style="width:100%;padding:12px;background:#1E5EFF;color:#fff;border:0;
+                           border-radius:6px;font-size:14px;font-weight:600;cursor:pointer">
+                GİRİŞ YAP
+            </button>
+        </form>
+
+        <MudDivider Class="my-6" />
+
+        <MudText Typo="Typo.caption" Class="mb-2">Demo hesapları (parola: <b>@IdentitySeeder.DemoPassword</b>)</MudText>
+        <MudStack Spacing="1">
+            @foreach (var (email, role) in DemoAccounts)
+            {
+                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                    <MudText Typo="Typo.caption" Style="font-family:Consolas,monospace">@email</MudText>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default">@role</MudChip>
+                </MudStack>
+            }
+        </MudStack>
+    </MudPaper>
+</div>
+
+@code {
+    [SupplyParameterFromQuery] public string? Error { get; set; }
+    [SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
+
+    private static readonly (string Email, string Role)[] DemoAccounts =
+    [
+        ("admin@nexusdemo.com.tr", "Admin"),
+        ("muhasebe@nexusdemo.com.tr", "Muhasebe"),
+        ("satis@nexusdemo.com.tr", "Satış"),
+        ("bakis@nexusdemo.com.tr", "Görüntüleyici"),
+    ];
+}

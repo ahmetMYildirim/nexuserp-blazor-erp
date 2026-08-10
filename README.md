@@ -50,6 +50,18 @@ dotnet run --project src/NexusErp.Web
 
 → http://localhost:5283 · pgAdmin: http://localhost:5050 (`admin@nexuserp.com` / `admin`)
 
+### Demo hesapları — parola hepsi için `Demo!2026`
+
+| E-posta | Rol | Yetki |
+|---|---|---|
+| `admin@nexusdemo.com.tr` | Admin | Her şey |
+| `muhasebe@nexusdemo.com.tr` | Muhasebe | Fatura kesme, tahsilat, raporlar |
+| `satis@nexusdemo.com.tr` | Satış | Cari ve fatura oluşturma — **tahsilat yok** |
+| `bakis@nexusdemo.com.tr` | Görüntüleyici | Salt okuma |
+
+Rolleri karşılaştırmak için Satış ile girip `/tahsilatlar`'a gitmeyi dene — "yetkisiz erişim"
+sayfası gelir. Fatura listesinde "kes/sil" butonları da o rolde görünmez.
+
 Uygulamayı da container'da çalıştırmak için:
 
 ```bash

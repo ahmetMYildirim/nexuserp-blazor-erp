@@ -1,0 +1,13 @@
+@inject NavigationManager Nav
+
+@code {
+    /// <summary>
+    /// Oturum açılmamışsa giriş sayfasına yönlendirir; kullanıcı giriş yapınca
+    /// gelmek istediği sayfaya geri döner (returnUrl).
+    /// </summary>
+    protected override void OnInitialized()
+    {
+        var returnUrl = Nav.ToBaseRelativePath(Nav.Uri);
+        Nav.NavigateTo($"/giris?returnUrl=/{Uri.EscapeDataString(returnUrl)}", forceLoad: true);
+    }
+}

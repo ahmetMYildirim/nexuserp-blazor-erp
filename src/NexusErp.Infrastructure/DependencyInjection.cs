@@ -2,7 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NexusErp.Application.Abstractions;
+using Microsoft.AspNetCore.Identity;
 using NexusErp.Infrastructure.Documents;
+using NexusErp.Infrastructure.Identity;
 using NexusErp.Infrastructure.Invoicing;
 using NexusErp.Infrastructure.Persistence;
 using NexusErp.Infrastructure.Tenancy;
@@ -16,8 +18,10 @@ public static class DependencyInjection
     {
         services.Configure<TenantOptions>(config.GetSection(TenantOptions.SectionName));
 
-        services.AddScoped<ITenantContext, TenantContext>();
-        services.AddScoped<ICurrentUser, StubCurrentUser>();   // Bölüm 12'de gerçeğiyle değişecek
+        // Tenant ve kullanıcı artık OTURUMDAN geliyor (Bölüm 12).
+        services.AddHttpContextAccessor();
+        services.AddScoped<ITenantContext, ClaimsTenantContext>();
+        services.AddScoped<ICurrentUser, ClaimsCurrentUser>();
 
         services.AddDbContext<AppDbContext>(opt =>
         {
@@ -33,6 +37,29 @@ public static class DependencyInjection
 
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
         services.AddScoped<IInvoiceNumberGenerator, InvoiceNumberGenerator>();
+
+        services.AddIdentity<AppUser, IdentityRole<Guid>>(opt =>
+                {
+                    opt.Password.RequiredLength = 8;
+                    opt.Password.RequireNonAlphanumeric = true;
+                    opt.User.RequireUniqueEmail = true;
+                    opt.SignIn.RequireConfirmedAccount = false;
+                    opt.Lockout.MaxFailedAccessAttempts = 5;
+                    opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+                })
+                .AddEntityFrameworkStores<AppDbContext>()
+                .AddClaimsPrincipalFactory<AppUserClaimsPrincipalFactory>()
+                .AddDefaultTokenProviders();
+
+        services.ConfigureApplicationCookie(opt =>
+        {
+            opt.LoginPath = "/giris";
+            opt.LogoutPath = "/cikis";
+            opt.AccessDeniedPath = "/yetkisiz";
+            opt.ExpireTimeSpan = TimeSpan.FromHours(8);
+            opt.SlidingExpiration = true;
+            opt.Cookie.Name = "NexusErp.Auth";
+        });
         services.AddScoped<IInvoicePdfGenerator, InvoicePdfGenerator>();
         services.AddSingleton<IExcelExporter, ExcelExporter>();
 

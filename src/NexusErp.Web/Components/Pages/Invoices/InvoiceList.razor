@@ -1,4 +1,5 @@
 @page "/faturalar"
+@attribute [Authorize]
 @using NexusErp.Application.Abstractions
 @using NexusErp.Application.Invoicing
 @using NexusErp.Domain.Enums
@@ -14,10 +15,12 @@
 <MudStack Row AlignItems="AlignItems.Center" Class="mb-4">
     <MudText Typo="Typo.h5">Faturalar</MudText>
     <MudSpacer />
-    <MudButton Variant="Variant.Filled" Color="Color.Primary"
-               StartIcon="@Icons.Material.Filled.Add" Href="/faturalar/yeni">
-        Yeni Fatura
-    </MudButton>
+    <AuthorizeView Roles="Admin,Muhasebe,Satis">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Add" Href="/faturalar/yeni">
+            Yeni Fatura
+        </MudButton>
+    </AuthorizeView>
 </MudStack>
 
 <MudPaper Elevation="1" Class="pa-4 mb-4">
@@ -111,6 +114,7 @@
                 </MudTooltip>
                 @if (context.Item.Status == InvoiceStatus.Draft)
                 {
+                    <AuthorizeView Roles="Admin,Muhasebe" Context="auth">
                     <MudTooltip Text="Faturayı kes">
                         <MudIconButton Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
                                        Color="Color.Success"
@@ -120,13 +124,16 @@
                         <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
                                        OnClick="@(() => DeleteAsync(context.Item))" />
                     </MudTooltip>
+                    </AuthorizeView>
                 }
                 else if (context.Item.Status != InvoiceStatus.Cancelled)
                 {
-                    <MudTooltip Text="İptal et">
-                        <MudIconButton Icon="@Icons.Material.Filled.Block" Size="Size.Small"
-                                       OnClick="@(() => CancelAsync(context.Item))" />
-                    </MudTooltip>
+                    <AuthorizeView Roles="Admin,Muhasebe" Context="auth">
+                        <MudTooltip Text="İptal et">
+                            <MudIconButton Icon="@Icons.Material.Filled.Block" Size="Size.Small"
+                                           OnClick="@(() => CancelAsync(context.Item))" />
+                        </MudTooltip>
+                    </AuthorizeView>
                 }
             </CellTemplate>
         </TemplateColumn>

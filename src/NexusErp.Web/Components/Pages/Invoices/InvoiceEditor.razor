@@ -1,5 +1,6 @@
 @page "/faturalar/yeni"
 @page "/faturalar/{Id:guid}"
+@attribute [Authorize(Roles = "Admin,Muhasebe,Satis")]
 @using NexusErp.Application.Invoicing
 @using NexusErp.Application.Parties
 @using NexusErp.Application.Products

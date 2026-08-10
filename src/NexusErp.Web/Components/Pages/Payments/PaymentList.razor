@@ -1,4 +1,5 @@
 @page "/tahsilatlar"
+@attribute [Authorize(Roles = "Admin,Muhasebe")]
 @using NexusErp.Application.Parties
 @using NexusErp.Application.Payments
 @using NexusErp.Domain.Enums
