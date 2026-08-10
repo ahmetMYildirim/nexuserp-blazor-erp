@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: nexuserp-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nexuserp
+      POSTGRES_USER: nexus
+      POSTGRES_PASSWORD: nexus_dev_2026
+      # Türkçe sıralama ve karakter desteği ("İstanbul Ltd." doğru yere sıralansın)
+      POSTGRES_INITDB_ARGS: "--locale=tr_TR.UTF-8 --encoding=UTF8"
+    ports:
+      - "5433:5432"        # 5433 → yerelde başka postgres varsa çakışmasın
+    volumes:
+      - nexuserp-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexus -d nexuserp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: nexuserp-pgadmin
+    restart: unless-stopped
+    environment:
+      # ⚠️ .local gibi "special-use" uzantılar pgAdmin tarafından geçersiz e-posta
+      # sayılır ve container yeniden başlatma döngüsüne girer. Normal bir TLD kullan.
+      PGADMIN_DEFAULT_EMAIL: admin@nexuserp.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "5050:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  nexuserp-data:

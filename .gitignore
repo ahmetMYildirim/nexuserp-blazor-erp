@@ -1,0 +1,17 @@
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.idea/
+appsettings.Production.json
+logs/
+
+*.html
+
+# Geliştirme rehberi ve çıktıları.
+# Bu repo mülakatta gösterilecek bir portföy projesi — "nasıl yapılır" rehberini
+# içinde taşıması gerekmiyor. Repo'ya dahil etmek istersen bu üç satırı sil.
+docs/
+*.pdf
+*.xlsx

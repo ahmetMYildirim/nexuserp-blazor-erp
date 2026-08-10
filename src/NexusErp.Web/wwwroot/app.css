@@ -1,0 +1,37 @@
+/* Stillerin çoğu MudBlazor'dan geliyor. Burası yalnızca Blazor'un
+   yerleşik hata arayüzü ve birkaç yardımcı sınıf için. */
+
+html, body {
+    margin: 0;
+    font-family: "Roboto", "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+/* Sayısal sütunlar sağa yaslı olmalı — muhasebeciler rakamları alt alta karşılaştırır */
+.text-right { text-align: right !important; }
+
+#blazor-error-ui {
+    color-scheme: light only;
+    background: #ffd166;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, .2);
+    display: none;
+    left: 0;
+    padding: .8rem 1.25rem .8rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1200;
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: .75rem;
+    top: .5rem;
+}
+
+.blazor-error-boundary {
+    background: #b32121;
+    padding: 1rem;
+    color: white;
+    border-radius: 4px;
+}

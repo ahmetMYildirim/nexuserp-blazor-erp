@@ -1,0 +1,59 @@
+@inherits LayoutComponentBase
+
+@* MudBlazor'ın 4 provider'ı — biri eksikse dialog/snackbar/popover çalışmaz *@
+<MudThemeProvider Theme="@_theme" @bind-IsDarkMode="_isDark" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="1">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit"
+                       Edge="Edge.Start" OnClick="@(() => _drawerOpen = !_drawerOpen)" />
+        <MudText Typo="Typo.h6" Class="ml-2">NexusERP</MudText>
+        <MudSpacer />
+        <MudTooltip Text="@(_isDark ? "Açık tema" : "Koyu tema")">
+            <MudIconButton Color="Color.Inherit"
+                           Icon="@(_isDark ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+                           OnClick="@(() => _isDark = !_isDark)" />
+        </MudTooltip>
+    </MudAppBar>
+
+    <MudDrawer @bind-Open="_drawerOpen" Elevation="1" ClipMode="DrawerClipMode.Always">
+        <NavMenu />
+    </MudDrawer>
+
+    <MudMainContent Class="pt-16 px-4">
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="my-4">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool _drawerOpen = true;
+    private bool _isDark;
+
+    private readonly MudTheme _theme = new()
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary = "#1E5EFF",
+            Secondary = "#00B894",
+            AppbarBackground = "#0F172A",
+            Background = "#F8FAFC",
+        },
+        PaletteDark = new PaletteDark
+        {
+            Primary = "#5B8DEF",
+            Secondary = "#00B894",
+        },
+        Typography = new Typography
+        {
+            Default = new DefaultTypography
+            {
+                FontFamily = ["Roboto", "Segoe UI", "Helvetica", "Arial", "sans-serif"]
+            }
+        }
+    };
+}
