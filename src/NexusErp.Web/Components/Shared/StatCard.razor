@@ -1,0 +1,26 @@
+<MudPaper Elevation="1" Class="pa-4" Style="height:100%">
+    <MudStack Row AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween">
+        <div>
+            <MudText Typo="Typo.caption">@Title</MudText>
+            <MudText Typo="Typo.h5" Class="mt-1">
+                @Value<span style="font-size:.65em;margin-left:2px">@Suffix</span>
+            </MudText>
+            @if (Hint is not null)
+            {
+                <MudText Typo="Typo.caption" Class="mt-1">@Hint</MudText>
+            }
+        </div>
+        <MudAvatar Color="@Color" Variant="Variant.Outlined">
+            <MudIcon Icon="@Icon" />
+        </MudAvatar>
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = default!;
+    [Parameter, EditorRequired] public string Value { get; set; } = default!;
+    [Parameter] public string? Suffix { get; set; }
+    [Parameter] public string? Hint { get; set; }
+    [Parameter] public string Icon { get; set; } = Icons.Material.Filled.Analytics;
+    [Parameter] public Color Color { get; set; } = Color.Primary;
+}

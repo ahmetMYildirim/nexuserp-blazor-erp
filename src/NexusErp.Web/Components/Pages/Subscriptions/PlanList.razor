@@ -1,0 +1,80 @@
+@page "/planlar"
+@using NexusErp.Application.Subscriptions
+@using NexusErp.Domain.Enums
+@inject SubscriptionService SubscriptionService
+
+<PageTitle>Abonelik Planları · NexusERP</PageTitle>
+
+<MudStack Row AlignItems="AlignItems.Center" Class="mb-4">
+    <MudText Typo="Typo.h5">Abonelik Planları</MudText>
+    <MudSpacer />
+    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+        Plan düzenleme ekranı Faz 2 — demo kapsamında seed verisi
+    </MudChip>
+</MudStack>
+
+<MudGrid>
+    @foreach (var p in _plans)
+    {
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Elevation="1" Class="pa-4" Style="height:100%">
+                <MudStack Spacing="1">
+                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary">@p.Code</MudChip>
+                        @if (p.TrialDays > 0)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info">
+                                @p.TrialDays gün deneme
+                            </MudChip>
+                        }
+                    </MudStack>
+
+                    <MudText Typo="Typo.subtitle1">@p.Name</MudText>
+
+                    <MudText Typo="Typo.h5" Class="mt-2">
+                        @p.Price.ToMoney() <span style="font-size:.5em">@p.Currency</span>
+                    </MudText>
+                    <MudText Typo="Typo.caption">/ @CycleText(p.Cycle)</MudText>
+
+                    <MudDivider Class="my-2" />
+
+                    <MudStack Row Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2">Aylık değer</MudText>
+                        <MudText Typo="Typo.body2">@p.MonthlyValue.ToMoney() ₺</MudText>
+                    </MudStack>
+                    <MudStack Row Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2">Aktif abone</MudText>
+                        <MudText Typo="Typo.body2">@p.ActiveSubscriptions</MudText>
+                    </MudStack>
+                    <MudStack Row Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2" Style="font-weight:600">MRR katkısı</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Success" Style="font-weight:600">
+                            @((p.MonthlyValue * p.ActiveSubscriptions).ToMoney()) ₺
+                        </MudText>
+                    </MudStack>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+    }
+</MudGrid>
+
+@if (_plans.Count == 0)
+{
+    <MudText Class="pa-6" Align="Align.Center">Plan bulunamadı.</MudText>
+}
+
+@code {
+    private List<PlanListItem> _plans = [];
+
+    protected override async Task OnInitializedAsync()
+        => _plans = await SubscriptionService.GetPlansAsync();
+
+    private static string CycleText(BillingCycle c) => c switch
+    {
+        BillingCycle.Monthly => "ay",
+        BillingCycle.Quarterly => "3 ay",
+        BillingCycle.SemiAnnual => "6 ay",
+        BillingCycle.Yearly => "yıl",
+        _ => "?"
+    };
+}

@@ -23,6 +23,8 @@ public interface IAppDbContext
     DbSet<Product> Products { get; }
     DbSet<Invoice> Invoices { get; }
     DbSet<InvoiceLine> InvoiceLines { get; }
+    DbSet<Plan> Plans { get; }
+    DbSet<Subscription> Subscriptions { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 

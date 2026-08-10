@@ -13,10 +13,23 @@ public static class DatabaseSeeder
     /// </summary>
     public static readonly Guid DemoTenantId = Guid.Parse("0195c8f0-0000-7000-8000-000000000001");
 
+    /// <summary>
+    /// Seed BÖLÜM BAZINDA idempotent: yeni modül eklendiğinde mevcut veri tabanına da
+    /// uygulanır. Tek bir "tenant var mı?" kontrolüyle erken dönseydi, sonradan eklenen
+    /// plan/abonelik verisi hiç oluşmazdı.
+    /// </summary>
     public static async Task SeedAsync(AppDbContext db, CancellationToken ct = default)
     {
         await db.Database.MigrateAsync(ct);
+        await SeedCoreAsync(db, ct);
+        await SeedSubscriptionsAsync(db, ct);
+    }
 
+    // ------------------------------------------------------------------
+    // Tenant · KDV oranları · cariler · ürünler
+    // ------------------------------------------------------------------
+    private static async Task SeedCoreAsync(AppDbContext db, CancellationToken ct)
+    {
         // IgnoreQueryFilters: seed anında tenant context henüz kurulu olmayabilir.
         // Uygulama kodunda bu meşru DEĞİL, sistem/seed işlerinde normal (ADR-004).
         if (await db.Tenants.IgnoreQueryFilters().AnyAsync(t => t.Id == DemoTenantId, ct))
@@ -24,7 +37,7 @@ public static class DatabaseSeeder
 
         var now = DateTimeOffset.UtcNow;
 
-        var tenant = new Tenant
+        db.Tenants.Add(new Tenant
         {
             Id = DemoTenantId,
             Name = "Nexus Demo Yazılım A.Ş.",
@@ -37,8 +50,7 @@ public static class DatabaseSeeder
             InvoiceSeries = "NEX",
             CreatedAt = now,
             CreatedBy = "seed"
-        };
-        db.Tenants.Add(tenant);
+        });
 
         // --- KDV oranları (2026) ---
         var rates = new[]
@@ -115,6 +127,84 @@ public static class DatabaseSeeder
             Kind = kind,
             TaxRateId = rate.Id,
             WithholdingRate = withholding,
+            CreatedAt = now,
+            CreatedBy = "seed"
+        };
+    }
+
+    // ------------------------------------------------------------------
+    // Abonelik planları ve abonelikler (Bölüm 09)
+    // ------------------------------------------------------------------
+    private static async Task SeedSubscriptionsAsync(AppDbContext db, CancellationToken ct)
+    {
+        if (await db.Plans.IgnoreQueryFilters().AnyAsync(ct)) return;
+
+        var now = DateTimeOffset.UtcNow;
+        var today = DateOnly.FromDateTime(DateTime.Today);
+
+        var bakim = await db.Products.IgnoreQueryFilters()
+                            .FirstAsync(p => p.Code == "HZM0001", ct);
+        var danismanlik = await db.Products.IgnoreQueryFilters()
+                            .FirstAsync(p => p.Code == "HZM0002", ct);
+
+        var plans = new[]
+        {
+            NewPlan("BASIC-AY", "Başlangıç Paketi — Aylık", 1_499m, BillingCycle.Monthly, bakim.Id),
+            NewPlan("PRO-AY", "Pro Paket — Aylık", 4_500m, BillingCycle.Monthly, bakim.Id, trialDays: 14),
+            NewPlan("PRO-YIL", "Pro Paket — Yıllık", 45_000m, BillingCycle.Yearly, bakim.Id),
+            NewPlan("DNS-3AY", "Danışmanlık Paketi — 3 Aylık", 12_000m, BillingCycle.Quarterly, danismanlik.Id),
+        };
+        db.Plans.AddRange(plans);
+
+        // ⚠️ Yalnızca MÜŞTERİ tipindeki carilere abonelik açılır — tedarikçiye satış
+        // faturası kesilemez (Party.EnsureCanBeInvoiced).
+        var customers = await db.Parties.IgnoreQueryFilters()
+                                .Where(p => (p.Type & PartyType.Customer) != 0)
+                                .OrderBy(p => p.Code).ToListAsync(ct);
+
+        // Çapa günü 31 olan abonelik: sonraki fatura tarihi de çapayla hizalı olmalı
+        var anchor31Next = new DateOnly(today.Year, today.Month,
+                                        Math.Min(31, DateTime.DaysInMonth(today.Year, today.Month)));
+
+        db.Subscriptions.AddRange(
+            // Vadesi GELMİŞ — "Şimdi Faturalandır" bunları kesecek
+            NewSub(customers[0].Id, plans[1].Id, today.AddMonths(-3), today.AddDays(-2)),
+            NewSub(customers[1].Id, plans[0].Id, today.AddMonths(-2), today.AddDays(-1)),
+            // Ayın 31'inde başlayan abonelik — çapa günü senaryosu
+            NewSub(customers[2].Id, plans[3].Id, new DateOnly(today.Year, 1, 31),
+                   anchor31Next, anchorDay: 31),
+            // Vadesi GELMEMİŞ
+            NewSub(customers[3].Id, plans[2].Id, today.AddMonths(-1), today.AddMonths(11))
+        );
+
+        await db.SaveChangesAsync(ct);
+
+        // --- yerel yardımcılar ---
+
+        Plan NewPlan(string code, string name, decimal price, BillingCycle cycle,
+                     Guid productId, int trialDays = 0) => new()
+        {
+            TenantId = DemoTenantId,
+            Code = code,
+            Name = name,
+            Price = price,
+            Cycle = cycle,
+            TrialDays = trialDays,
+            ProductId = productId,
+            CreatedAt = now,
+            CreatedBy = "seed"
+        };
+
+        Subscription NewSub(Guid partyId, Guid planId, DateOnly start, DateOnly nextBilling,
+                            int? anchorDay = null) => new()
+        {
+            TenantId = DemoTenantId,
+            PartyId = partyId,
+            PlanId = planId,
+            Status = SubscriptionStatus.Active,
+            StartDate = start,
+            NextBillingDate = nextBilling,
+            BillingAnchorDay = anchorDay ?? start.Day,
             CreatedAt = now,
             CreatedBy = "seed"
         };

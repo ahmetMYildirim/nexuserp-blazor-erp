@@ -1,0 +1,19 @@
+@* Toplam panelindeki tek satır: solda etiket, sağda sayı. *@
+<MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+    <MudText Typo="@(Bold ? Typo.subtitle1 : Typo.body2)"
+             Style="@(Bold ? "font-weight:600" : null)">
+        @Label
+    </MudText>
+    <MudText Typo="@(Bold ? Typo.subtitle1 : Typo.body2)" Color="@Color"
+             Style="@($"font-variant-numeric:tabular-nums;{(Bold ? "font-weight:700" : "")}")">
+        @Value.ToString("N2") @Currency
+    </MudText>
+</MudStack>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = default!;
+    [Parameter, EditorRequired] public decimal Value { get; set; }
+    [Parameter] public string Currency { get; set; } = "₺";
+    [Parameter] public Color Color { get; set; } = Color.Inherit;
+    [Parameter] public bool Bold { get; set; }
+}

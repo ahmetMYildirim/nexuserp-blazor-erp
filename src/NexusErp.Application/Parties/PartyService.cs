@@ -62,6 +62,34 @@ public sealed class PartyService(IAppDbContext db)
         return new PagedResult<PartyListItem>(items, total);
     }
 
+    /// <summary>Fatura başlığındaki otomatik tamamlama için.</summary>
+    public async Task<IReadOnlyList<PartyLookupItem>> LookupAsync(
+        string? term, PartyType type = PartyType.Customer, CancellationToken ct = default)
+    {
+        var query = db.Parties.AsNoTracking()
+            .Where(p => p.IsActive && (p.Type & type) != 0);
+
+        if (!string.IsNullOrWhiteSpace(term))
+        {
+            var pattern = "%" + term.Trim().ToUpper(Tr) + "%";
+            query = query.Where(p =>
+                EF.Functions.Like(p.Code.ToUpper(), pattern) ||
+                EF.Functions.Like(p.Title.ToUpper(), pattern));
+        }
+
+        return await query
+            .OrderBy(p => p.Title)
+            .Take(20)
+            .Select(p => new PartyLookupItem(p.Id, p.Code, p.Title, p.PaymentTermDays, p.Currency))
+            .ToListAsync(ct);
+    }
+
+    public async Task<PartyLookupItem?> GetLookupAsync(Guid id, CancellationToken ct = default) =>
+        await db.Parties.AsNoTracking()
+            .Where(p => p.Id == id)
+            .Select(p => new PartyLookupItem(p.Id, p.Code, p.Title, p.PaymentTermDays, p.Currency))
+            .FirstOrDefaultAsync(ct);
+
     public async Task<PartyForm?> GetFormAsync(Guid id, CancellationToken ct = default)
     {
         var p = await db.Parties.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);

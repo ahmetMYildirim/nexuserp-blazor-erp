@@ -39,6 +39,13 @@ public sealed class PartyForm
     public string? Notes { get; set; }
 }
 
+/// <summary>Fatura başlığındaki cari seçici için hafif model.</summary>
+public sealed record PartyLookupItem(
+    Guid Id, string Code, string Title, int PaymentTermDays, string Currency)
+{
+    public override string ToString() => $"{Code} — {Title}";
+}
+
 /// <summary>Sunucu tarafı sayfalama sonucu.</summary>
 public sealed record PagedResult<T>(IReadOnlyList<T> Items, int TotalCount);
 

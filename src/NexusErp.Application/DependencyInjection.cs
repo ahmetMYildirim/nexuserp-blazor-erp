@@ -2,6 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 using NexusErp.Application.Invoicing;
 using NexusErp.Application.Parties;
 using NexusErp.Application.Products;
+using NexusErp.Application.Subscriptions;
+using NexusErp.Application.TaxRates;
 
 namespace NexusErp.Application;
 
@@ -16,6 +18,9 @@ public static class DependencyInjection
         services.AddScoped<PartyService>();
         services.AddScoped<ProductService>();
         services.AddScoped<InvoiceService>();
+        services.AddScoped<TaxRateService>();
+        services.AddScoped<SubscriptionService>();
+        services.AddScoped<SubscriptionBillingService>();
 
         // .NET 8 zaman soyutlaması. Testte FakeTimeProvider ile zamanı ileri sarabiliyoruz —
         // Bölüm 09'da abonelik döngüsünü test etmenin başka yolu yok.

@@ -1,0 +1,183 @@
+@page "/abonelikler"
+@using NexusErp.Application.Subscriptions
+@using NexusErp.Domain.Enums
+@inject SubscriptionService SubscriptionService
+@inject SubscriptionBillingService BillingService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Abonelikler · NexusERP</PageTitle>
+
+<MudStack Row AlignItems="AlignItems.Center" Class="mb-4">
+    <MudText Typo="Typo.h5">Abonelikler</MudText>
+    <MudSpacer />
+    @* Demo'nun en güçlü anı: iki kez bas, ikincisi 0 üretsin. *@
+    <MudButton Variant="Variant.Filled" Color="Color.Warning" Disabled="@_running"
+               StartIcon="@Icons.Material.Filled.PlayArrow" OnClick="RunBillingNow">
+        @if (_running)
+        {
+            <MudProgressCircular Size="Size.Small" Indeterminate Class="mr-2" />
+        }
+        Faturalandırmayı Şimdi Çalıştır
+    </MudButton>
+</MudStack>
+
+@if (_stats is not null)
+{
+    <MudGrid Class="mb-4">
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Title="Aktif Abonelik" Value="@_stats.ActiveCount.ToString()"
+                      Icon="@Icons.Material.Filled.Subscriptions" Color="Color.Primary" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Title="MRR" Value="@_stats.Mrr.ToMoney()" Suffix="₺"
+                      Hint="Aylık tekrarlayan gelir"
+                      Icon="@Icons.Material.Filled.TrendingUp" Color="Color.Success" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Title="ARR" Value="@_stats.Arr.ToMoney()" Suffix="₺"
+                      Hint="MRR × 12"
+                      Icon="@Icons.Material.Filled.CalendarMonth" Color="Color.Info" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Title="Bu Ay Yenilenecek" Value="@_stats.RenewingThisMonth.ToString()"
+                      Icon="@Icons.Material.Filled.Autorenew" Color="Color.Warning" />
+        </MudItem>
+    </MudGrid>
+}
+
+@if (_lastRun is not null)
+{
+    <MudAlert Severity="@(_lastRun.Created > 0 ? Severity.Success : Severity.Info)"
+              Class="mb-4" Dense ShowCloseIcon CloseIconClicked="@(() => _lastRun = null)">
+        @_lastRun.Summary
+        @if (_lastRun.Created == 0 && _lastRun.Skipped > 0)
+        {
+            <text> — aynı dönem için ikinci fatura üretilmedi (idempotency).</text>
+        }
+    </MudAlert>
+}
+
+<MudDataGrid T="SubscriptionListItem" Items="_items" Dense Hover Striped Elevation="1">
+    <Columns>
+        <PropertyColumn Property="x => x.PartyTitle" Title="Cari" />
+        <PropertyColumn Property="x => x.PlanName" Title="Plan" />
+        <TemplateColumn Title="Döngü">
+            <CellTemplate>@CycleText(context.Item.Cycle)</CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Başlangıç">
+            <CellTemplate>@context.Item.StartDate.ToString("dd.MM.yyyy")</CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Sonraki Fatura">
+            <CellTemplate>
+                <MudText Typo="Typo.body2"
+                         Color="@(context.Item.NextBillingDate <= Today ? Color.Warning : Color.Inherit)">
+                    @context.Item.NextBillingDate.ToString("dd.MM.yyyy")
+                </MudText>
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Çapa Günü">
+            <CellTemplate>@context.Item.BillingAnchorDay</CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Dönem Ücreti" CellClass="text-right">
+            <CellTemplate>@context.Item.EffectivePrice.ToMoney() @context.Item.Currency</CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Aylık Değer" CellClass="text-right">
+            <CellTemplate>@context.Item.MonthlyValue.ToMoney()</CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Durum">
+            <CellTemplate>
+                <MudChip T="string" Size="Size.Small" Color="@StatusColor(context.Item.Status)">
+                    @StatusText(context.Item.Status)
+                </MudChip>
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="" CellClass="d-flex justify-end">
+            <CellTemplate>
+                @if (context.Item.Status != SubscriptionStatus.Cancelled)
+                {
+                    <MudTooltip Text="İptal et">
+                        <MudIconButton Icon="@Icons.Material.Filled.Cancel" Size="Size.Small"
+                                       OnClick="@(() => CancelAsync(context.Item))" />
+                    </MudTooltip>
+                }
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <NoRecordsContent>
+        <MudText Class="pa-6" Align="Align.Center">Abonelik bulunamadı.</MudText>
+    </NoRecordsContent>
+</MudDataGrid>
+
+@code {
+    private IReadOnlyList<SubscriptionListItem> _items = [];
+    private SubscriptionStats? _stats;
+    private BillingRunResult? _lastRun;
+    private bool _running;
+
+    private static DateOnly Today => DateOnly.FromDateTime(DateTime.Today);
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        var result = await SubscriptionService.SearchAsync();
+        _items = result.Items;
+        _stats = await SubscriptionService.GetStatsAsync(Today);
+    }
+
+    private async Task RunBillingNow()
+    {
+        _running = true;
+        _lastRun = await BillingService.RunAsync(Today);
+        _running = false;
+
+        Snackbar.Add(_lastRun.Summary,
+                     _lastRun.Created > 0 ? Severity.Success : Severity.Info);
+        await LoadAsync();
+    }
+
+    private async Task CancelAsync(SubscriptionListItem item)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Aboneliği İptal Et",
+            $"'{item.PartyTitle}' aboneliği dönem sonunda iptal edilsin mi?",
+            yesText: "İptal Et", cancelText: "Vazgeç");
+
+        if (confirmed != true) return;
+
+        if (await Snackbar.RunAsync(
+                () => SubscriptionService.CancelAsync(item.Id, Today, immediately: false),
+                "Abonelik iptal edildi."))
+            await LoadAsync();
+    }
+
+    private static string CycleText(BillingCycle c) => c switch
+    {
+        BillingCycle.Monthly => "Aylık",
+        BillingCycle.Quarterly => "3 Aylık",
+        BillingCycle.SemiAnnual => "6 Aylık",
+        BillingCycle.Yearly => "Yıllık",
+        _ => "?"
+    };
+
+    private static string StatusText(SubscriptionStatus s) => s switch
+    {
+        SubscriptionStatus.Trialing => "Deneme",
+        SubscriptionStatus.Active => "Aktif",
+        SubscriptionStatus.PastDue => "Vadesi Geçti",
+        SubscriptionStatus.Paused => "Duraklatıldı",
+        SubscriptionStatus.Cancelled => "İptal",
+        _ => "?"
+    };
+
+    private static Color StatusColor(SubscriptionStatus s) => s switch
+    {
+        SubscriptionStatus.Trialing => Color.Info,
+        SubscriptionStatus.Active => Color.Success,
+        SubscriptionStatus.PastDue => Color.Error,
+        SubscriptionStatus.Paused => Color.Warning,
+        SubscriptionStatus.Cancelled => Color.Default,
+        _ => Color.Default
+    };
+}

@@ -1,0 +1,498 @@
+@page "/faturalar/yeni"
+@page "/faturalar/{Id:guid}"
+@using NexusErp.Application.Invoicing
+@using NexusErp.Application.Parties
+@using NexusErp.Application.Products
+@using NexusErp.Application.TaxRates
+@using NexusErp.Domain.Common
+@using NexusErp.Domain.Enums
+@using NexusErp.Domain.Invoicing
+@inject InvoiceService InvoiceService
+@inject PartyService PartyService
+@inject ProductService ProductService
+@inject TaxRateService TaxRateService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>@(Id is null ? "Yeni Fatura" : "Fatura") · NexusERP</PageTitle>
+
+@if (_form is null)
+{
+    <MudProgressLinear Indeterminate Color="Color.Primary" Class="my-8" />
+}
+else
+{
+    <MudStack Row AlignItems="AlignItems.Center" Class="mb-4">
+        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Href="/faturalar" />
+        <MudText Typo="Typo.h5">
+            @(Id is null ? "Yeni Fatura" : _number ?? "Fatura Taslağı")
+        </MudText>
+        @if (!_editable)
+        {
+            <MudChip T="string" Size="Size.Small" Color="Color.Info">Kesildi — salt okunur</MudChip>
+        }
+        <MudSpacer />
+        @if (_editable)
+        {
+            <MudButton Variant="Variant.Outlined" Disabled="@_busy" OnClick="SaveDraftAsync">
+                Taslağı Kaydet
+            </MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Success" Disabled="@_busy"
+                       StartIcon="@Icons.Material.Filled.CheckCircle" OnClick="IssueAsync">
+                Faturayı Kes
+            </MudButton>
+        }
+    </MudStack>
+
+    @* ---------------- BAŞLIK ---------------- *@
+    <MudPaper Elevation="1" Class="pa-4 mb-4">
+        <MudGrid Spacing="2">
+            <MudItem xs="12" md="5">
+                <MudAutocomplete T="PartyLookupItem" Label="Cari *" Value="_selectedParty"
+                                 SearchFunc="SearchParties" ToStringFunc="@(p => p?.ToString() ?? "")"
+                                 ValueChanged="OnPartyChanged" Variant="Variant.Outlined"
+                                 Margin="Margin.Dense" Disabled="@(!_editable)"
+                                 ResetValueOnEmptyText CoerceText />
+            </MudItem>
+            <MudItem xs="6" md="2">
+                <MudSelect T="InvoiceType" @bind-Value="_form.Type" Label="Tip"
+                           Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@(!_editable)">
+                    <MudSelectItem Value="@InvoiceType.Sales">Satış</MudSelectItem>
+                    <MudSelectItem Value="@InvoiceType.SalesReturn">İade</MudSelectItem>
+                    <MudSelectItem Value="@InvoiceType.Proforma">Proforma</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="6" md="2">
+                <MudDatePicker Label="Fatura Tarihi" Date="_issueDate" DateChanged="OnIssueDateChanged"
+                               Variant="Variant.Outlined" Margin="Margin.Dense"
+                               DateFormat="dd.MM.yyyy" Disabled="@(!_editable)" />
+            </MudItem>
+            <MudItem xs="6" md="2">
+                <MudDatePicker Label="Vade Tarihi" @bind-Date="_dueDate"
+                               Variant="Variant.Outlined" Margin="Margin.Dense"
+                               DateFormat="dd.MM.yyyy" Disabled="@(!_editable)" />
+            </MudItem>
+            <MudItem xs="6" md="1">
+                <MudSelect T="string" @bind-Value="_form.Currency" Label="Döviz"
+                           Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@(!_editable)">
+                    <MudSelectItem Value="@("TRY")">TRY</MudSelectItem>
+                    <MudSelectItem Value="@("USD")">USD</MudSelectItem>
+                    <MudSelectItem Value="@("EUR")">EUR</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    @* ---------------- SATIRLAR ---------------- *@
+    <MudPaper Elevation="1" Class="pa-4 mb-4">
+        <MudStack Row AlignItems="AlignItems.Center" Class="mb-3">
+            <MudText Typo="Typo.subtitle1">Fatura Satırları</MudText>
+            <MudSpacer />
+            @if (_editable)
+            {
+                <MudButton Size="Size.Small" Variant="Variant.Outlined"
+                           StartIcon="@Icons.Material.Filled.Add" OnClick="AddLine">
+                    Satır Ekle
+                </MudButton>
+            }
+        </MudStack>
+
+        <div style="overflow-x:auto">
+            <table class="mud-table-root" style="width:100%;min-width:1100px">
+                <thead class="mud-table-head">
+                    <tr>
+                        <th style="width:28px"></th>
+                        <th style="min-width:260px">Ürün / Hizmet</th>
+                        <th style="width:110px">Miktar</th>
+                        <th style="width:130px">Birim Fiyat</th>
+                        <th style="width:150px">İskonto</th>
+                        <th style="width:110px">KDV</th>
+                        <th style="width:110px">Tevkifat</th>
+                        <th style="width:130px;text-align:right">Satır Toplamı</th>
+                        <th style="width:40px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var i = 0; i < _form.Lines.Count; i++)
+                    {
+                        var index = i;
+                        var line = _form.Lines[index];
+                        <tr>
+                            <td class="text-center">@(index + 1)</td>
+                            <td>
+                                <MudAutocomplete T="ProductLookupItem" Value="null"
+                                                 Text="@line.ProductName"
+                                                 SearchFunc="SearchProducts"
+                                                 ToStringFunc="@(p => p is null ? "" : $"{p.Code} — {p.Name}")"
+                                                 ValueChanged="@(p => ApplyProduct(line, p))"
+                                                 Variant="Variant.Outlined" Margin="Margin.Dense"
+                                                 Disabled="@(!_editable)" Dense
+                                                 Placeholder="Ürün ara veya yaz" />
+                            </td>
+                            <td>
+                                <MudNumericField T="decimal" Value="line.Quantity"
+                                                 ValueChanged="@(v => { line.Quantity = v; Recalculate(); })"
+                                                 Variant="Variant.Outlined" Margin="Margin.Dense"
+                                                 Min="0.000001m" Format="N2" Disabled="@(!_editable)" />
+                            </td>
+                            <td>
+                                <MudNumericField T="decimal" Value="line.UnitPrice"
+                                                 ValueChanged="@(v => { line.UnitPrice = v; Recalculate(); })"
+                                                 Variant="Variant.Outlined" Margin="Margin.Dense"
+                                                 Min="0m" Format="N2" Disabled="@(!_editable)" />
+                            </td>
+                            <td>
+                                <MudStack Row Spacing="1">
+                                    <MudSelect T="DiscountType" Value="line.DiscountType" Dense
+                                               ValueChanged="@(v => { line.DiscountType = v; Recalculate(); })"
+                                               Variant="Variant.Outlined" Margin="Margin.Dense"
+                                               Style="width:64px" Disabled="@(!_editable)">
+                                        <MudSelectItem Value="@DiscountType.None">—</MudSelectItem>
+                                        <MudSelectItem Value="@DiscountType.Percentage">%</MudSelectItem>
+                                        <MudSelectItem Value="@DiscountType.Amount">₺</MudSelectItem>
+                                    </MudSelect>
+                                    @if (line.DiscountType != DiscountType.None)
+                                    {
+                                        <MudNumericField T="decimal"
+                                                         Value="@DisplayDiscount(line)"
+                                                         ValueChanged="@(v => SetDiscount(line, v))"
+                                                         Variant="Variant.Outlined" Margin="Margin.Dense"
+                                                         Min="0m" Format="N2" Disabled="@(!_editable)" />
+                                    }
+                                </MudStack>
+                            </td>
+                            <td>
+                                <MudSelect T="decimal" Value="line.TaxRate" Dense
+                                           ValueChanged="@(v => { line.TaxRate = v; Recalculate(); })"
+                                           Variant="Variant.Outlined" Margin="Margin.Dense"
+                                           Disabled="@(!_editable)">
+                                    @foreach (var r in _taxRates)
+                                    {
+                                        <MudSelectItem Value="@r.Rate">@r.Name</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            </td>
+                            <td>
+                                <MudSelect T="decimal?" Value="line.WithholdingRate" Dense Clearable
+                                           ValueChanged="@(v => { line.WithholdingRate = v; Recalculate(); })"
+                                           Variant="Variant.Outlined" Margin="Margin.Dense"
+                                           Disabled="@(!_editable)">
+                                    <MudSelectItem T="decimal?" Value="@(0.20m)">2/10</MudSelectItem>
+                                    <MudSelectItem T="decimal?" Value="@(0.30m)">3/10</MudSelectItem>
+                                    <MudSelectItem T="decimal?" Value="@(0.50m)">5/10</MudSelectItem>
+                                    <MudSelectItem T="decimal?" Value="@(0.70m)">7/10</MudSelectItem>
+                                    <MudSelectItem T="decimal?" Value="@(0.90m)">9/10</MudSelectItem>
+                                </MudSelect>
+                            </td>
+                            <td style="text-align:right;font-variant-numeric:tabular-nums">
+                                @(_preview is not null && index < _preview.Lines.Count
+                                    ? _preview.Lines[index].LineTotal.ToString("N2")
+                                    : "—")
+                            </td>
+                            <td>
+                                @if (_editable)
+                                {
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                                   OnClick="@(() => RemoveLine(index))" />
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (_form.Lines.Count == 0)
+        {
+            <MudText Class="pa-6" Align="Align.Center">
+                Henüz satır yok. "Satır Ekle" ile başla.
+            </MudText>
+        }
+    </MudPaper>
+
+    @* ---------------- TOPLAMLAR ---------------- *@
+    <MudGrid>
+        <MudItem xs="12" md="6">
+            <MudPaper Elevation="1" Class="pa-4" Style="height:100%">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Belge İskontosu</MudText>
+                <MudStack Row Spacing="2">
+                    <MudSelect T="DiscountType" Value="_form.DocumentDiscountType"
+                               ValueChanged="@(v => { _form.DocumentDiscountType = v; Recalculate(); })"
+                               Variant="Variant.Outlined" Margin="Margin.Dense"
+                               Style="max-width:140px" Disabled="@(!_editable)">
+                        <MudSelectItem Value="@DiscountType.None">Yok</MudSelectItem>
+                        <MudSelectItem Value="@DiscountType.Percentage">Yüzde</MudSelectItem>
+                        <MudSelectItem Value="@DiscountType.Amount">Tutar</MudSelectItem>
+                    </MudSelect>
+                    @if (_form.DocumentDiscountType != DiscountType.None)
+                    {
+                        <MudNumericField T="decimal" Value="@DisplayDocDiscount()"
+                                         ValueChanged="SetDocDiscount"
+                                         Variant="Variant.Outlined" Margin="Margin.Dense"
+                                         Min="0m" Format="N2" Style="max-width:160px"
+                                         Disabled="@(!_editable)" />
+                    }
+                </MudStack>
+
+                <MudTextField @bind-Value="_form.Notes" Label="Notlar" Class="mt-4"
+                              Variant="Variant.Outlined" Lines="3" Margin="Margin.Dense"
+                              Disabled="@(!_editable)" />
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudPaper Elevation="1" Class="pa-4">
+                @if (_calcError is not null)
+                {
+                    <MudAlert Severity="Severity.Warning" Dense>@_calcError</MudAlert>
+                }
+                else if (_preview is { } t)
+                {
+                    <MudStack Spacing="1">
+                        <TotalRow Label="Ara Toplam" Value="@t.GrossTotal" />
+                        @if (t.DiscountTotal > 0)
+                        {
+                            <TotalRow Label="İskonto" Value="@(-t.DiscountTotal)" Color="Color.Error" />
+                        }
+                        <TotalRow Label="KDV Matrahı" Value="@t.TaxBaseTotal" />
+                        <TotalRow Label="KDV" Value="@t.TaxTotal" />
+                        @if (t.WithholdingTotal > 0)
+                        {
+                            <TotalRow Label="Tevkifat" Value="@(-t.WithholdingTotal)" Color="Color.Warning" />
+                        }
+                        <MudDivider Class="my-2" />
+                        <TotalRow Label="GENEL TOPLAM" Value="@t.GrandTotal" Bold />
+                    </MudStack>
+                }
+                else
+                {
+                    <MudText Align="Align.Center" Class="pa-4">
+                        Satır ekleyince toplamlar burada hesaplanır.
+                    </MudText>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    private InvoiceForm? _form;
+    private PartyLookupItem? _selectedParty;
+    private List<TaxRateItem> _taxRates = [];
+    private DocumentResult? _preview;
+    private string? _calcError;
+    private string? _number;
+    private bool _editable = true;
+    private bool _busy;
+
+    // MudDatePicker DateTime? ile çalışır, domain DateOnly kullanır
+    private DateTime? _issueDate;
+    private DateTime? _dueDate;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id is null)
+        {
+            _form = new InvoiceForm();
+            _editable = true;
+        }
+        else
+        {
+            _form = await InvoiceService.GetFormAsync(Id.Value);
+            if (_form is null) { Nav.NavigateTo("/faturalar"); return; }
+
+            var list = await InvoiceService.SearchAsync(new InvoiceQuery(PageSize: 1));
+            var current = list.Items.FirstOrDefault(i => i.Id == Id.Value);
+            _number = current?.Number;
+            _editable = current?.Status == InvoiceStatus.Draft;
+
+            _selectedParty = await PartyService.GetLookupAsync(_form.PartyId);
+        }
+
+        _issueDate = _form.IssueDate.ToDateTime(TimeOnly.MinValue);
+        _dueDate = _form.DueDate?.ToDateTime(TimeOnly.MinValue);
+
+        _taxRates = await TaxRateService.GetValidOnAsync(_form.IssueDate);
+        Recalculate();
+    }
+
+    // ------------------------------------------------------------------
+    // Hesaplama — AYNI motor. UI'da ikinci bir hesap YAZMIYORUZ.
+    // Motor Domain'de saf fonksiyon olduğu için burada da çağrılabiliyor;
+    // sunucudaki kayıt ile önizleme birbirinden ayrışamaz.
+    // ------------------------------------------------------------------
+    private void Recalculate()
+    {
+        if (_form is null) return;
+
+        var usable = _form.Lines.Where(l => l.Quantity > 0 && l.UnitPrice >= 0).ToList();
+        if (usable.Count == 0) { _preview = null; _calcError = null; return; }
+
+        try
+        {
+            var inputs = usable
+                .Select(l => new LineInput(l.Quantity, l.UnitPrice, l.DiscountType,
+                                           l.DiscountValue, l.TaxRate, l.WithholdingRate))
+                .ToList();
+
+            _preview = InvoiceCalculator.CalculateDocument(
+                inputs, _form.DocumentDiscountType, _form.DocumentDiscountValue);
+            _calcError = null;
+        }
+        catch (DomainException ex)
+        {
+            _preview = null;
+            _calcError = ex.Message;        // "İskonto tutarı aşıyor" gibi anlık uyarı
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Satır işlemleri
+    // ------------------------------------------------------------------
+    private void AddLine()
+    {
+        var defaultRate = _taxRates.FirstOrDefault(r => r.IsDefault) ?? _taxRates.FirstOrDefault();
+        _form!.Lines.Add(new InvoiceLineForm
+        {
+            Quantity = 1m,
+            TaxRate = defaultRate?.Rate ?? 0m,
+            TaxRateId = defaultRate?.Id
+        });
+        Recalculate();
+    }
+
+    private void RemoveLine(int index)
+    {
+        _form!.Lines.RemoveAt(index);
+        Recalculate();
+    }
+
+    private void ApplyProduct(InvoiceLineForm line, ProductLookupItem? p)
+    {
+        if (p is null) return;
+
+        line.ProductId = p.Id;
+        line.ProductCode = p.Code;
+        line.ProductName = p.Name;          // SNAPSHOT — sonradan değişse fatura değişmez
+        line.Unit = p.Unit;
+        line.UnitPrice = p.UnitPrice;       // önerilen fiyat, kullanıcı değiştirebilir
+        line.TaxRateId = p.TaxRateId;
+        line.TaxRate = p.TaxRate;
+        line.WithholdingRate = p.WithholdingRate;
+
+        Recalculate();
+    }
+
+    private Task<IEnumerable<ProductLookupItem>> SearchProducts(string term, CancellationToken ct)
+        => ProductService.LookupAsync(term, ct).ContinueWith(t => t.Result.AsEnumerable(), ct);
+
+    private Task<IEnumerable<PartyLookupItem>> SearchParties(string term, CancellationToken ct)
+        => PartyService.LookupAsync(term, PartyType.Customer, ct)
+                       .ContinueWith(t => t.Result.AsEnumerable(), ct);
+
+    private void OnPartyChanged(PartyLookupItem? p)
+    {
+        _selectedParty = p;
+        if (p is null || _form is null) return;
+
+        _form.PartyId = p.Id;
+        _form.Currency = p.Currency;
+        // Vade carinin ödeme vadesinden otomatik hesaplanır
+        _dueDate = _form.IssueDate.AddDays(p.PaymentTermDays).ToDateTime(TimeOnly.MinValue);
+    }
+
+    private void OnIssueDateChanged(DateTime? date)
+    {
+        _issueDate = date;
+        if (date is null || _form is null) return;
+
+        _form.IssueDate = DateOnly.FromDateTime(date.Value);
+        if (_selectedParty is not null)
+            _dueDate = _form.IssueDate.AddDays(_selectedParty.PaymentTermDays)
+                                      .ToDateTime(TimeOnly.MinValue);
+    }
+
+    // İskonto: yüzde ise kullanıcıya 10 gösterilir, modelde 0,10 tutulur
+    private static decimal DisplayDiscount(InvoiceLineForm l) =>
+        l.DiscountType == DiscountType.Percentage ? l.DiscountValue * 100m : l.DiscountValue;
+
+    private void SetDiscount(InvoiceLineForm l, decimal shown)
+    {
+        l.DiscountValue = l.DiscountType == DiscountType.Percentage ? shown / 100m : shown;
+        Recalculate();
+    }
+
+    private decimal DisplayDocDiscount() =>
+        _form!.DocumentDiscountType == DiscountType.Percentage
+            ? _form.DocumentDiscountValue * 100m
+            : _form.DocumentDiscountValue;
+
+    private void SetDocDiscount(decimal shown)
+    {
+        _form!.DocumentDiscountValue =
+            _form.DocumentDiscountType == DiscountType.Percentage ? shown / 100m : shown;
+        Recalculate();
+    }
+
+    // ------------------------------------------------------------------
+    // Kaydetme
+    // ------------------------------------------------------------------
+    private bool Prepare()
+    {
+        if (_form is null) return false;
+
+        if (_form.PartyId == Guid.Empty)
+        {
+            Snackbar.Add("Cari seçilmedi.", Severity.Warning);
+            return false;
+        }
+
+        _form.IssueDate = DateOnly.FromDateTime(_issueDate ?? DateTime.Today);
+        _form.DueDate = _dueDate is null ? null : DateOnly.FromDateTime(_dueDate.Value);
+        return true;
+    }
+
+    private async Task SaveDraftAsync()
+    {
+        if (!Prepare()) return;
+
+        _busy = true;
+        Guid savedId = default;
+        var ok = await Snackbar.RunAsync(
+            async () => savedId = await InvoiceService.SaveDraftAsync(_form!),
+            "Taslak kaydedildi.");
+        _busy = false;
+
+        if (ok && Id is null) Nav.NavigateTo($"/faturalar/{savedId}");
+    }
+
+    private async Task IssueAsync()
+    {
+        if (!Prepare()) return;
+
+        var confirmed = await DialogService.ShowMessageBox(
+            "Faturayı Kes",
+            "Fatura kesildikten sonra DEĞİŞTİRİLEMEZ ve SİLİNEMEZ. Devam edilsin mi?",
+            yesText: "Faturayı Kes", cancelText: "Vazgeç");
+
+        if (confirmed != true) return;
+
+        _busy = true;
+        string? number = null;
+        var ok = await Snackbar.RunAsync(async () =>
+        {
+            var savedId = await InvoiceService.SaveDraftAsync(_form!);
+            number = await InvoiceService.IssueAsync(savedId);
+        });
+        _busy = false;
+
+        if (ok)
+        {
+            Snackbar.Add($"Fatura kesildi: {number}", Severity.Success);
+            Nav.NavigateTo("/faturalar");
+        }
+    }
+}

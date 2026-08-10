@@ -19,6 +19,8 @@ public class AppDbContext(
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<InvoiceLine> InvoiceLines => Set<InvoiceLine>();
     public DbSet<InvoiceCounter> InvoiceCounters => Set<InvoiceCounter>();
+    public DbSet<Plan> Plans => Set<Plan>();
+    public DbSet<Subscription> Subscriptions => Set<Subscription>();
 
     /// <summary>
     /// Query filter içinden okunur. EF Core, DbContext ÜYESİNE yapılan erişimi sabit değil
