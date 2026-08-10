@@ -1,9 +1,15 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
+  <!-- Kuruş dağıtımı gibi internal yardımcıları doğrudan test edebilmek için.
+       ⚠️ Buraya ASLA PackageReference eklenmez — Domain saf kalır (ADR-001). -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="NexusErp.Tests" />
+  </ItemGroup>
 
 </Project>

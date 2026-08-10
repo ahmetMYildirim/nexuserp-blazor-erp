@@ -1,0 +1,109 @@
+@page "/urunler"
+@using NexusErp.Application.Products
+@using NexusErp.Domain.Enums
+@inject ProductService ProductService
+
+<PageTitle>Ürün / Hizmet · NexusERP</PageTitle>
+
+<MudStack Row AlignItems="AlignItems.Center" Class="mb-4">
+    <MudText Typo="Typo.h5">Ürün / Hizmet</MudText>
+    <MudSpacer />
+    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+        Düzenleme ekranı Faz 2 — demo kapsamında seed verisi kullanılıyor
+    </MudChip>
+</MudStack>
+
+<MudPaper Elevation="1" Class="pa-4 mb-4">
+    <MudGrid Spacing="2">
+        <MudItem xs="12" md="6">
+            <MudTextField @bind-Value="_search" @bind-Value:after="ReloadAsync"
+                          Label="Ara (kod, ad)" Variant="Variant.Outlined"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="false" DebounceInterval="400" Clearable Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="12" md="3">
+            <MudSelect T="ProductKind?" @bind-Value="_kind" @bind-Value:after="ReloadAsync"
+                       Label="Tür" Variant="Variant.Outlined" Clearable Margin="Margin.Dense">
+                <MudSelectItem T="ProductKind?" Value="@ProductKind.Service">Hizmet</MudSelectItem>
+                <MudSelectItem T="ProductKind?" Value="@ProductKind.Goods">Mal</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudDataGrid T="ProductListItem" @ref="_grid" ServerData="LoadServerData"
+             Dense Hover Striped Elevation="1" RowsPerPage="25" SortMode="SortMode.Single">
+    <Columns>
+        <PropertyColumn Property="x => x.Code" Title="Kod" />
+        <PropertyColumn Property="x => x.Name" Title="Ad" />
+        <TemplateColumn Title="Tür" Sortable="false">
+            <CellTemplate>
+                <MudChip T="string" Size="Size.Small"
+                         Color="@(context.Item.Kind == ProductKind.Goods ? Color.Warning : Color.Info)">
+                    @(context.Item.Kind == ProductKind.Goods ? "Mal" : "Hizmet")
+                </MudChip>
+            </CellTemplate>
+        </TemplateColumn>
+        <PropertyColumn Property="x => x.Unit" Title="Birim" Sortable="false" />
+        @* Para her zaman sağa yaslı — muhasebeciler rakamları alt alta karşılaştırır *@
+        <TemplateColumn Title="Birim Fiyat" Sortable="true" SortBy="x => x.UnitPrice"
+                        HeaderClass="justify-end" CellClass="text-right">
+            <CellTemplate>@context.Item.UnitPrice.ToMoney() @context.Item.Currency</CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="KDV" Sortable="false" CellClass="text-right">
+            <CellTemplate>@context.Item.TaxRate.ToRate()</CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Tevkifat" Sortable="false">
+            <CellTemplate>
+                @if (context.Item.WithholdingRate is not null)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Warning">
+                        @context.Item.WithholdingRate.ToWithholding()
+                    </MudChip>
+                }
+                else
+                {
+                    <span>—</span>
+                }
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Durum" Sortable="false">
+            <CellTemplate>
+                <MudChip T="string" Size="Size.Small"
+                         Color="@(context.Item.IsActive ? Color.Success : Color.Default)">
+                    @(context.Item.IsActive ? "Aktif" : "Pasif")
+                </MudChip>
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <PagerContent>
+        <MudDataGridPager T="ProductListItem" RowsPerPageString="Sayfa başına"
+                          InfoFormat="{first_item}-{last_item} / {all_items}" />
+    </PagerContent>
+    <NoRecordsContent>
+        <MudText Class="pa-6" Align="Align.Center">Kayıt bulunamadı.</MudText>
+    </NoRecordsContent>
+</MudDataGrid>
+
+@code {
+    private MudDataGrid<ProductListItem> _grid = default!;
+    private string? _search;
+    private ProductKind? _kind;
+
+    private async Task<GridData<ProductListItem>> LoadServerData(GridState<ProductListItem> state)
+    {
+        var sort = state.SortDefinitions.FirstOrDefault();
+
+        var result = await ProductService.SearchAsync(new ProductQuery(
+            Search: _search,
+            Kind: _kind,
+            Page: state.Page,
+            PageSize: state.PageSize,
+            SortBy: sort?.SortBy ?? nameof(ProductListItem.Code),
+            Descending: sort?.Descending ?? false));
+
+        return new GridData<ProductListItem> { Items = result.Items, TotalItems = result.TotalCount };
+    }
+
+    private Task ReloadAsync() => _grid.ReloadServerData();
+}
