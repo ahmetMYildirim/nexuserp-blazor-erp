@@ -1,0 +1,24 @@
+{
+  "dotnet.defaultSolution": "NexusErp.sln",
+  "dotnet.completion.showCompletionItemsFromUnimportedNamespaces": true,
+  "dotnet.server.useOmnisharp": false,
+
+  "editor.formatOnSave": true,
+  "editor.rulers": [100],
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+
+  "[csharp]": { "editor.defaultFormatter": "ms-dotnettools.csharp" },
+  "[razor]": { "editor.defaultFormatter": "ms-dotnettools.csharp" },
+
+  "files.exclude": {
+    "**/bin": true,
+    "**/obj": true
+  },
+
+  "search.exclude": {
+    "**/bin": true,
+    "**/obj": true,
+    "**/Migrations/*.Designer.cs": true
+  }
+}

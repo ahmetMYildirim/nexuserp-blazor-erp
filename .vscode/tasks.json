@@ -1,0 +1,64 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build",
+      "command": "dotnet",
+      "type": "process",
+      "args": ["build", "${workspaceFolder}/NexusErp.sln", "/property:GenerateFullPaths=true", "/consoleloggerparameters:NoSummary"],
+      "problemMatcher": "$msCompile",
+      "group": { "kind": "build", "isDefault": true }
+    },
+    {
+      "label": "test",
+      "command": "dotnet",
+      "type": "process",
+      "args": ["test", "${workspaceFolder}/NexusErp.sln"],
+      "problemMatcher": "$msCompile",
+      "group": { "kind": "test", "isDefault": true }
+    },
+    {
+      "label": "docker: veritabanını başlat",
+      "command": "docker",
+      "type": "process",
+      "args": ["compose", "-f", "${workspaceFolder}/docker-compose.yml", "up", "-d"],
+      "problemMatcher": []
+    },
+    {
+      "label": "docker: veritabanını durdur",
+      "command": "docker",
+      "type": "process",
+      "args": ["compose", "-f", "${workspaceFolder}/docker-compose.yml", "down"],
+      "problemMatcher": []
+    },
+    {
+      "label": "ef: migration ekle",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "ef", "migrations", "add", "${input:migrationName}",
+        "--project", "${workspaceFolder}/src/NexusErp.Infrastructure",
+        "--startup-project", "${workspaceFolder}/src/NexusErp.Web"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "ef: veritabanını güncelle",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "ef", "database", "update",
+        "--project", "${workspaceFolder}/src/NexusErp.Infrastructure",
+        "--startup-project", "${workspaceFolder}/src/NexusErp.Web"
+      ],
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "migrationName",
+      "type": "promptString",
+      "description": "Migration adı (örn. AddSubscriptions)"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "NexusERP çalıştır (F5)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/src/NexusErp.Web/bin/Debug/net9.0/NexusErp.Web.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/NexusErp.Web",
+      "stopAtEntry": false,
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+      },
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5283"
+      },
+      "sourceFileMap": { "/Views": "${workspaceFolder}/Views" }
+    },
+    {
+      "name": "Testlere bağlan (debug)",
+      "type": "coreclr",
+      "request": "attach"
+    }
+  ]
+}
