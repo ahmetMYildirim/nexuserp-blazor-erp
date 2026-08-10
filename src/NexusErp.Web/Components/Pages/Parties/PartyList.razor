@@ -1,0 +1,159 @@
+@page "/cariler"
+@using NexusErp.Application.Parties
+@using NexusErp.Domain.Enums
+@inject PartyService PartyService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Cari Kartlar · NexusERP</PageTitle>
+
+<MudStack Row AlignItems="AlignItems.Center" Class="mb-4">
+    <MudText Typo="Typo.h5">Cari Kartlar</MudText>
+    <MudSpacer />
+    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => OpenEditor(null))">
+        Yeni Cari
+    </MudButton>
+</MudStack>
+
+<MudPaper Elevation="1" Class="pa-4 mb-4">
+    <MudGrid Spacing="2">
+        <MudItem xs="12" md="6">
+            <MudTextField @bind-Value="_search" @bind-Value:after="ReloadAsync"
+                          Label="Ara (kod, unvan, VKN)" Variant="Variant.Outlined"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="false" DebounceInterval="400" Clearable Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="6" md="3">
+            <MudSelect T="PartyType?" @bind-Value="_type" @bind-Value:after="ReloadAsync"
+                       Label="Tip" Variant="Variant.Outlined" Clearable Margin="Margin.Dense">
+                <MudSelectItem T="PartyType?" Value="@PartyType.Customer">Müşteri</MudSelectItem>
+                <MudSelectItem T="PartyType?" Value="@PartyType.Supplier">Tedarikçi</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="6" md="3">
+            <MudSelect T="bool?" @bind-Value="_isActive" @bind-Value:after="ReloadAsync"
+                       Label="Durum" Variant="Variant.Outlined" Clearable Margin="Margin.Dense">
+                <MudSelectItem T="bool?" Value="@true">Aktif</MudSelectItem>
+                <MudSelectItem T="bool?" Value="@false">Pasif</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@* ServerData: sayfalama/sıralama/filtre veri tabanında yapılır.
+   Listeyi doğrudan vermek 50.000 carili bir ERP'de uygulamayı öldürür. *@
+<MudDataGrid T="PartyListItem" @ref="_grid" ServerData="LoadServerData"
+             Dense Hover Striped Elevation="1" RowsPerPage="25" SortMode="SortMode.Single">
+    <Columns>
+        <PropertyColumn Property="x => x.Code" Title="Kod" />
+        <PropertyColumn Property="x => x.Title" Title="Ticari Unvan" />
+        <TemplateColumn Title="Tip" Sortable="false">
+            <CellTemplate>
+                @if (context.Item.Type.HasFlag(PartyType.Customer))
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary">Müşteri</MudChip>
+                }
+                @if (context.Item.Type.HasFlag(PartyType.Supplier))
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary">Tedarikçi</MudChip>
+                }
+            </CellTemplate>
+        </TemplateColumn>
+        <PropertyColumn Property="x => x.TaxNumber" Title="VKN / TCKN" Sortable="false" />
+        <PropertyColumn Property="x => x.City" Title="İl" />
+        <PropertyColumn Property="x => x.Phone" Title="Telefon" Sortable="false" />
+        <TemplateColumn Title="Vade" Sortable="true" SortBy="x => x.PaymentTermDays">
+            <CellTemplate>@context.Item.PaymentTermDays gün</CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Durum" Sortable="false">
+            <CellTemplate>
+                <MudChip T="string" Size="Size.Small"
+                         Color="@(context.Item.IsActive ? Color.Success : Color.Default)">
+                    @(context.Item.IsActive ? "Aktif" : "Pasif")
+                </MudChip>
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="" Sortable="false" CellClass="d-flex justify-end">
+            <CellTemplate>
+                <MudTooltip Text="Düzenle">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                   OnClick="@(() => OpenEditor(context.Item.Id))" />
+                </MudTooltip>
+                <MudTooltip Text="@(context.Item.IsActive ? "Pasife al" : "Aktifleştir")">
+                    <MudIconButton Size="Size.Small"
+                                   Icon="@(context.Item.IsActive ? Icons.Material.Filled.Block : Icons.Material.Filled.CheckCircle)"
+                                   OnClick="@(() => ToggleActiveAsync(context.Item))" />
+                </MudTooltip>
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <PagerContent>
+        <MudDataGridPager T="PartyListItem" RowsPerPageString="Sayfa başına"
+                          InfoFormat="{first_item}-{last_item} / {all_items}" />
+    </PagerContent>
+    <NoRecordsContent>
+        <MudText Class="pa-6" Align="Align.Center">Kayıt bulunamadı.</MudText>
+    </NoRecordsContent>
+</MudDataGrid>
+
+@code {
+    private MudDataGrid<PartyListItem> _grid = default!;
+    private string? _search;
+    private PartyType? _type;
+    private bool? _isActive = true;
+
+    private async Task<GridData<PartyListItem>> LoadServerData(GridState<PartyListItem> state)
+    {
+        var sort = state.SortDefinitions.FirstOrDefault();
+
+        var result = await PartyService.SearchAsync(new PartyQuery(
+            Search: _search,
+            Type: _type,
+            IsActive: _isActive,
+            Page: state.Page,
+            PageSize: state.PageSize,
+            SortBy: sort?.SortBy ?? nameof(PartyListItem.Code),
+            Descending: sort?.Descending ?? false));
+
+        return new GridData<PartyListItem> { Items = result.Items, TotalItems = result.TotalCount };
+    }
+
+    private Task ReloadAsync() => _grid.ReloadServerData();
+
+    private async Task OpenEditor(Guid? id)
+    {
+        var parameters = new DialogParameters<PartyEditor> { { x => x.PartyId, id } };
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseButton = true,
+            BackdropClick = false
+        };
+
+        var dialog = await DialogService.ShowAsync<PartyEditor>(
+            id is null ? "Yeni Cari Kart" : "Cari Kart Düzenle", parameters, options);
+
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+            await ReloadAsync();
+    }
+
+    private async Task ToggleActiveAsync(PartyListItem item)
+    {
+        var target = !item.IsActive;
+        var action = target ? "aktifleştirilsin" : "pasife alınsın";
+
+        var confirmed = await DialogService.ShowMessageBox(
+            "Onay", $"'{item.Title}' {action} mı?", yesText: "Evet", cancelText: "Vazgeç");
+
+        if (confirmed != true) return;
+
+        var ok = await Snackbar.RunAsync(
+            () => PartyService.SetActiveAsync(item.Id, target),
+            target ? "Cari aktifleştirildi." : "Cari pasife alındı.");
+
+        if (ok) await ReloadAsync();
+    }
+}

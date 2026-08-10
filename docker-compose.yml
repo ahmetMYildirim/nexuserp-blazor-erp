@@ -7,8 +7,11 @@ services:
       POSTGRES_DB: nexuserp
       POSTGRES_USER: nexus
       POSTGRES_PASSWORD: nexus_dev_2026
-      # Türkçe sıralama ve karakter desteği ("İstanbul Ltd." doğru yere sıralansın)
-      POSTGRES_INITDB_ARGS: "--locale=tr_TR.UTF-8 --encoding=UTF8"
+      # Türkçe sıralama ve büyük/küçük harf dönüşümü.
+      # ⚠️ --locale=tr_TR.UTF-8 TEK BAŞINA YETMEZ: alpine musl libc'de bu etiket kabul
+      # edilir ama davranış C locale'dir (upper('istanbul') → 'ISTANBUL', 'İSTANBUL' değil).
+      # ICU sağlayıcısı gerçek Türkçe kurallarını uygular; ILIKE ve ORDER BY doğru çalışır.
+      POSTGRES_INITDB_ARGS: "--locale-provider=icu --icu-locale=tr-TR --locale=C.UTF-8 --encoding=UTF8"
     ports:
       - "5433:5432"        # 5433 → yerelde başka postgres varsa çakışmasın
     volumes:

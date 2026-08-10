@@ -18,11 +18,15 @@
 
     <ImportMap />
     <link rel="icon" type="image/png" href="favicon.png" />
-    <HeadOutlet />
+    <HeadOutlet @rendermode="InteractiveServer" />
 </head>
 
 <body>
-    <Routes />
+    @* GLOBAL render mode. Sayfa başına @rendermode yazmak YETMEZ:
+       .NET 8+ Blazor Web App'te layout statik kalır, MudBlazor'ın provider'ları
+       (Popover/Dialog/Snackbar) interaktif ağaca girmez ve
+       "Missing <MudPopoverProvider />" hatası alırsın. *@
+    <Routes @rendermode="InteractiveServer" />
     <script src="_framework/blazor.web.js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
 </body>
