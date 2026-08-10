@@ -27,7 +27,12 @@ public sealed class InvoiceNumberGenerator(AppDbContext db, ITenantContext tenan
         // ⚠️ AS "Value" çift tırnaklı olmak ZORUNDA: EF Core'un SqlQuery<T> metodu
         // skaler tipler için kolonun "Value" adında olmasını bekler; tırnaksız
         // yazarsan PostgreSQL kolonu "value" yapar ve EF bulamaz.
-        var sequence = await db.Database
+        // ⚠️ ToListAsync — SingleAsync/FirstAsync DEĞİL.
+        // Bu LINQ operatörleri sorguyu alt sorgu içine sarar ("SELECT ... FROM (...) LIMIT 2")
+        // ama INSERT ... RETURNING "composable" değildir; EF Core şu hatayı verir:
+        // "'FromSql' or 'SqlQuery' was called with non-composable SQL".
+        // ToListAsync sarmalamadan doğrudan çalıştırır.
+        var rows = await db.Database
             .SqlQuery<long>($"""
                 INSERT INTO invoice_counters
                     (id, tenant_id, series, year, last_number,
@@ -38,8 +43,9 @@ public sealed class InvoiceNumberGenerator(AppDbContext db, ITenantContext tenan
                 DO UPDATE SET last_number = invoice_counters.last_number + 1
                 RETURNING last_number AS "Value"
                 """)
-            .SingleAsync(ct);
+            .ToListAsync(ct);
 
+        var sequence = rows[0];
         return ($"{series}{year}{sequence:D9}", sequence);
     }
 }

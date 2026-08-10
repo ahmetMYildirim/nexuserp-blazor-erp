@@ -35,6 +35,14 @@ public class AppDbContext(
         {
             var clr = entityType.ClrType;
 
+            // ⚠️ Anahtarları BİZ üretiyoruz (AuditableEntity: Guid.CreateVersion7()).
+            // EF Core, Guid PK'yı konvansiyon gereği ValueGeneratedOnAdd sayar; dolu bir
+            // anahtarla karşılaşınca "bu kayıt zaten var" varsayıp entity'yi Added yerine
+            // MODIFIED işaretler. Sonuç: yeni satırlar INSERT değil UPDATE edilir ve
+            // "0 row(s) affected" concurrency hatası alınır.
+            if (typeof(AuditableEntity).IsAssignableFrom(clr))
+                modelBuilder.Entity(clr).Property(nameof(AuditableEntity.Id)).ValueGeneratedNever();
+
             // EF Core 9'da entity başına TEK query filter olur — tenant ve soft delete birlikte
             if (typeof(ITenantScoped).IsAssignableFrom(clr))
                 TenantFilterMethod.MakeGenericMethod(clr).Invoke(null, [modelBuilder, this]);

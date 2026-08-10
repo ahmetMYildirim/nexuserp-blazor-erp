@@ -35,10 +35,16 @@ public sealed class DatabaseFixture : IAsyncLifetime
 
     public AppDbContext CreateContext(Guid tenantId)
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        var builder = new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql(ConnectionString)
-            .UseSnakeCaseNamingConvention()
-            .Options;
+            .UseSnakeCaseNamingConvention();
+
+        if (Environment.GetEnvironmentVariable("NEXUS_SQL_LOG") is { Length: > 0 } path)
+            builder.LogTo(line => File.AppendAllText(path, line + Environment.NewLine),
+                          Microsoft.Extensions.Logging.LogLevel.Information)
+                   .EnableSensitiveDataLogging();
+
+        var options = builder.Options;
 
         return new AppDbContext(options, new FakeTenant(tenantId), new FakeUser());
     }
