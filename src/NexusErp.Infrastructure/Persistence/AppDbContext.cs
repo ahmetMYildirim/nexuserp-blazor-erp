@@ -16,6 +16,9 @@ public class AppDbContext(
     public DbSet<Party> Parties => Set<Party>();
     public DbSet<TaxRate> TaxRates => Set<TaxRate>();
     public DbSet<Product> Products => Set<Product>();
+    public DbSet<Invoice> Invoices => Set<Invoice>();
+    public DbSet<InvoiceLine> InvoiceLines => Set<InvoiceLine>();
+    public DbSet<InvoiceCounter> InvoiceCounters => Set<InvoiceCounter>();
 
     /// <summary>
     /// Query filter içinden okunur. EF Core, DbContext ÜYESİNE yapılan erişimi sabit değil

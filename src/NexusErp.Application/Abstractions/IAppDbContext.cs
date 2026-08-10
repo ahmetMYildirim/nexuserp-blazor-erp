@@ -21,6 +21,8 @@ public interface IAppDbContext
     DbSet<Party> Parties { get; }
     DbSet<TaxRate> TaxRates { get; }
     DbSet<Product> Products { get; }
+    DbSet<Invoice> Invoices { get; }
+    DbSet<InvoiceLine> InvoiceLines { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 

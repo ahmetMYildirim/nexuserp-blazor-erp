@@ -1,0 +1,229 @@
+@page "/faturalar"
+@using NexusErp.Application.Invoicing
+@using NexusErp.Domain.Enums
+@inject InvoiceService InvoiceService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>Faturalar · NexusERP</PageTitle>
+
+<MudStack Row AlignItems="AlignItems.Center" Class="mb-4">
+    <MudText Typo="Typo.h5">Faturalar</MudText>
+    <MudSpacer />
+    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Add" Href="/faturalar/yeni">
+        Yeni Fatura
+    </MudButton>
+</MudStack>
+
+<MudPaper Elevation="1" Class="pa-4 mb-4">
+    <MudGrid Spacing="2">
+        <MudItem xs="12" md="5">
+            <MudTextField @bind-Value="_search" @bind-Value:after="ReloadAsync"
+                          Label="Ara (fatura no, cari)" Variant="Variant.Outlined"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="false" DebounceInterval="400" Clearable Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="6" md="3">
+            <MudSelect T="InvoiceStatus?" @bind-Value="_status" @bind-Value:after="ReloadAsync"
+                       Label="Durum" Variant="Variant.Outlined" Clearable Margin="Margin.Dense">
+                <MudSelectItem T="InvoiceStatus?" Value="@InvoiceStatus.Draft">Taslak</MudSelectItem>
+                <MudSelectItem T="InvoiceStatus?" Value="@InvoiceStatus.Issued">Kesildi</MudSelectItem>
+                <MudSelectItem T="InvoiceStatus?" Value="@InvoiceStatus.PartiallyPaid">Kısmi Tahsil</MudSelectItem>
+                <MudSelectItem T="InvoiceStatus?" Value="@InvoiceStatus.Paid">Tahsil Edildi</MudSelectItem>
+                <MudSelectItem T="InvoiceStatus?" Value="@InvoiceStatus.Cancelled">İptal</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="6" md="4" Class="d-flex align-center">
+            <MudSwitch @bind-Value="_onlyOverdue" @bind-Value:after="ReloadAsync"
+                       Color="Color.Error" Label="Sadece vadesi geçenler" />
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudDataGrid T="InvoiceListItem" @ref="_grid" ServerData="LoadServerData"
+             Dense Hover Striped Elevation="1" RowsPerPage="25" SortMode="SortMode.Single">
+    <Columns>
+        <TemplateColumn Title="Fatura No" Sortable="true" SortBy="x => x.Number">
+            <CellTemplate>
+                @if (context.Item.Number is null)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default">TASLAK</MudChip>
+                }
+                else
+                {
+                    <span style="font-family:Consolas,monospace">@context.Item.Number</span>
+                }
+            </CellTemplate>
+        </TemplateColumn>
+        <PropertyColumn Property="x => x.PartyTitle" Title="Cari" />
+        <TemplateColumn Title="Tip" Sortable="false">
+            <CellTemplate>@TypeText(context.Item.Type)</CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Tarih" Sortable="true" SortBy="x => x.IssueDate">
+            <CellTemplate>@context.Item.IssueDate.ToString("dd.MM.yyyy")</CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Vade" Sortable="true" SortBy="x => x.DueDate">
+            <CellTemplate>
+                <MudText Typo="Typo.body2"
+                         Color="@(context.Item.IsOverdue ? Color.Error : Color.Inherit)">
+                    @context.Item.DueDate.ToString("dd.MM.yyyy")
+                </MudText>
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Genel Toplam" Sortable="true" SortBy="x => x.GrandTotal"
+                        HeaderClass="justify-end" CellClass="text-right">
+            <CellTemplate>@context.Item.GrandTotal.ToMoney() @context.Item.Currency</CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Kalan" Sortable="false" CellClass="text-right">
+            <CellTemplate>@context.Item.RemainingAmount.ToMoney(dashOnZero: true)</CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Durum" Sortable="false">
+            <CellTemplate>
+                <MudChip T="string" Size="Size.Small" Color="@StatusColor(context.Item.Status)">
+                    @StatusText(context.Item.Status)
+                </MudChip>
+                @if (context.Item.SubscriptionId is not null)
+                {
+                    <MudTooltip Text="Abonelikten otomatik üretildi">
+                        <MudIcon Icon="@Icons.Material.Filled.Autorenew" Size="Size.Small" />
+                    </MudTooltip>
+                }
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="" Sortable="false" CellClass="d-flex justify-end">
+            <CellTemplate>
+                <MudTooltip Text="@(context.Item.Status == InvoiceStatus.Draft ? "Düzenle" : "Görüntüle")">
+                    <MudIconButton Size="Size.Small"
+                                   Icon="@(context.Item.Status == InvoiceStatus.Draft ? Icons.Material.Filled.Edit : Icons.Material.Filled.Visibility)"
+                                   Href="@($"/faturalar/{context.Item.Id}")" />
+                </MudTooltip>
+                @if (context.Item.Status == InvoiceStatus.Draft)
+                {
+                    <MudTooltip Text="Faturayı kes">
+                        <MudIconButton Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
+                                       Color="Color.Success"
+                                       OnClick="@(() => IssueAsync(context.Item))" />
+                    </MudTooltip>
+                    <MudTooltip Text="Sil">
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                       OnClick="@(() => DeleteAsync(context.Item))" />
+                    </MudTooltip>
+                }
+                else if (context.Item.Status != InvoiceStatus.Cancelled)
+                {
+                    <MudTooltip Text="İptal et">
+                        <MudIconButton Icon="@Icons.Material.Filled.Block" Size="Size.Small"
+                                       OnClick="@(() => CancelAsync(context.Item))" />
+                    </MudTooltip>
+                }
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <PagerContent>
+        <MudDataGridPager T="InvoiceListItem" RowsPerPageString="Sayfa başına"
+                          InfoFormat="{first_item}-{last_item} / {all_items}" />
+    </PagerContent>
+    <NoRecordsContent>
+        <MudText Class="pa-6" Align="Align.Center">Kayıt bulunamadı.</MudText>
+    </NoRecordsContent>
+</MudDataGrid>
+
+@code {
+    private MudDataGrid<InvoiceListItem> _grid = default!;
+    private string? _search;
+    private InvoiceStatus? _status;
+    private bool _onlyOverdue;
+
+    private async Task<GridData<InvoiceListItem>> LoadServerData(GridState<InvoiceListItem> state)
+    {
+        var sort = state.SortDefinitions.FirstOrDefault();
+
+        var result = await InvoiceService.SearchAsync(new InvoiceQuery(
+            Search: _search,
+            Status: _status,
+            OnlyOverdue: _onlyOverdue,
+            Page: state.Page,
+            PageSize: state.PageSize,
+            SortBy: sort?.SortBy ?? nameof(InvoiceListItem.IssueDate),
+            Descending: sort?.Descending ?? true));
+
+        return new GridData<InvoiceListItem> { Items = result.Items, TotalItems = result.TotalCount };
+    }
+
+    private Task ReloadAsync() => _grid.ReloadServerData();
+
+    private async Task IssueAsync(InvoiceListItem item)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Faturayı Kes",
+            "Fatura kesildikten sonra DEĞİŞTİRİLEMEZ ve SİLİNEMEZ. Devam edilsin mi?",
+            yesText: "Faturayı Kes", cancelText: "Vazgeç");
+
+        if (confirmed != true) return;
+
+        string? number = null;
+        var ok = await Snackbar.RunAsync(
+            async () => number = await InvoiceService.IssueAsync(item.Id));
+
+        if (ok)
+        {
+            Snackbar.Add($"Fatura kesildi: {number}", Severity.Success);
+            await ReloadAsync();
+        }
+    }
+
+    private async Task CancelAsync(InvoiceListItem item)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Faturayı İptal Et", $"{item.Number} numaralı fatura iptal edilsin mi?",
+            yesText: "İptal Et", cancelText: "Vazgeç");
+
+        if (confirmed != true) return;
+
+        if (await Snackbar.RunAsync(() => InvoiceService.CancelAsync(item.Id), "Fatura iptal edildi."))
+            await ReloadAsync();
+    }
+
+    private async Task DeleteAsync(InvoiceListItem item)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Taslağı Sil", "Bu taslak fatura silinsin mi?",
+            yesText: "Sil", cancelText: "Vazgeç");
+
+        if (confirmed != true) return;
+
+        if (await Snackbar.RunAsync(() => InvoiceService.DeleteDraftAsync(item.Id), "Taslak silindi."))
+            await ReloadAsync();
+    }
+
+    private static string TypeText(InvoiceType t) => t switch
+    {
+        InvoiceType.Sales => "Satış",
+        InvoiceType.SalesReturn => "İade",
+        InvoiceType.Proforma => "Proforma",
+        InvoiceType.Purchase => "Alış",
+        _ => "?"
+    };
+
+    private static string StatusText(InvoiceStatus s) => s switch
+    {
+        InvoiceStatus.Draft => "Taslak",
+        InvoiceStatus.Issued => "Kesildi",
+        InvoiceStatus.PartiallyPaid => "Kısmi Tahsil",
+        InvoiceStatus.Paid => "Tahsil Edildi",
+        InvoiceStatus.Cancelled => "İptal",
+        _ => "?"
+    };
+
+    private static Color StatusColor(InvoiceStatus s) => s switch
+    {
+        InvoiceStatus.Draft => Color.Default,
+        InvoiceStatus.Issued => Color.Info,
+        InvoiceStatus.PartiallyPaid => Color.Warning,
+        InvoiceStatus.Paid => Color.Success,
+        InvoiceStatus.Cancelled => Color.Error,
+        _ => Color.Default
+    };
+}

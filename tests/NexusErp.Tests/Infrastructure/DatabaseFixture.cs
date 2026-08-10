@@ -43,6 +43,9 @@ public sealed class DatabaseFixture : IAsyncLifetime
         return new AppDbContext(options, new FakeTenant(tenantId), new FakeUser());
     }
 
+    /// <summary>InvoiceNumberGenerator gibi ITenantContext isteyen servisler için.</summary>
+    public ITenantContext CreateTenantContext(Guid tenantId) => new FakeTenant(tenantId);
+
     private sealed class FakeTenant(Guid id) : ITenantContext
     {
         public Guid TenantId { get; private set; } = id;
