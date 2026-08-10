@@ -1,10 +1,13 @@
 @page "/faturalar"
+@using NexusErp.Application.Abstractions
 @using NexusErp.Application.Invoicing
 @using NexusErp.Domain.Enums
 @inject InvoiceService InvoiceService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
+@inject IInvoicePdfGenerator PdfGenerator
+@inject IJSRuntime JS
 
 <PageTitle>Faturalar · NexusERP</PageTitle>
 
@@ -94,6 +97,13 @@
         </TemplateColumn>
         <TemplateColumn Title="" Sortable="false" CellClass="d-flex justify-end">
             <CellTemplate>
+                @if (context.Item.Number is not null)
+                {
+                    <MudTooltip Text="PDF indir">
+                        <MudIconButton Icon="@Icons.Material.Filled.PictureAsPdf" Size="Size.Small"
+                                       OnClick="@(() => DownloadPdfAsync(context.Item))" />
+                    </MudTooltip>
+                }
                 <MudTooltip Text="@(context.Item.Status == InvoiceStatus.Draft ? "Düzenle" : "Görüntüle")">
                     <MudIconButton Size="Size.Small"
                                    Icon="@(context.Item.Status == InvoiceStatus.Draft ? Icons.Material.Filled.Edit : Icons.Material.Filled.Visibility)"
@@ -196,6 +206,13 @@
 
         if (await Snackbar.RunAsync(() => InvoiceService.DeleteDraftAsync(item.Id), "Taslak silindi."))
             await ReloadAsync();
+    }
+
+    private async Task DownloadPdfAsync(InvoiceListItem item)
+    {
+        var bytes = await PdfGenerator.GenerateAsync(item.Id);
+        await JS.InvokeVoidAsync("downloadFile", $"{item.Number}.pdf",
+                                 "application/pdf", Convert.ToBase64String(bytes));
     }
 
     private static string TypeText(InvoiceType t) => t switch

@@ -1,0 +1,104 @@
+@page "/cari-ekstre"
+@using NexusErp.Application.Parties
+@using NexusErp.Application.Payments
+@using NexusErp.Domain.Enums
+@inject PartyService PartyService
+@inject PartyBalanceService BalanceService
+
+<PageTitle>Cari Ekstre · NexusERP</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-4">Cari Ekstre</MudText>
+
+<MudPaper Elevation="1" Class="pa-4 mb-4">
+    <MudGrid Spacing="2">
+        <MudItem xs="12" md="5">
+            <MudAutocomplete T="PartyLookupItem" Label="Cari" Value="_party"
+                             SearchFunc="SearchParties" ToStringFunc="@(p => p?.ToString() ?? "")"
+                             ValueChanged="OnPartyChanged" Variant="Variant.Outlined"
+                             Margin="Margin.Dense" ResetValueOnEmptyText CoerceText />
+        </MudItem>
+        <MudItem xs="6" md="3">
+            <MudDatePicker Label="Başlangıç" Date="_from" DateChanged="OnFromChanged"
+                           Variant="Variant.Outlined" Margin="Margin.Dense" DateFormat="dd.MM.yyyy" />
+        </MudItem>
+        <MudItem xs="6" md="3">
+            <MudDatePicker Label="Bitiş" Date="_to" DateChanged="OnToChanged"
+                           Variant="Variant.Outlined" Margin="Margin.Dense" DateFormat="dd.MM.yyyy" />
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@if (_party is null)
+{
+    <MudAlert Severity="Severity.Info">Ekstresini görmek istediğiniz cariyi seçin.</MudAlert>
+}
+else
+{
+    <MudGrid Class="mb-4">
+        <MudItem xs="12" md="4">
+            <StatCard Title="Güncel Bakiye" Value="@Math.Abs(_balance).ToMoney()" Suffix="₺"
+                      Hint="@(_balance >= 0 ? "Müşteri bize borçlu" : "Biz müşteriye borçluyuz (avans)")"
+                      Icon="@Icons.Material.Filled.AccountBalance"
+                      Color="@(_balance > 0 ? Color.Error : Color.Success)" />
+        </MudItem>
+    </MudGrid>
+
+    <MudSimpleTable Dense Hover Bordered Elevation="1">
+        <thead>
+            <tr>
+                <th>Tarih</th><th>Açıklama</th><th>Belge No</th>
+                <th class="text-right">Borç</th>
+                <th class="text-right">Alacak</th>
+                <th class="text-right">Bakiye</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var r in _rows)
+            {
+                <tr>
+                    <td>@r.Date.ToString("dd.MM.yyyy")</td>
+                    <td>@r.Description</td>
+                    <td style="font-family:Consolas,monospace">@r.DocumentNumber</td>
+                    <td class="text-right">@Dash(r.Debit)</td>
+                    <td class="text-right">@Dash(r.Credit)</td>
+                    <td class="text-right" style="font-weight:600">@r.Balance.ToString("N2")</td>
+                </tr>
+            }
+        </tbody>
+    </MudSimpleTable>
+}
+
+@code {
+    private PartyLookupItem? _party;
+    private IReadOnlyList<StatementRow> _rows = [];
+    private decimal _balance;
+
+    private DateTime? _from = new DateTime(DateTime.Today.Year, 1, 1);
+    private DateTime? _to = DateTime.Today;
+
+    private Task<IEnumerable<PartyLookupItem>> SearchParties(string term, CancellationToken ct)
+        => PartyService.LookupAsync(term, PartyType.Both, ct)
+                       .ContinueWith(t => t.Result.AsEnumerable(), ct);
+
+    private async Task OnPartyChanged(PartyLookupItem? p)
+    {
+        _party = p;
+        await LoadAsync();
+    }
+
+    private async Task OnFromChanged(DateTime? d) { _from = d; await LoadAsync(); }
+    private async Task OnToChanged(DateTime? d) { _to = d; await LoadAsync(); }
+
+    private async Task LoadAsync()
+    {
+        if (_party is null) return;
+
+        var from = DateOnly.FromDateTime(_from ?? new DateTime(DateTime.Today.Year, 1, 1));
+        var to = DateOnly.FromDateTime(_to ?? DateTime.Today);
+
+        _rows = await BalanceService.GetStatementAsync(_party.Id, from, to);
+        _balance = await BalanceService.GetBalanceAsync(_party.Id);
+    }
+
+    private static string Dash(decimal v) => v == 0 ? "—" : v.ToString("N2");
+}

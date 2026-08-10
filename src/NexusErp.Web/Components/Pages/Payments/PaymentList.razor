@@ -1,0 +1,135 @@
+@page "/tahsilatlar"
+@using NexusErp.Application.Parties
+@using NexusErp.Application.Payments
+@using NexusErp.Domain.Enums
+@inject PaymentService PaymentService
+@inject PartyService PartyService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Tahsilatlar · NexusERP</PageTitle>
+
+<MudStack Row AlignItems="AlignItems.Center" Class="mb-4">
+    <MudText Typo="Typo.h5">Tahsilatlar</MudText>
+    <MudSpacer />
+    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Add" OnClick="OpenEditor">
+        Yeni Tahsilat
+    </MudButton>
+</MudStack>
+
+<MudPaper Elevation="1" Class="pa-4 mb-4">
+    <MudTextField @bind-Value="_search" @bind-Value:after="LoadAsync"
+                  Label="Ara (tahsilat no, cari)" Variant="Variant.Outlined"
+                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                  Immediate="false" DebounceInterval="400" Clearable Margin="Margin.Dense"
+                  Style="max-width:480px" />
+</MudPaper>
+
+<MudDataGrid T="PaymentListItem" Items="_items" Dense Hover Striped Elevation="1">
+    <Columns>
+        <TemplateColumn Title="Tahsilat No">
+            <CellTemplate>
+                <span style="font-family:Consolas,monospace">@context.Item.Number</span>
+            </CellTemplate>
+        </TemplateColumn>
+        <PropertyColumn Property="x => x.PartyTitle" Title="Cari" />
+        <TemplateColumn Title="Tarih">
+            <CellTemplate>@context.Item.PaymentDate.ToString("dd.MM.yyyy")</CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Yöntem">
+            <CellTemplate>@MethodText(context.Item.Method)</CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Tutar" CellClass="text-right">
+            <CellTemplate>@context.Item.Amount.ToMoney() @context.Item.Currency</CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Eşleşen" CellClass="text-right">
+            <CellTemplate>@context.Item.AllocatedAmount.ToMoney()</CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Avans" CellClass="text-right">
+            <CellTemplate>
+                @if (context.Item.UnallocatedAmount > 0)
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Info">
+                        @context.Item.UnallocatedAmount.ToMoney()
+                    </MudText>
+                }
+                else
+                {
+                    <span>—</span>
+                }
+            </CellTemplate>
+        </TemplateColumn>
+        <PropertyColumn Property="x => x.Reference" Title="Referans" />
+        <TemplateColumn Title="Durum">
+            <CellTemplate>
+                <MudChip T="string" Size="Size.Small"
+                         Color="@(context.Item.IsCancelled ? Color.Error : Color.Success)">
+                    @(context.Item.IsCancelled ? "İptal" : "Geçerli")
+                </MudChip>
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="" CellClass="d-flex justify-end">
+            <CellTemplate>
+                @if (!context.Item.IsCancelled)
+                {
+                    <MudTooltip Text="İptal et (ters kayıt yazılır)">
+                        <MudIconButton Icon="@Icons.Material.Filled.Undo" Size="Size.Small"
+                                       OnClick="@(() => CancelAsync(context.Item))" />
+                    </MudTooltip>
+                }
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <NoRecordsContent>
+        <MudText Class="pa-6" Align="Align.Center">Tahsilat bulunamadı.</MudText>
+    </NoRecordsContent>
+</MudDataGrid>
+
+@code {
+    private IReadOnlyList<PaymentListItem> _items = [];
+    private string? _search;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+        => _items = (await PaymentService.SearchAsync(_search)).Items;
+
+    private async Task OpenEditor()
+    {
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true, BackdropClick = false
+        };
+
+        var dialog = await DialogService.ShowAsync<PaymentEditor>("Yeni Tahsilat", options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false }) await LoadAsync();
+    }
+
+    private async Task CancelAsync(PaymentListItem item)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Tahsilatı İptal Et",
+            $"{item.Number} iptal edilsin mi? Eşleştirmeler çözülür ve ters kayıt yazılır " +
+            "(kayıt silinmez, muhasebe izi korunur).",
+            yesText: "İptal Et", cancelText: "Vazgeç");
+
+        if (confirmed != true) return;
+
+        if (await Snackbar.RunAsync(() => PaymentService.CancelAsync(item.Id),
+                                    "Tahsilat iptal edildi, ters kayıt yazıldı."))
+            await LoadAsync();
+    }
+
+    private static string MethodText(PaymentMethod m) => m switch
+    {
+        PaymentMethod.Cash => "Nakit",
+        PaymentMethod.BankTransfer => "Havale/EFT",
+        PaymentMethod.CreditCard => "Kredi Kartı",
+        PaymentMethod.Cheque => "Çek",
+        PaymentMethod.PromissoryNote => "Senet",
+        _ => "Diğer"
+    };
+}

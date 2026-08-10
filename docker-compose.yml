@@ -39,5 +39,28 @@ services:
       postgres:
         condition: service_healthy
 
+  # Uygulamayı da container'da çalıştırmak için:
+  #   docker compose --profile full up -d --build
+  # Geliştirmede uygulamayı "dotnet run" ile çalıştırdığımız için varsayılan olarak kapalı.
+  app:
+    profiles: ["full"]
+    build:
+      context: .
+      dockerfile: src/NexusErp.Web/Dockerfile
+    container_name: nexuserp-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: 8080
+      # ⚠️ Host=postgres — container ağı içinden SERVİS ADIYLA erişilir,
+      # localhost:5433 DEĞİL (o dışarıdan erişim portu).
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=nexuserp;Username=nexus;Password=nexus_dev_2026"
+      Tenant__DefaultTenantId: "0195c8f0-0000-7000-8000-000000000001"
+    ports:
+      - "8080:8080"
+
 volumes:
   nexuserp-data:

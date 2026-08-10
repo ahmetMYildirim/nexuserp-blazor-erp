@@ -25,6 +25,9 @@ public interface IAppDbContext
     DbSet<InvoiceLine> InvoiceLines { get; }
     DbSet<Plan> Plans { get; }
     DbSet<Subscription> Subscriptions { get; }
+    DbSet<Payment> Payments { get; }
+    DbSet<PaymentAllocation> PaymentAllocations { get; }
+    DbSet<PartyLedgerEntry> PartyLedgerEntries { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 

@@ -1,0 +1,90 @@
+@page "/yaslandirma"
+@using NexusErp.Application.Abstractions
+@using NexusErp.Application.Payments
+@inject PartyBalanceService BalanceService
+@inject IJSRuntime JS
+@inject IExcelExporter Excel
+
+<PageTitle>Yaşlandırma Raporu · NexusERP</PageTitle>
+
+<MudStack Row AlignItems="AlignItems.Center" Class="mb-4">
+    <div>
+        <MudText Typo="Typo.h5">Cari Yaşlandırma Raporu</MudText>
+        <MudText Typo="Typo.caption">
+            Tahsil edilmemiş alacakların gecikme süresine göre dağılımı
+        </MudText>
+    </div>
+    <MudSpacer />
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Download"
+               Disabled="@(_rows.Count == 0)" OnClick="ExportAsync">
+        Excel'e Aktar
+    </MudButton>
+</MudStack>
+
+@if (_rows.Count == 0)
+{
+    <MudAlert Severity="Severity.Info">Açık alacak bulunmuyor.</MudAlert>
+}
+else
+{
+    <MudGrid Class="mb-4">
+        <MudItem xs="6" md="2"><MiniStat Label="Vadesi Gelmemiş" Value="@Fmt(_rows.Sum(r => r.NotDue))" Icon="@Icons.Material.Filled.Schedule" Color="Color.Default" /></MudItem>
+        <MudItem xs="6" md="2"><MiniStat Label="1–30 Gün" Value="@Fmt(_rows.Sum(r => r.Days1To30))" Icon="@Icons.Material.Filled.Timelapse" Color="Color.Info" /></MudItem>
+        <MudItem xs="6" md="2"><MiniStat Label="31–60 Gün" Value="@Fmt(_rows.Sum(r => r.Days31To60))" Icon="@Icons.Material.Filled.Timelapse" Color="Color.Warning" /></MudItem>
+        <MudItem xs="6" md="2"><MiniStat Label="61–90 Gün" Value="@Fmt(_rows.Sum(r => r.Days61To90))" Icon="@Icons.Material.Filled.Timelapse" Color="Color.Warning" /></MudItem>
+        <MudItem xs="6" md="2"><MiniStat Label="90+ Gün" Value="@Fmt(_rows.Sum(r => r.Over90))" Icon="@Icons.Material.Filled.PriorityHigh" Color="Color.Error" /></MudItem>
+        <MudItem xs="6" md="2"><MiniStat Label="TOPLAM" Value="@Fmt(_rows.Sum(r => r.Total))" Icon="@Icons.Material.Filled.Functions" Color="Color.Primary" /></MudItem>
+    </MudGrid>
+
+    <MudDataGrid T="AgingRow" Items="_rows" Dense Hover Bordered Elevation="1">
+        <Columns>
+            <PropertyColumn Property="x => x.PartyTitle" Title="Cari" />
+            <TemplateColumn Title="Vadesi Gelmemiş" HeaderClass="justify-end" CellClass="text-right">
+                <CellTemplate>@Dash(context.Item.NotDue)</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="1–30 Gün" HeaderClass="justify-end" CellClass="text-right">
+                <CellTemplate>@Dash(context.Item.Days1To30)</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="31–60 Gün" HeaderClass="justify-end" CellClass="text-right">
+                <CellTemplate>@Dash(context.Item.Days31To60)</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="61–90 Gün" HeaderClass="justify-end" CellClass="text-right">
+                <CellTemplate>@Dash(context.Item.Days61To90)</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="90+ Gün" HeaderClass="justify-end" CellClass="text-right">
+                <CellTemplate>
+                    <MudText Typo="Typo.body2"
+                             Color="@(context.Item.Over90 > 0 ? Color.Error : Color.Inherit)">
+                        @Dash(context.Item.Over90)
+                    </MudText>
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Toplam" HeaderClass="justify-end"
+                            CellClass="text-right font-weight-bold">
+                <CellTemplate>@Dash(context.Item.Total)</CellTemplate>
+            </TemplateColumn>
+        </Columns>
+    </MudDataGrid>
+}
+
+@code {
+    private IReadOnlyList<AgingRow> _rows = [];
+    private static DateOnly Today => DateOnly.FromDateTime(DateTime.Today);
+
+    protected override async Task OnInitializedAsync()
+        => _rows = await BalanceService.GetAgingAsync(Today);
+
+    // Sıfırları "—" göstermek tabloyu okunabilir kılar; ekran sıfır dolu olunca
+    // gerçek rakamlar kaybolur. Muhasebe raporlarının standardı.
+    private static string Dash(decimal v) => v == 0 ? "—" : v.ToString("N2");
+    private static string Fmt(decimal v) => v.ToString("N2") + " ₺";
+
+    private async Task ExportAsync()
+    {
+        var bytes = Excel.ExportAging(_rows, Today);
+        await JS.InvokeVoidAsync("downloadFile",
+            $"Yaslandirma-{Today:yyyy-MM-dd}.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            Convert.ToBase64String(bytes));
+    }
+}

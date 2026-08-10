@@ -11,6 +11,9 @@ var trCulture = new CultureInfo("tr-TR");
 CultureInfo.DefaultThreadCurrentCulture = trCulture;
 CultureInfo.DefaultThreadCurrentUICulture = trCulture;
 
+// QuestPDF Community lisansı: yıllık geliri 1M USD altındaki kullanım ücretsiz
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorComponents()
@@ -27,6 +30,9 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await DatabaseSeeder.SeedAsync(db);
+
+    // Demo fatura/tahsilat verisi — gerçek servisler üzerinden üretilir
+    await scope.ServiceProvider.GetRequiredService<DemoDataSeeder>().SeedAsync();
 }
 
 if (!app.Environment.IsDevelopment())

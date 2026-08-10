@@ -23,6 +23,8 @@ public static class DatabaseSeeder
         await db.Database.MigrateAsync(ct);
         await SeedCoreAsync(db, ct);
         await SeedSubscriptionsAsync(db, ct);
+        // Fatura ve tahsilat demo verisi Application katmanındaki DemoDataSeeder'da —
+        // servisleri kullanması gerekiyor, Infrastructure oraya bağımlı olamaz.
     }
 
     // ------------------------------------------------------------------

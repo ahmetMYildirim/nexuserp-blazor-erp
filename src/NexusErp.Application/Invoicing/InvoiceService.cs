@@ -244,6 +244,24 @@ public sealed class InvoiceService(
 
         invoice.MarkIssued(number, sequence, clock.GetUtcNow());
 
+        // Cari hareket — proforma cariye İŞLEMEZ (bağlayıcı olmayan teklif)
+        if (invoice.AffectsBalance)
+        {
+            var isReturn = invoice.Type == InvoiceType.SalesReturn;
+            db.PartyLedgerEntries.Add(new PartyLedgerEntry
+            {
+                PartyId = invoice.PartyId,
+                EntryDate = invoice.IssueDate,
+                Type = isReturn ? LedgerEntryType.InvoiceReturn : LedgerEntryType.Invoice,
+                Debit = isReturn ? 0m : invoice.GrandTotal,
+                Credit = isReturn ? invoice.GrandTotal : 0m,
+                Currency = invoice.Currency,
+                Description = isReturn ? "İade faturası" : "Satış faturası",
+                InvoiceId = invoice.Id,
+                DocumentNumber = number
+            });
+        }
+
         await db.SaveChangesAsync(ct);
         return number;
     }

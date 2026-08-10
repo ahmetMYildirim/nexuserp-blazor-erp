@@ -1,0 +1,109 @@
+@using NexusErp.Application.Parties
+@using NexusErp.Application.Payments
+@using NexusErp.Domain.Enums
+@inject PaymentService PaymentService
+@inject PartyService PartyService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudGrid Spacing="2">
+            <MudItem xs="12">
+                <MudAutocomplete T="PartyLookupItem" Label="Cari *" Value="_party"
+                                 SearchFunc="SearchParties" ToStringFunc="@(p => p?.ToString() ?? "")"
+                                 ValueChanged="OnPartyChanged" Variant="Variant.Outlined"
+                                 Margin="Margin.Dense" ResetValueOnEmptyText CoerceText />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudDatePicker Label="Tahsilat Tarihi" @bind-Date="_date"
+                               Variant="Variant.Outlined" Margin="Margin.Dense"
+                               DateFormat="dd.MM.yyyy" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect T="PaymentMethod" @bind-Value="_form.Method" Label="Ödeme Yöntemi"
+                           Variant="Variant.Outlined" Margin="Margin.Dense">
+                    <MudSelectItem Value="@PaymentMethod.BankTransfer">Havale / EFT</MudSelectItem>
+                    <MudSelectItem Value="@PaymentMethod.Cash">Nakit</MudSelectItem>
+                    <MudSelectItem Value="@PaymentMethod.CreditCard">Kredi Kartı</MudSelectItem>
+                    <MudSelectItem Value="@PaymentMethod.Cheque">Çek</MudSelectItem>
+                    <MudSelectItem Value="@PaymentMethod.PromissoryNote">Senet</MudSelectItem>
+                    <MudSelectItem Value="@PaymentMethod.Other">Diğer</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="decimal" @bind-Value="_form.Amount" Label="Tutar *"
+                                 Variant="Variant.Outlined" Margin="Margin.Dense"
+                                 Min="0m" Format="N2" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_form.Reference" Label="Referans (dekont/çek no)"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_form.Notes" Label="Not"
+                              Variant="Variant.Outlined" Lines="2" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudSwitch @bind-Value="_form.AutoAllocate" Color="Color.Primary"
+                           Label="Açık faturalara otomatik dağıt (vade sırasına göre)" />
+                <MudText Typo="Typo.caption">
+                    Kapalıysa tahsilat avans olarak cari bakiyede kalır.
+                </MudText>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel">Vazgeç</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   Disabled="@_saving" OnClick="SaveAsync">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate Class="mr-2" />
+            }
+            Kaydet
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = default!;
+
+    private readonly PaymentForm _form = new();
+    private PartyLookupItem? _party;
+    private DateTime? _date = DateTime.Today;
+    private bool _saving;
+
+    private Task<IEnumerable<PartyLookupItem>> SearchParties(string term, CancellationToken ct)
+        => PartyService.LookupAsync(term, PartyType.Customer, ct)
+                       .ContinueWith(t => t.Result.AsEnumerable(), ct);
+
+    private void OnPartyChanged(PartyLookupItem? p)
+    {
+        _party = p;
+        if (p is null) return;
+        _form.PartyId = p.Id;
+        _form.Currency = p.Currency;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_form.PartyId == Guid.Empty)
+        {
+            Snackbar.Add("Cari seçilmedi.", Severity.Warning);
+            return;
+        }
+
+        _form.PaymentDate = DateOnly.FromDateTime(_date ?? DateTime.Today);
+
+        _saving = true;
+        var ok = await Snackbar.RunAsync(
+            async () => await PaymentService.CreateAsync(_form),
+            "Tahsilat kaydedildi.");
+        _saving = false;
+
+        if (ok) Dialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel() => Dialog.Cancel();
+}

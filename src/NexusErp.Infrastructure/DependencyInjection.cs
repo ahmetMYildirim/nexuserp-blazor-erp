@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NexusErp.Application.Abstractions;
+using NexusErp.Infrastructure.Documents;
 using NexusErp.Infrastructure.Invoicing;
 using NexusErp.Infrastructure.Persistence;
 using NexusErp.Infrastructure.Tenancy;
@@ -32,6 +33,8 @@ public static class DependencyInjection
 
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
         services.AddScoped<IInvoiceNumberGenerator, InvoiceNumberGenerator>();
+        services.AddScoped<IInvoicePdfGenerator, InvoicePdfGenerator>();
+        services.AddSingleton<IExcelExporter, ExcelExporter>();
 
         return services;
     }

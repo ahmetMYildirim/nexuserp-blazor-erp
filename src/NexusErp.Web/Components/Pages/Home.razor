@@ -1,64 +1,274 @@
 @page "/"
+@using NexusErp.Application.Dashboard
+@using NexusErp.Domain.Enums
+@inject DashboardService Dashboard
 
 <PageTitle>Genel Bakış · NexusERP</PageTitle>
 
-<MudText Typo="Typo.h5" Class="mb-4">Genel Bakış</MudText>
+<MudStack Row AlignItems="AlignItems.Center" Class="mb-4">
+    <MudText Typo="Typo.h5">Genel Bakış</MudText>
+    <MudSpacer />
+    <MudText Typo="Typo.caption">@DateTime.Today.ToString("dd MMMM yyyy")</MudText>
+</MudStack>
 
-<MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-4">
-    Dashboard <strong>Bölüm 11</strong>'de gerçek verilerle dolacak.
-    Şu an iskelet çalışıyor: MudBlazor, tema, menü ve interaktif render aktif.
-</MudAlert>
-
-<MudGrid>
-    @foreach (var card in _placeholders)
-    {
+@if (_data is null)
+{
+    @* İskelet: Blazor Server ilk render'ı sunucudan gelir, veri hazır olmadan sayfa çizilir *@
+    <MudGrid>
+        @for (var i = 0; i < 4; i++)
+        {
+            <MudItem xs="12" sm="6" md="3">
+                <MudSkeleton Height="110px" SkeletonType="SkeletonType.Rectangle" />
+            </MudItem>
+        }
+    </MudGrid>
+}
+else
+{
+    @* ---------------- ANA KPI'LAR ---------------- *@
+    <MudGrid Class="mb-2">
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Title="Açık Alacak" Value="@_data.OpenReceivables.ToMoney()" Suffix="₺"
+                      Hint="@($"{_data.InvoiceCount} fatura kayıtlı")"
+                      Icon="@Icons.Material.Filled.AccountBalanceWallet" Color="Color.Primary" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Title="Vadesi Geçen" Value="@_data.OverdueReceivables.ToMoney()" Suffix="₺"
+                      Hint="@($"{_data.OverdueInvoiceCount} fatura gecikmede")"
+                      Icon="@Icons.Material.Filled.Warning" Color="Color.Error" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatCard Title="MRR" Value="@_data.Mrr.ToMoney()" Suffix="₺"
+                      Hint="@($"{_data.ActiveSubscriptions} aktif abonelik · ARR {_data.Arr.ToMoney()} ₺")"
+                      Icon="@Icons.Material.Filled.Autorenew" Color="Color.Success" />
+        </MudItem>
         <MudItem xs="12" sm="6" md="3">
             <MudPaper Elevation="1" Class="pa-4" Style="height:100%">
                 <MudStack Row AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween">
                     <div>
-                        <MudText Typo="Typo.caption">@card.Title</MudText>
-                        <MudText Typo="Typo.h5" Class="mt-1">—</MudText>
+                        <MudText Typo="Typo.caption">Bu Ay Ciro (KDV hariç)</MudText>
+                        <MudText Typo="Typo.h5" Class="mt-1">
+                            @_data.MonthRevenue.ToMoney()<span style="font-size:.65em">₺</span>
+                        </MudText>
+                        @if (_data.PreviousMonthRevenue > 0)
+                        {
+                            <MudStack Row Spacing="1" AlignItems="AlignItems.Center" Class="mt-1">
+                                <MudIcon Size="Size.Small"
+                                         Icon="@(_data.RevenueChangePercent >= 0 ? Icons.Material.Filled.ArrowUpward : Icons.Material.Filled.ArrowDownward)"
+                                         Color="@(_data.RevenueChangePercent >= 0 ? Color.Success : Color.Error)" />
+                                <MudText Typo="Typo.caption"
+                                         Color="@(_data.RevenueChangePercent >= 0 ? Color.Success : Color.Error)">
+                                    %@Math.Abs(_data.RevenueChangePercent).ToString("N1")
+                                </MudText>
+                                <MudText Typo="Typo.caption">geçen aya göre</MudText>
+                            </MudStack>
+                        }
                     </div>
-                    <MudAvatar Color="@card.Color" Variant="Variant.Outlined">
-                        <MudIcon Icon="@card.Icon" />
+                    <MudAvatar Color="Color.Info" Variant="Variant.Outlined">
+                        <MudIcon Icon="@Icons.Material.Filled.TrendingUp" />
                     </MudAvatar>
                 </MudStack>
             </MudPaper>
         </MudItem>
-    }
-</MudGrid>
+    </MudGrid>
 
-<MudPaper Elevation="0" Class="pa-4 mt-6" Style="max-width:640px">
-    <MudText Typo="Typo.subtitle1" Class="mb-2">Kurulum durumu</MudText>
-    <MudList T="string" Dense>
-        <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" IconColor="Color.Success">
-            .NET 9 · Blazor Server · MudBlazor
-        </MudListItem>
-        <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" IconColor="Color.Success">
-            PostgreSQL 17 (Docker, port 5433) · pgAdmin (5050)
-        </MudListItem>
-        <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" IconColor="Color.Success">
-            Domain katmanı: Money, TaxIdentifier, entity'ler
-        </MudListItem>
-        <MudListItem T="string" Icon="@Icons.Material.Filled.RadioButtonUnchecked" IconColor="Color.Default">
-            Sıradaki: Bölüm 05 — EF Core, migration, seed
-        </MudListItem>
-    </MudList>
+    @* ---------------- İKİNCİL İSTATİSTİKLER ---------------- *@
+    <MudGrid Class="mb-2">
+        <MudItem xs="6" sm="4" md="2">
+            <MiniStat Label="Tahsilat Oranı" Value="@($"%{_data.CollectionRate:N1}")"
+                      Icon="@Icons.Material.Filled.Percent" Color="Color.Success" />
+        </MudItem>
+        <MudItem xs="6" sm="4" md="2">
+            <MiniStat Label="Bu Ay Tahsilat" Value="@($"{_data.MonthCollected.ToMoney()} ₺")"
+                      Icon="@Icons.Material.Filled.Payments" Color="Color.Info" />
+        </MudItem>
+        <MudItem xs="6" sm="4" md="2">
+            <MiniStat Label="Ortalama Fatura" Value="@($"{_data.AverageInvoice.ToMoney()} ₺")"
+                      Icon="@Icons.Material.Filled.Receipt" Color="Color.Primary" />
+        </MudItem>
+        <MudItem xs="6" sm="4" md="2">
+            <MiniStat Label="Aktif Cari" Value="@_data.PartyCount.ToString()"
+                      Icon="@Icons.Material.Filled.People" Color="Color.Secondary" />
+        </MudItem>
+        <MudItem xs="6" sm="4" md="2">
+            <MiniStat Label="Taslak Fatura" Value="@_data.DraftInvoiceCount.ToString()"
+                      Icon="@Icons.Material.Filled.EditNote" Color="Color.Warning" />
+        </MudItem>
+        <MudItem xs="6" sm="4" md="2">
+            <MiniStat Label="Aktif Abonelik" Value="@_data.ActiveSubscriptions.ToString()"
+                      Icon="@Icons.Material.Filled.Subscriptions" Color="Color.Success" />
+        </MudItem>
+    </MudGrid>
 
-    <MudButton Class="mt-3" Variant="Variant.Filled" Color="Color.Primary"
-               StartIcon="@Icons.Material.Filled.TouchApp" OnClick="@(() => _clicks++)">
-        İnteraktivite testi (@_clicks)
-    </MudButton>
-</MudPaper>
+    <MudGrid>
+        @* ---------------- CİRO / TAHSİLAT GRAFİĞİ ---------------- *@
+        <MudItem xs="12" md="8">
+            <MudPaper Elevation="1" Class="pa-4" Style="height:100%">
+                <MudStack Row AlignItems="AlignItems.Center" Class="mb-3">
+                    <MudText Typo="Typo.subtitle1">Son 12 Ay</MudText>
+                    <MudSpacer />
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text">
+                        Ciro (KDV hariç)
+                    </MudChip>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">
+                        Tahsilat
+                    </MudChip>
+                </MudStack>
+                <MudChart ChartType="ChartType.Line" ChartSeries="@_series" XAxisLabels="@_labels"
+                          Height="300px"
+                          ChartOptions="@(new ChartOptions { YAxisFormat = "N0", LineStrokeWidth = 3, InterpolationOption = InterpolationOption.NaturalSpline })" />
+            </MudPaper>
+        </MudItem>
+
+        @* ---------------- FATURA DURUM DAĞILIMI ---------------- *@
+        <MudItem xs="12" md="4">
+            <MudPaper Elevation="1" Class="pa-4" Style="height:100%">
+                <MudText Typo="Typo.subtitle1" Class="mb-3">Fatura Durumları</MudText>
+                @if (_data.StatusBreakdown.Count == 0)
+                {
+                    <MudText Typo="Typo.body2">Henüz fatura yok.</MudText>
+                }
+                else
+                {
+                    @foreach (var s in _data.StatusBreakdown.OrderBy(x => x.Status))
+                    {
+                        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center"
+                                  Class="mb-2">
+                            <MudChip T="string" Size="Size.Small" Color="@StatusColor(s.Status)">
+                                @StatusText(s.Status)
+                            </MudChip>
+                            <MudStack Row Spacing="2" AlignItems="AlignItems.Center">
+                                <MudText Typo="Typo.caption">@s.Count adet</MudText>
+                                <MudText Typo="Typo.body2"
+                                         Style="font-weight:600;font-variant-numeric:tabular-nums">
+                                    @s.Amount.ToMoney() ₺
+                                </MudText>
+                            </MudStack>
+                        </MudStack>
+                        <MudProgressLinear Color="@StatusColor(s.Status)" Rounded Size="Size.Small"
+                                           Value="@ShareOf(s.Amount)" Class="mb-3" />
+                    }
+                }
+            </MudPaper>
+        </MudItem>
+
+        @* ---------------- EN ÇOK ALACAKLI CARİLER ---------------- *@
+        <MudItem xs="12" md="5">
+            <MudPaper Elevation="1" Class="pa-4" Style="height:100%">
+                <MudText Typo="Typo.subtitle1" Class="mb-3">En Çok Alacaklı Cariler</MudText>
+                @if (_data.TopDebtors.Count == 0)
+                {
+                    <MudText Typo="Typo.body2">Açık alacak yok.</MudText>
+                }
+                else
+                {
+                    @foreach (var d in _data.TopDebtors)
+                    {
+                        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center"
+                                  Class="mb-3">
+                            <div>
+                                <MudText Typo="Typo.body2">@d.Title</MudText>
+                                <MudText Typo="Typo.caption">@d.InvoiceCount açık fatura</MudText>
+                            </div>
+                            <MudText Typo="Typo.body2"
+                                     Style="font-weight:600;font-variant-numeric:tabular-nums">
+                                @d.Amount.ToMoney() ₺
+                            </MudText>
+                        </MudStack>
+                    }
+                }
+            </MudPaper>
+        </MudItem>
+
+        @* ---------------- YAKLAŞAN VADELER ---------------- *@
+        <MudItem xs="12" md="7">
+            <MudPaper Elevation="1" Class="pa-4" Style="height:100%">
+                <MudText Typo="Typo.subtitle1" Class="mb-3">Yaklaşan Vadeler</MudText>
+                @if (_data.UpcomingDue.Count == 0)
+                {
+                    <MudText Typo="Typo.body2">Vadesi yaklaşan fatura yok.</MudText>
+                }
+                else
+                {
+                    <MudSimpleTable Dense Hover Elevation="0">
+                        <thead>
+                            <tr>
+                                <th>Fatura No</th><th>Cari</th><th>Vade</th>
+                                <th class="text-right">Kalan</th><th>Kalan Gün</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var i in _data.UpcomingDue)
+                            {
+                                <tr>
+                                    <td style="font-family:Consolas,monospace">@i.Number</td>
+                                    <td>@i.PartyTitle</td>
+                                    <td>@i.DueDate.ToString("dd.MM.yyyy")</td>
+                                    <td class="text-right">@i.Remaining.ToMoney() ₺</td>
+                                    <td>
+                                        <MudChip T="string" Size="Size.Small"
+                                                 Color="@(i.DaysLeft <= 3 ? Color.Warning : Color.Default)">
+                                            @i.DaysLeft gün
+                                        </MudChip>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
 
 @code {
-    private int _clicks;
+    private DashboardSummary? _data;
+    private List<ChartSeries> _series = [];
+    private string[] _labels = [];
 
-    private readonly (string Title, string Icon, Color Color)[] _placeholders =
-    [
-        ("Açık Alacak",   Icons.Material.Filled.AccountBalanceWallet, Color.Primary),
-        ("Vadesi Geçen",  Icons.Material.Filled.Warning,              Color.Error),
-        ("MRR",           Icons.Material.Filled.Autorenew,            Color.Success),
-        ("Bu Ay Ciro",    Icons.Material.Filled.TrendingUp,           Color.Info),
-    ];
+    protected override async Task OnInitializedAsync()
+    {
+        _data = await Dashboard.GetAsync(DateOnly.FromDateTime(DateTime.Today));
+
+        _labels = _data.RevenueTrend.Select(t => t.Label).ToArray();
+        _series =
+        [
+            new ChartSeries
+            {
+                Name = "Ciro",
+                Data = _data.RevenueTrend.Select(t => (double)t.Amount).ToArray()
+            },
+            new ChartSeries
+            {
+                Name = "Tahsilat",
+                Data = _data.CollectionTrend.Select(t => (double)t.Amount).ToArray()
+            }
+        ];
+    }
+
+    private double ShareOf(decimal amount)
+    {
+        var total = _data!.StatusBreakdown.Sum(x => x.Amount);
+        return total == 0 ? 0 : (double)(amount / total * 100m);
+    }
+
+    private static string StatusText(InvoiceStatus s) => s switch
+    {
+        InvoiceStatus.Draft => "Taslak",
+        InvoiceStatus.Issued => "Kesildi",
+        InvoiceStatus.PartiallyPaid => "Kısmi Tahsil",
+        InvoiceStatus.Paid => "Tahsil Edildi",
+        InvoiceStatus.Cancelled => "İptal",
+        _ => "?"
+    };
+
+    private static Color StatusColor(InvoiceStatus s) => s switch
+    {
+        InvoiceStatus.Draft => Color.Default,
+        InvoiceStatus.Issued => Color.Info,
+        InvoiceStatus.PartiallyPaid => Color.Warning,
+        InvoiceStatus.Paid => Color.Success,
+        InvoiceStatus.Cancelled => Color.Error,
+        _ => Color.Default
+    };
 }
