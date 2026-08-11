@@ -19,10 +19,13 @@ public static class DependencyInjection
     {
         services.Configure<TenantOptions>(config.GetSection(TenantOptions.SectionName));
 
-        // Tenant ve kullanıcı artık OTURUMDAN geliyor (Bölüm 12).
+        // Tenant/kullanıcı tutucuları. Değeri barındıran uygulama yazar:
+        // Blazor → AuthStateInitializer, API → AddApiIdentityContext() (aşağıda).
         services.AddHttpContextAccessor();
-        services.AddScoped<ITenantContext, ClaimsTenantContext>();
-        services.AddScoped<ICurrentUser, ClaimsCurrentUser>();
+        services.AddScoped<TenantContext>();
+        services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantContext>());
+        services.AddScoped<MutableCurrentUser>();
+        services.AddScoped<ICurrentUser>(sp => sp.GetRequiredService<MutableCurrentUser>());
 
         services.AddDbContext<AppDbContext>(opt =>
         {
@@ -66,6 +69,17 @@ public static class DependencyInjection
         services.AddScoped<IUblInvoiceBuilder, UblInvoiceBuilder>();
         services.AddSingleton<IEInvoiceGateway, MockEInvoiceGateway>();
 
+        return services;
+    }
+
+    /// <summary>
+    /// REST API için: tenant ve kullanıcı HttpContext'teki JWT claim'lerinden okunur.
+    /// Blazor bunu ÇAĞIRMAZ — orada devre bazlı AuthStateInitializer kullanılıyor.
+    /// </summary>
+    public static IServiceCollection AddApiIdentityContext(this IServiceCollection services)
+    {
+        services.AddScoped<ITenantContext, ClaimsTenantContext>();
+        services.AddScoped<ICurrentUser, ClaimsCurrentUser>();
         return services;
     }
 }

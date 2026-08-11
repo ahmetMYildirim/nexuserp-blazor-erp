@@ -1,0 +1,60 @@
+@using NexusErp.Application.Abstractions
+@using NexusErp.Infrastructure.Identity
+@using NexusErp.Infrastructure.Tenancy
+@implements IDisposable
+@inject TenantContext Tenant
+@inject MutableCurrentUser CurrentUser
+@inject AuthenticationStateProvider AuthProvider
+
+@*
+    Devre (circuit) açılırken tenant ve kullanıcıyı kimlik durumundan okur.
+
+    Router'ı SARMALIYOR: bu bileşenin OnInitializedAsync'i, alt bileşenler
+    (yani sayfalar) render edilmeden ÖNCE tamamlanır. Böylece hiçbir sayfa
+    tenant belirlenmeden veri sorgusu yapamaz.
+
+    ⚠️ Neden IHttpContextAccessor değil: Microsoft interaktif render'da onu
+    önermiyor — devre açıldıktan sonra HttpContext null olabilir. Burada
+    AuthenticationStateProvider kullanıyoruz; Blazor Server'da devre başına
+    scoped ve oturum değişince haber veriyor.
+*@
+@if (_ready)
+{
+    @ChildContent
+}
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private bool _ready;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AuthProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+        Apply(await AuthProvider.GetAuthenticationStateAsync());
+        _ready = true;
+    }
+
+    private void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+        => _ = InvokeAsync(async () =>
+        {
+            Apply(await task);
+            StateHasChanged();
+        });
+
+    private void Apply(AuthenticationState state)
+    {
+        var user = state.User;
+
+        if (Guid.TryParse(user.FindFirst(AppClaims.TenantId)?.Value, out var tenantId)
+            && tenantId != Guid.Empty)
+        {
+            Tenant.SetTenant(tenantId);
+        }
+
+        CurrentUser.SetUser(user.Identity?.Name);
+    }
+
+    public void Dispose()
+        => AuthProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+}

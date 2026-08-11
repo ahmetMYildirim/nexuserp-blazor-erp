@@ -23,6 +23,7 @@ var builder = WebApplication.CreateBuilder(args);
 // hem REST'ten çağrılıyor — iş kuralları tek yerde (ADR-001, ADR-006).
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
+builder.Services.AddApiIdentityContext();   // tenant/kullanıcı JWT claim'lerinden
 
 var jwt = builder.Configuration.GetSection("Jwt");
 var signingKey = new SymmetricSecurityKey(

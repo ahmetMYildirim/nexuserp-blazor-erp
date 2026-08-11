@@ -162,6 +162,29 @@ curl http://localhost:5299/api/faturalar/{id}/ubl -H "Authorization: Bearer $TOK
 
 Yetki API'de de geçerli: Satış rolüyle `POST /faturalar/{id}/kes` → **403**.
 
+## Performans — ölçüldü, iddia edilmedi
+
+100.000 fatura / 500 cari ile (`Bogus` + toplu `INSERT`, PostgreSQL 17):
+
+| Sorgu | Süre | Plan |
+|---|---|---|
+| Yaşlandırma raporu (tüm açık faturaları gruplar) | **80 ms** | `Seq Scan` + `HashAggregate` |
+| Tek carinin açık faturaları (seçici) | **2 ms** | `Bitmap Index Scan` |
+
+**Hipotez:** yaşlandırma raporuna kapsayıcı index eklemek hızlandırır.
+**Ölçüm:** hızlandırmadı — *anlamlı fark yok*.
+
+**Neden:** sorguda seçici filtre yok, tablonun tamamı okunuyor; PostgreSQL doğru şekilde
+sıralı tarama seçiyor. Index eklemek okumayı hızlandırmaz, yalnızca yazma maliyetini artırır.
+Seçici sorgu ise EF'in yabancı anahtar için ürettiği index'i zaten kullanıyor.
+
+**Karar: index eklenmedi.** 1M satır ölçeğinde doğru çözüm gece yenilenen bir
+materialized view olur, index değil.
+
+```bash
+dotnet test --filter FullyQualifiedName~AgingReportBenchmark   # ölçümü tekrarla
+```
+
 ## Bilinçli olarak kapsam dışı
 
 Stok/depo yönetimi, muhasebe fişi ve tek düzen hesap planı, gerçek e-Fatura entegratör
