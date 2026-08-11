@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NexusErp.Application.Abstractions;
 using Microsoft.AspNetCore.Identity;
 using NexusErp.Infrastructure.Documents;
+using NexusErp.Infrastructure.EInvoice;
 using NexusErp.Infrastructure.Identity;
 using NexusErp.Infrastructure.Invoicing;
 using NexusErp.Infrastructure.Persistence;
@@ -62,6 +63,8 @@ public static class DependencyInjection
         });
         services.AddScoped<IInvoicePdfGenerator, InvoicePdfGenerator>();
         services.AddSingleton<IExcelExporter, ExcelExporter>();
+        services.AddScoped<IUblInvoiceBuilder, UblInvoiceBuilder>();
+        services.AddSingleton<IEInvoiceGateway, MockEInvoiceGateway>();
 
         return services;
     }

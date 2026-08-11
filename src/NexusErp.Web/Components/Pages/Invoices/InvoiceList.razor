@@ -8,6 +8,8 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
 @inject IInvoicePdfGenerator PdfGenerator
+@inject IUblInvoiceBuilder UblBuilder
+@inject IEInvoiceGateway EInvoiceGateway
 @inject IJSRuntime JS
 
 <PageTitle>Faturalar · NexusERP</PageTitle>
@@ -106,6 +108,16 @@
                         <MudIconButton Icon="@Icons.Material.Filled.PictureAsPdf" Size="Size.Small"
                                        OnClick="@(() => DownloadPdfAsync(context.Item))" />
                     </MudTooltip>
+                    <MudTooltip Text="e-Fatura XML (UBL-TR 1.2)">
+                        <MudIconButton Icon="@Icons.Material.Filled.Code" Size="Size.Small"
+                                       OnClick="@(() => DownloadUblAsync(context.Item))" />
+                    </MudTooltip>
+                    <AuthorizeView Roles="Admin,Muhasebe" Context="ef">
+                        <MudTooltip Text="e-Fatura gönder (sahte entegratör)">
+                            <MudIconButton Icon="@Icons.Material.Filled.CloudUpload" Size="Size.Small"
+                                           OnClick="@(() => SendEInvoiceAsync(context.Item))" />
+                        </MudTooltip>
+                    </AuthorizeView>
                 }
                 <MudTooltip Text="@(context.Item.Status == InvoiceStatus.Draft ? "Düzenle" : "Görüntüle")">
                     <MudIconButton Size="Size.Small"
@@ -220,6 +232,26 @@
         var bytes = await PdfGenerator.GenerateAsync(item.Id);
         await JS.InvokeVoidAsync("downloadFile", $"{item.Number}.pdf",
                                  "application/pdf", Convert.ToBase64String(bytes));
+    }
+
+    private async Task DownloadUblAsync(InvoiceListItem item)
+    {
+        var doc = await UblBuilder.BuildAsync(item.Id);
+        var bytes = System.Text.Encoding.UTF8.GetBytes(doc.Xml);
+        await JS.InvokeVoidAsync("downloadFile", $"{item.Number}.xml",
+                                 "application/xml", Convert.ToBase64String(bytes));
+    }
+
+    private async Task SendEInvoiceAsync(InvoiceListItem item)
+    {
+        var doc = await UblBuilder.BuildAsync(item.Id);
+        var result = await EInvoiceGateway.SendAsync(doc);
+
+        Snackbar.Add(
+            result.Success
+                ? $"e-Fatura gönderildi · profil: {doc.Profile} · takip no: {result.TrackingId}"
+                : $"Gönderim başarısız: {result.Message}",
+            result.Success ? Severity.Success : Severity.Error);
     }
 
     private static string TypeText(InvoiceType t) => t switch

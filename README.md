@@ -39,6 +39,16 @@ Excel çıktısı formüllü.
 
 **Fatura PDF'i** — QuestPDF, tevkifat dipnotu, ETTN, Türkçe font desteği.
 
+**e-Fatura (UBL-TR 1.2) XML üretimi**
+GİB formatında XML: `CustomizationID=TR1.2`, ETTN, KDV oranı bazında ayrı `TaxSubtotal`,
+tevkifat için `WithholdingTaxTotal`, UN/ECE Rec.20 birim kodları. Entegratör bağlantısı
+`IEInvoiceGateway` arayüzünün arkasında — sözleşme imzalandığında yalnızca o sınıf yazılır.
+
+**REST API** (`NexusErp.Api`)
+JWT kimlik doğrulama, rol bazlı yetki, hız sınırlama, Scalar/OpenAPI dokümantasyonu.
+Application katmanına **hiç dokunmadan** eklendi — aynı servisler hem Blazor'dan hem
+REST'ten çağrılıyor, iş kuralları tek yerde.
+
 ---
 
 ## Hızlı başlangıç
@@ -119,6 +129,38 @@ partial index ve precision davranışını taklit edemez, testler geçer ama ür
 - Belge iskontosunda kuruş kaybı olmadığı
 
 ---
+
+## REST API
+
+```bash
+dotnet run --project src/NexusErp.Api
+```
+
+→ http://localhost:5299/scalar/v1 (interaktif dokümantasyon)
+
+```bash
+# 1) Jeton al
+curl -X POST http://localhost:5299/api/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"email":"muhasebe@nexusdemo.com.tr","password":"Demo!2026"}'
+
+# 2) Fatura kes ve e-Fatura XML'ini çek
+curl -X POST http://localhost:5299/api/faturalar/{id}/kes -H "Authorization: Bearer $TOKEN"
+curl http://localhost:5299/api/faturalar/{id}/ubl -H "Authorization: Bearer $TOKEN"
+```
+
+| Uç | Açıklama |
+|---|---|
+| `POST /api/auth/token` | JWT jetonu (web ile aynı kullanıcı ve roller) |
+| `GET/POST /api/cariler` | Cari listesi ve kaydı |
+| `GET/POST /api/faturalar` | Fatura listesi, taslak oluşturma |
+| `POST /api/faturalar/{id}/kes` | Atomik numara ile faturayı kes |
+| `GET /api/faturalar/{id}/pdf` · `/ubl` | PDF ve e-Fatura XML çıktısı |
+| `POST /api/tahsilatlar` | Tahsilat + FIFO eşleştirme |
+| `GET /api/tahsilatlar/yaslandirma` | Yaşlandırma raporu |
+| `POST /api/abonelikler/faturalandir` | **Idempotent** — zamanlanmış görevden güvenle çağrılır |
+
+Yetki API'de de geçerli: Satış rolüyle `POST /faturalar/{id}/kes` → **403**.
 
 ## Bilinçli olarak kapsam dışı
 
