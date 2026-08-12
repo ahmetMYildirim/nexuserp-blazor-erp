@@ -8,13 +8,14 @@ using NexusErp.Domain.ValueObjects;
 
 namespace NexusErp.Application.Parties;
 
-public sealed class PartyService(IAppDbContext db)
+public sealed class PartyService(IAppDbContextFactory factory)
 {
     private static readonly CultureInfo Tr = CultureInfo.GetCultureInfo("tr-TR");
 
     public async Task<PagedResult<PartyListItem>> SearchAsync(
         PartyQuery q, CancellationToken ct = default)
     {
+        await using var db = factory.Create();
         var query = db.Parties.AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(q.Search))
@@ -66,6 +67,7 @@ public sealed class PartyService(IAppDbContext db)
     public async Task<IReadOnlyList<PartyLookupItem>> LookupAsync(
         string? term, PartyType type = PartyType.Customer, CancellationToken ct = default)
     {
+        await using var db = factory.Create();
         var query = db.Parties.AsNoTracking()
             .Where(p => p.IsActive && (p.Type & type) != 0);
 
@@ -84,14 +86,18 @@ public sealed class PartyService(IAppDbContext db)
             .ToListAsync(ct);
     }
 
-    public async Task<PartyLookupItem?> GetLookupAsync(Guid id, CancellationToken ct = default) =>
-        await db.Parties.AsNoTracking()
+    public async Task<PartyLookupItem?> GetLookupAsync(Guid id, CancellationToken ct = default)
+    {
+        await using var db = factory.Create();
+        return await db.Parties.AsNoTracking()
             .Where(p => p.Id == id)
             .Select(p => new PartyLookupItem(p.Id, p.Code, p.Title, p.PaymentTermDays, p.Currency))
             .FirstOrDefaultAsync(ct);
+    }
 
     public async Task<PartyForm?> GetFormAsync(Guid id, CancellationToken ct = default)
     {
+        await using var db = factory.Create();
         var p = await db.Parties.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
         if (p is null) return null;
 
@@ -121,6 +127,7 @@ public sealed class PartyService(IAppDbContext db)
     {
         Validate(form);
 
+        await using var db = factory.Create();
         var code = form.Code.Trim();
 
         // DB'deki unique index son savunma hattı; burada kullanıcıya anlamlı mesaj veriyoruz
@@ -154,26 +161,18 @@ public sealed class PartyService(IAppDbContext db)
 
         entity.SetTaxNumber(form.TaxNumber);   // Validate() zaten doğruladı, burada patlamaz
 
-        // Add EN SON: doğrulama hatası olursa context'te öksüz Added entity kalmasın
         if (isNew) db.Parties.Add(entity);
 
-        try
-        {
-            await db.SaveChangesAsync(ct);
-        }
-        catch
-        {
-            // Veri tabanı seviyesinde hata olursa (unique ihlali vb.) takibi temizle,
-            // aksi halde kullanıcının bir sonraki denemesi de aynı hatayla patlar.
-            if (isNew) db.Detach(entity);
-            throw;
-        }
+        // Detach yamasına artık gerek yok: context bu metoda ait, hata olursa
+        // öksüz Added entity'siyle birlikte kapanıyor. Sonraki deneme temiz başlıyor.
+        await db.SaveChangesAsync(ct);
 
         return entity.Id;
     }
 
     public async Task SetActiveAsync(Guid id, bool isActive, CancellationToken ct = default)
     {
+        await using var db = factory.Create();
         var p = await db.Parties.FirstOrDefaultAsync(x => x.Id == id, ct)
                 ?? throw new DomainException("Cari kart bulunamadı.");
 
@@ -188,6 +187,7 @@ public sealed class PartyService(IAppDbContext db)
     /// </summary>
     public async Task<string> SuggestCodeAsync(PartyType type, CancellationToken ct = default)
     {
+        await using var db = factory.Create();
         var prefix = type.HasFlag(PartyType.Customer) ? "MUS" : "TED";
 
         // ⚠️ IgnoreQueryFilters() SOFT DELETE ile birlikte TENANT filtresini de kaldırır.

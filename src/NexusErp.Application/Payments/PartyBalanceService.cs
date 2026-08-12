@@ -4,18 +4,23 @@ using NexusErp.Domain.Enums;
 
 namespace NexusErp.Application.Payments;
 
-public sealed class PartyBalanceService(IAppDbContext db)
+public sealed class PartyBalanceService(IAppDbContextFactory factory)
 {
     /// <summary>Bakiye = SUM(Borç) − SUM(Alacak). Pozitif = müşteri bize borçlu.</summary>
     public async Task<decimal> GetBalanceAsync(Guid partyId, CancellationToken ct = default)
-        => await db.PartyLedgerEntries
+    {
+        await using var db = factory.Create();
+        return await db.PartyLedgerEntries
             .Where(e => e.PartyId == partyId)
             .SumAsync(e => e.Debit - e.Credit, ct);
+    }
 
     /// <summary>Cari ekstre — devir satırı + hareketler + yürüyen bakiye.</summary>
     public async Task<IReadOnlyList<StatementRow>> GetStatementAsync(
         Guid partyId, DateOnly from, DateOnly to, CancellationToken ct = default)
     {
+        await using var db = factory.Create();
+
         // Devir: dönem başından ÖNCEKİ tüm hareketlerin bakiyesi
         var opening = await db.PartyLedgerEntries
             .Where(e => e.PartyId == partyId && e.EntryDate < from)
@@ -54,6 +59,8 @@ public sealed class PartyBalanceService(IAppDbContext db)
     public async Task<IReadOnlyList<AgingRow>> GetAgingAsync(
         DateOnly asOf, CancellationToken ct = default)
     {
+        await using var db = factory.Create();
+
         var d30 = asOf.AddDays(-30);
         var d60 = asOf.AddDays(-60);
         var d90 = asOf.AddDays(-90);

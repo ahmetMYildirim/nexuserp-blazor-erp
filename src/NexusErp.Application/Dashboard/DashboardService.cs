@@ -46,10 +46,13 @@ public sealed record DashboardSummary(
 /// Dashboard'ın TAMAMI tek serviste. Her kart için ayrı servis çağırmak
 /// 8 veri tabanı turu ve Blazor'da 8 ayrı render döngüsü demektir.
 /// </summary>
-public sealed class DashboardService(IAppDbContext db)
+public sealed class DashboardService(IAppDbContextFactory factory)
 {
     public async Task<DashboardSummary> GetAsync(DateOnly today, CancellationToken ct = default)
     {
+        // Tek context: dashboard'ın 8 sorgusu aynı anlık görüntüden okusun.
+        await using var db = factory.Create();
+
         var monthStart = new DateOnly(today.Year, today.Month, 1);
         var trendStart = monthStart.AddMonths(-11);
 

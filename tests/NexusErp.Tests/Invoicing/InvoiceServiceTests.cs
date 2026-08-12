@@ -18,7 +18,8 @@ public sealed class InvoiceServiceTests(DatabaseFixture fixture)
     {
         var db = fixture.CreateContext(tenant);
         var generator = new InvoiceNumberGenerator(db, fixture.CreateTenantContext(tenant));
-        var service = new InvoiceService(db, generator, TimeProvider.System);
+        var service = new InvoiceService(
+            fixture.CreateFactory(tenant), generator, TimeProvider.System);
 
         var party = new Party
         {

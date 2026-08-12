@@ -36,7 +36,7 @@ public sealed class AgingReportBenchmark(DatabaseFixture fixture, ITestOutputHel
 
         await SeedAsync(db, tenant);
 
-        var service = new PartyBalanceService(db);
+        var service = new PartyBalanceService(fixture.CreateFactory(tenant));
         var asOf = DateOnly.FromDateTime(DateTime.Today);
         var samplePartyId = await db.Parties.Select(p => p.Id).FirstAsync();
 

@@ -22,9 +22,10 @@ public sealed class SubscriptionBillingTests(DatabaseFixture fixture)
     {
         var db = fixture.CreateContext(tenant);
         var generator = new InvoiceNumberGenerator(db, fixture.CreateTenantContext(tenant));
-        var invoiceService = new InvoiceService(db, generator, TimeProvider.System);
+        var factory = fixture.CreateFactory(tenant);
+        var invoiceService = new InvoiceService(factory, generator, TimeProvider.System);
         var billing = new SubscriptionBillingService(
-            db, invoiceService, NullLogger<SubscriptionBillingService>.Instance);
+            factory, invoiceService, NullLogger<SubscriptionBillingService>.Instance);
 
         var taxRate = new TaxRate
         {

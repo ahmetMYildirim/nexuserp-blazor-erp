@@ -27,7 +27,10 @@ public static class DependencyInjection
         services.AddScoped<MutableCurrentUser>();
         services.AddScoped<ICurrentUser>(sp => sp.GetRequiredService<MutableCurrentUser>());
 
-        services.AddDbContext<AppDbContext>(opt =>
+        // ⚠️ AddDbContextFactory VARSAYILAN OLARAK SINGLETON kaydeder.
+        // AppDbContext'in ITenantContext ve ICurrentUser (ikisi de SCOPED) bağımlılığı var;
+        // lifetime: Scoped vermezsen "Cannot consume scoped service from singleton" alırsın.
+        services.AddDbContextFactory<AppDbContext>(opt =>
         {
             opt.UseNpgsql(config.GetConnectionString("Postgres"), npg =>
                 {
@@ -37,8 +40,14 @@ public static class DependencyInjection
                // Party.TaxNumber → parties.tax_number
                // Bu olmadan PostgreSQL'de her sorguda çift tırnak kullanmak zorunda kalırsın
                .UseSnakeCaseNamingConvention();
-        });
+        }, lifetime: ServiceLifetime.Scoped);
 
+        services.AddScoped<IAppDbContextFactory, AppDbContextFactoryAdapter>();
+
+        // Migration/seed ve Identity (UserManager) doğrudan AppDbContext istiyor —
+        // tekil scoped kayıt duruyor. Servisler kademeli olarak fabrikaya geçecek.
+        services.AddScoped<AppDbContext>(sp =>
+            sp.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContext());
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
         services.AddScoped<IInvoiceNumberGenerator, InvoiceNumberGenerator>();
 

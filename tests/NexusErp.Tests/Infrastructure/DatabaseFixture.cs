@@ -52,6 +52,17 @@ public sealed class DatabaseFixture : IAsyncLifetime
     /// <summary>InvoiceNumberGenerator gibi ITenantContext isteyen servisler için.</summary>
     public ITenantContext CreateTenantContext(Guid tenantId) => new FakeTenant(tenantId);
 
+    /// <summary>
+    /// Fabrikaya geçmiş servisler için. Servis her çağrıda TAZE context açar —
+    /// yazdığı veriyi doğrulamak istiyorsan testte ayrı bir CreateContext() aç.
+    /// </summary>
+    public IAppDbContextFactory CreateFactory(Guid tenantId) => new TestFactory(this, tenantId);
+
+    private sealed class TestFactory(DatabaseFixture fixture, Guid tenantId) : IAppDbContextFactory
+    {
+        public IAppDbContext Create() => fixture.CreateContext(tenantId);
+    }
+
     private sealed class FakeTenant(Guid id) : ITenantContext
     {
         public Guid TenantId { get; private set; } = id;

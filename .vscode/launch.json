@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "NexusERP çalıştır (F5)",
+      "name": "Web (Blazor) — F5",
       "type": "coreclr",
       "request": "launch",
       "preLaunchTask": "build",
@@ -21,9 +21,47 @@
       "sourceFileMap": { "/Views": "${workspaceFolder}/Views" }
     },
     {
+      "name": "API (REST)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/src/NexusErp.Api/bin/Debug/net9.0/NexusErp.Api.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/NexusErp.Api",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5299"
+      }
+    },
+    {
+      // OCR servisi (Bölüm 16). Docker yerine yerelde hata ayıklamak için.
+      // Önce: pip install -r services/ocr/requirements.txt
+      "name": "OCR servisi (Python)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"],
+      "cwd": "${workspaceFolder}/services/ocr",
+      "jinja": false,
+      "justMyCode": false
+    },
+    {
       "name": "Testlere bağlan (debug)",
       "type": "coreclr",
       "request": "attach"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "▶ Web + API",
+      "configurations": ["Web (Blazor) — F5", "API (REST)"],
+      "stopAll": true
+    },
+    {
+      "name": "▶ Web + API + OCR",
+      "configurations": ["Web (Blazor) — F5", "API (REST)", "OCR servisi (Python)"],
+      "stopAll": true
     }
   ]
 }

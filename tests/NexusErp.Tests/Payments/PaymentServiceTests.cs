@@ -20,11 +20,15 @@ public sealed class PaymentServiceTests(DatabaseFixture fixture)
 
     private Ctx Setup(Guid tenant)
     {
+        // db: tohumlama ve DOĞRULAMA context'i. Servisler artık fabrikadan
+        // kendi context'lerini açıyor — doğrulama sorguları AsNoTracking olduğu için
+        // bu context bayat veri döndürmez.
         var db = fixture.CreateContext(tenant);
+        var factory = fixture.CreateFactory(tenant);
         var generator = new InvoiceNumberGenerator(db, fixture.CreateTenantContext(tenant));
-        var invoices = new InvoiceService(db, generator, TimeProvider.System);
-        var payments = new PaymentService(db, generator);
-        var balance = new PartyBalanceService(db);
+        var invoices = new InvoiceService(factory, generator, TimeProvider.System);
+        var payments = new PaymentService(factory, generator);
+        var balance = new PartyBalanceService(factory);
 
         var party = new Party
         {

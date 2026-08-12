@@ -1,4 +1,6 @@
 using System.Reflection;
+using System.Text.Encodings.Web;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NexusErp.Application.Abstractions;
 using NexusErp.Domain.Common;
@@ -27,6 +29,9 @@ public class AppDbContext(
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<PaymentAllocation> PaymentAllocations => Set<PaymentAllocation>();
     public DbSet<PartyLedgerEntry> PartyLedgerEntries => Set<PartyLedgerEntry>();
+    public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
+    public DbSet<OutBoxMessage> OutboxMessages => Set<OutBoxMessage>();
+
 
     /// <summary>
     /// Query filter içinden okunur. EF Core, DbContext ÜYESİNE yapılan erişimi sabit değil
@@ -84,12 +89,8 @@ public class AppDbContext(
     // SaveChanges: audit + tenant ataması + soft delete dönüşümü
     // ------------------------------------------------------------------
 
-    public void Detach(object entity) => Entry(entity).State = EntityState.Detached;
-
-    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        // ⚠️ Npgsql timestamptz kolonuna yalnızca offset'i SIFIR olan DateTimeOffset yazar.
-        // DateTimeOffset.Now (+03:00) verirsen çalışma zamanı hatası alırsın.
         var now = DateTimeOffset.UtcNow;
         var user = currentUser.UserName;
 
@@ -107,7 +108,6 @@ public class AppDbContext(
                 case EntityState.Modified:
                     entry.Entity.UpdatedAt = now;
                     entry.Entity.UpdatedBy = user;
-                    // oluşturma bilgisi değişmez olmalı
                     entry.Property(nameof(AuditableEntity.CreatedAt)).IsModified = false;
                     entry.Property(nameof(AuditableEntity.CreatedBy)).IsModified = false;
                     break;
@@ -122,6 +122,105 @@ public class AppDbContext(
             }
         }
 
-        return base.SaveChangesAsync(cancellationToken);
+        // Denetlenecek değişiklikleri TOPLA — henüz yazma.
+        // ⚠️ base.SaveChangesAsync'ten ÖNCE olmak zorunda: kayıttan sonra entity'ler
+        // Unchanged'a döner ve OriginalValue/CurrentValue farkı kaybolur.
+        var pending = CollectAuditEntries(now, user);
+
+        var result = await base.SaveChangesAsync(cancellationToken);
+
+        if (pending.Count > 0)
+        {
+            AuditEntries.AddRange(pending);
+            await base.SaveChangesAsync(cancellationToken);
+        }
+
+        return result;
     }
+
+    private List<AuditEntry> CollectAuditEntries(DateTimeOffset now, string user)
+    {
+        var entries = new List<AuditEntry>();
+
+        foreach (var entry in ChangeTracker.Entries<AuditableEntity>())
+        {
+            // Denetim kaydının kendisini denetleme — sonsuz döngü olur
+            if (entry.Entity is AuditEntry) continue;
+
+            // ⚠️ Outbox'ı da denetleme. OutBoxMessage : AuditableEntity olduğu için
+            // aksi halde HER olay yazımı bir Insert denetimi, HER ProcessedAt
+            // güncellemesi bir Update denetimi üretir. Denetim tablosu outbox'ın
+            // İKİ KATI hızla büyür ve gerçek iş kayıtları çöpün içinde kaybolur.
+            if (entry.Entity is OutBoxMessage) continue;
+
+            var action = entry.State switch
+            {
+                EntityState.Added => AuditAction.Insert,
+                // Soft delete: yukarıdaki döngü Deleted'ı Modified'a çevirip
+                // IsDeleted = true yaptı. Silme olarak kaydedilmesi gereken durum bu.
+                EntityState.Modified when entry.Entity.IsDeleted => AuditAction.Delete,
+                EntityState.Modified => AuditAction.Update,
+                _ => (AuditAction?)null
+            };
+
+            if (action is null) continue;
+
+            var changes = new Dictionary<string, object?>();
+
+            foreach (var prop in entry.Properties)
+            {
+                // Gürültü: her kayıtta zaten değişen denetim alanlarını atla
+                if (prop.Metadata.Name is nameof(AuditableEntity.UpdatedAt)
+                                       or nameof(AuditableEntity.UpdatedBy)
+                                       or nameof(AuditableEntity.CreatedAt)
+                                       or nameof(AuditableEntity.CreatedBy))
+                    continue;
+
+                if (action == AuditAction.Insert)
+                {
+                    if (prop.CurrentValue is not null)
+                        changes[prop.Metadata.Name] = prop.CurrentValue;
+                }
+                else if (prop.IsModified && !Equals(prop.OriginalValue, prop.CurrentValue))
+                {
+                    changes[prop.Metadata.Name] = new
+                    {
+                        eski = prop.OriginalValue,
+                        yeni = prop.CurrentValue
+                    };
+                }
+            }
+
+            if (changes.Count == 0) continue;   // gerçekten değişen bir şey yok
+
+            entries.Add(new AuditEntry
+            {
+                TenantId = entry.Entity is ITenantScoped s ? s.TenantId : CurrentTenantId,
+                EntityName = entry.Entity.GetType().Name,
+                EntityId = entry.Entity.Id.ToString(),
+                Action = action.Value,
+                UserName = user,
+                OccurredAt = now,
+                Changes = JsonSerializer.Serialize(changes, JsonOptions),
+
+                // ⚠️ CreatedAt/CreatedBy'ı ELLE dolduruyoruz. Denetim kayıtları ikinci
+                // turda base.SaveChangesAsync ile yazılıyor — yani bu override'ın audit
+                // döngüsüne HİÇ uğramıyorlar. Set etmezsek CreatedAt 0001-01-01 kalır.
+                CreatedAt = now,
+                CreatedBy = user
+            });
+        }
+
+        return entries;
+    }
+
+    /// <summary>
+    /// ⚠️ UnsafeRelaxedJsonEscaping olmadan Türkçe karakterler ü gibi kaçış
+    /// dizilerine dönüşür ve denetim kaydı gözle okunamaz hale gelir.
+    /// "Unsafe" adı yanıltıcı — HTML'e basmadığın sürece güvenli.
+    /// </summary>
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
 }

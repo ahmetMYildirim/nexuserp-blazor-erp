@@ -1,0 +1,159 @@
+# NexusERP REST API — REST Client (humao.rest-client) ile çalıştırılır
+#
+# Kullanım: her isteğin üstündeki "Send Request" bağlantısına tıkla.
+# Ortam seçimi: sağ altta "No Environment" → "local" (.vscode/settings.json'da tanımlı)
+#
+# Önce API'yi başlat:  dotnet run --project src/NexusErp.Api
+# Veri tabanı ayakta olmalı: docker compose up -d
+
+@api = {{apiUrl}}
+
+###############################################################################
+# 1) Jeton al — diğer tüm istekler buna bağlı
+###############################################################################
+
+# @name token
+POST {{api}}/api/auth/token
+Content-Type: application/json
+
+{
+  "email": "{{user}}",
+  "password": "{{password}}"
+}
+
+### Yanıttaki jetonu değişkene bağla (üstteki isteği ÖNCE çalıştır)
+@jwt = {{token.response.body.accessToken}}
+
+###############################################################################
+# 2) Cariler
+###############################################################################
+
+### Cari listesi
+GET {{api}}/api/cariler
+Authorization: Bearer {{jwt}}
+
+### Arama — Türkçe büyük/küçük harf testi: "İNŞAAT" → "Karadeniz İnşaat" bulmalı
+GET {{api}}/api/cariler?ara=İNŞAAT
+Authorization: Bearer {{jwt}}
+
+### Yeni cari
+# @name newParty
+POST {{api}}/api/cariler
+Authorization: Bearer {{jwt}}
+Content-Type: application/json
+
+{
+  "code": "M-9001",
+  "title": "Test Teknoloji A.Ş.",
+  "type": "Customer",
+  "taxNumber": "1234567890",
+  "taxOffice": "Kadıköy",
+  "email": "muhasebe@testteknoloji.com.tr",
+  "city": "İstanbul"
+}
+
+###############################################################################
+# 3) Faturalar
+###############################################################################
+
+### Fatura listesi
+GET {{api}}/api/faturalar
+Authorization: Bearer {{jwt}}
+
+### Taslak fatura — tevkifatlı (KDV %20, tevkifat 7/10)
+# Beklenen: matrah 8.000 · KDV 1.600 · tevkifat 1.120 · ödenecek 8.480
+# @name draft
+POST {{api}}/api/faturalar
+Authorization: Bearer {{jwt}}
+Content-Type: application/json
+
+{
+  "partyId": "{{newParty.response.body.id}}",
+  "series": "NEX",
+  "type": "Sales",
+  "issueDate": "2026-08-11",
+  "dueDate": "2026-09-10",
+  "currency": "TRY",
+  "lines": [
+    {
+      "productCode": "HZM-001",
+      "productName": "Yazılım danışmanlığı",
+      "unit": "Saat",
+      "quantity": 80,
+      "unitPrice": 100,
+      "taxRate": 0.20,
+      "withholdingRate": 0.70
+    }
+  ]
+}
+
+@invoiceId = {{draft.response.body.id}}
+
+### Faturayı kes — atomik numara üretir (NEX2026000000001 formatı)
+POST {{api}}/api/faturalar/{{invoiceId}}/kes
+Authorization: Bearer {{jwt}}
+
+### PDF indir
+GET {{api}}/api/faturalar/{{invoiceId}}/pdf
+Authorization: Bearer {{jwt}}
+
+### e-Fatura UBL-TR 1.2 XML
+GET {{api}}/api/faturalar/{{invoiceId}}/ubl
+Authorization: Bearer {{jwt}}
+
+###############################################################################
+# 4) Tahsilat
+###############################################################################
+
+### Tahsilat + FIFO eşleştirme
+POST {{api}}/api/tahsilatlar
+Authorization: Bearer {{jwt}}
+Content-Type: application/json
+
+{
+  "partyId": "{{newParty.response.body.id}}",
+  "paymentDate": "2026-08-11",
+  "method": "BankTransfer",
+  "amount": 5000,
+  "currency": "TRY",
+  "reference": "Havale — TR33 0006 1005 1978 6457 8413 26",
+  "autoAllocate": true
+}
+
+### Yaşlandırma raporu (30/60/90 gün kovaları)
+GET {{api}}/api/tahsilatlar/yaslandirma
+Authorization: Bearer {{jwt}}
+
+###############################################################################
+# 5) Abonelik faturalandırma — IDEMPOTENT
+###############################################################################
+
+### İlk çalıştırma: fatura üretir  (tarih QUERY parametresi, gövde yok)
+POST {{api}}/api/abonelikler/faturalandir?tarih=2026-08-11
+Authorization: Bearer {{jwt}}
+
+### İkinci çalıştırma: uretilen = 0, atlanan > 0 dönmeli
+# Garanti (subscription_id, period_start) unique index'inde — iş mantığında değil.
+POST {{api}}/api/abonelikler/faturalandir?tarih=2026-08-11
+Authorization: Bearer {{jwt}}
+
+###############################################################################
+# 6) Yetki testleri — bunlar BAŞARISIZ olmalı
+###############################################################################
+
+### Jetonsuz istek → 401 (302 yönlendirme DEĞİL)
+GET {{api}}/api/faturalar
+
+### Satış rolüyle jeton al
+# @name salesToken
+POST {{api}}/api/auth/token
+Content-Type: application/json
+
+{
+  "email": "satis@nexusdemo.com.tr",
+  "password": "{{password}}"
+}
+
+### Satış rolüyle fatura kesme → 403
+POST {{api}}/api/faturalar/{{invoiceId}}/kes
+Authorization: Bearer {{salesToken.response.body.accessToken}}

@@ -1,0 +1,52 @@
+{
+  // Projeyi ilk açanın "Önerilen eklentileri yükle" bildirimini görmesi için.
+  // Yeni bir makinede kurulum: Ctrl+Shift+P → "Extensions: Show Recommended Extensions"
+  "recommendations": [
+    // --- Yapay zekâ asistanları ---
+    // GitHub Copilot bu VS Code sürümünde YERLEŞİK, listede yok — sadece giriş yap.
+    "anthropic.claude-code",                // Claude Code — sohbet + agent
+    "openai.chatgpt",                       // Codex
+
+    // --- Kod kalitesi ---
+    "sonarsource.sonarlint-vscode",         // statik analiz, yazarken hata yakalar
+
+    // --- .NET / C# / Blazor ---
+    "ms-dotnettools.csdevkit",              // çözüm gezgini, test kaşifi, Razor
+    "ms-dotnettools.csharp",                // dil sunucusu + hata ayıklayıcı
+    "ms-dotnettools.vscodeintellicode-csharp",
+    "k--kato.docomment",                    // /// yazınca XML doc iskeleti açar
+
+    // --- Veri tabanı ---
+    "ms-ossdata.vscode-pgsql",              // PostgreSQL'e bağlan, sorgu çalıştır
+
+    // --- Docker ---
+    "ms-azuretools.vscode-containers",
+    "ms-azuretools.vscode-docker",
+
+    // --- OCR servisi (Python) ---
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "ms-python.debugpy",
+    "charliermarsh.ruff",                   // lint + format, tek araç
+
+    // --- API testi ---
+    "humao.rest-client",                    // .http dosyalarını doğrudan çalıştırır
+
+    // --- Genel ---
+    "redhat.vscode-yaml",                   // docker-compose şema doğrulama
+    "editorconfig.editorconfig",
+    "eamodio.gitlens",
+    "usernamehw.errorlens",                 // hatayı satır sonunda gösterir
+    "yzhang.markdown-all-in-one",           // docs/ için içindekiler, kısayollar
+    "aaron-bond.better-comments",           // ⚠️ ve 🎯 yorumlarını renklendirir
+    "gruntfuggly.todo-tree",                // TODO/FIXME panelde toplanır
+    "christian-kohler.path-intellisense"    // dosya yolu tamamlama
+  ],
+
+  "unwantedRecommendations": [
+    // Bunların işini C# Dev Kit zaten yapıyor; ikisi birden kurulunca
+    // test kaşifi ve çözüm ağacı çift görünür.
+    "formulahendry.dotnet-test-explorer",
+    "fernandoescolar.vscode-solution-explorer"
+  ]
+}

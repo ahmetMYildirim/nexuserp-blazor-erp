@@ -2,6 +2,7 @@ using System.Globalization;
 using MudBlazor.Services;
 using NexusErp.Application;
 using NexusErp.Infrastructure;
+using NexusErp.Infrastructure.BackgroundJobs;
 using NexusErp.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using NexusErp.Infrastructure.Identity;
@@ -27,6 +28,12 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddAuthorization();
+
+// ⚠️ Abonelik faturalandırma YALNIZCA burada kayıtlı, API'de değil.
+// İki uygulama birden ayaktayken ikisi de kaydetseydi aynı dönem iki kez
+// faturalanmaya çalışılırdı; (subscription_id, period_start) unique index'i
+// bunu engeller ama boşuna iş yapılır. Tek sahibi olsun.
+builder.Services.AddHostedService<SubscriptionBillingWorker>();
 
 var app = builder.Build();
 

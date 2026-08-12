@@ -6,10 +6,12 @@ using NexusErp.Domain.Enums;
 
 namespace NexusErp.Application.Subscriptions;
 
-public sealed class SubscriptionService(IAppDbContext db)
+public sealed class SubscriptionService(IAppDbContextFactory factory)
 {
-    public async Task<List<PlanListItem>> GetPlansAsync(CancellationToken ct = default) =>
-        await db.Plans.AsNoTracking()
+    public async Task<List<PlanListItem>> GetPlansAsync(CancellationToken ct = default)
+    {
+        await using var db = factory.Create();
+        return await db.Plans.AsNoTracking()
             .OrderBy(p => p.Price)
             .Select(p => new PlanListItem(
                 p.Id, p.Code, p.Name, p.Price, p.Currency, p.Cycle, p.TrialDays, p.IsActive,
@@ -17,11 +19,13 @@ public sealed class SubscriptionService(IAppDbContext db)
                                          && s.Status == SubscriptionStatus.Active),
                 p.Price / (int)p.Cycle))
             .ToListAsync(ct);
+    }
 
     public async Task<PagedResult<SubscriptionListItem>> SearchAsync(
         SubscriptionStatus? status = null, int page = 0, int pageSize = 25,
         CancellationToken ct = default)
     {
+        await using var db = factory.Create();
         var query = db.Subscriptions.AsNoTracking();
         if (status is not null) query = query.Where(s => s.Status == status.Value);
 
@@ -46,6 +50,7 @@ public sealed class SubscriptionService(IAppDbContext db)
     /// </summary>
     public async Task<SubscriptionStats> GetStatsAsync(DateOnly today, CancellationToken ct = default)
     {
+        await using var db = factory.Create();
         var rows = await db.Subscriptions
             .Where(s => s.Status == SubscriptionStatus.Active
                      || s.Status == SubscriptionStatus.PastDue)
@@ -75,6 +80,7 @@ public sealed class SubscriptionService(IAppDbContext db)
     public async Task CancelAsync(Guid id, DateOnly on, bool immediately,
                                   CancellationToken ct = default)
     {
+        await using var db = factory.Create();
         var sub = await db.Subscriptions.FirstOrDefaultAsync(s => s.Id == id, ct)
                   ?? throw new DomainException("Abonelik bulunamadı.");
 

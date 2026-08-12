@@ -10,7 +10,7 @@ using NexusErp.Domain.Invoicing;
 namespace NexusErp.Application.Invoicing;
 
 public sealed class InvoiceService(
-    IAppDbContext db,
+    IAppDbContextFactory factory,
     IInvoiceNumberGenerator numbers,
     TimeProvider clock)
 {
@@ -23,6 +23,7 @@ public sealed class InvoiceService(
     public async Task<PagedResult<InvoiceListItem>> SearchAsync(
         InvoiceQuery q, CancellationToken ct = default)
     {
+        await using var db = factory.Create();
         var today = DateOnly.FromDateTime(clock.GetUtcNow().Date);
         var query = db.Invoices.AsNoTracking();
 
@@ -70,6 +71,7 @@ public sealed class InvoiceService(
 
     public async Task<InvoiceForm?> GetFormAsync(Guid id, CancellationToken ct = default)
     {
+        await using var db = factory.Create();
         var inv = await db.Invoices.AsNoTracking()
             .Include(i => i.Lines.OrderBy(l => l.LineNumber))
             .FirstOrDefaultAsync(i => i.Id == id, ct);
@@ -119,6 +121,7 @@ public sealed class InvoiceService(
         if (form.Lines.Count == 0)
             throw new DomainException("Fatura en az bir satır içermelidir.");
 
+        await using var db = factory.Create();
         var party = await db.Parties.FirstOrDefaultAsync(p => p.Id == form.PartyId, ct)
                     ?? throw new DomainException("Cari kart bulunamadı.");
 
@@ -215,18 +218,10 @@ public sealed class InvoiceService(
         invoice.WithholdingTotal = calc.WithholdingTotal;
         invoice.GrandTotal = calc.GrandTotal;
 
-        // Add EN SON — doğrulama hatası olursa context'te öksüz entity kalmasın (Bölüm 06)
         if (isNew) db.Invoices.Add(invoice);
 
-        try
-        {
-            await db.SaveChangesAsync(ct);
-        }
-        catch
-        {
-            if (isNew) db.Detach(invoice);
-            throw;
-        }
+        // Detach yamasına gerek kalmadı: context bu metoda ait, hata olursa onunla kapanıyor.
+        await db.SaveChangesAsync(ct);
 
         return invoice.Id;
     }
@@ -234,10 +229,14 @@ public sealed class InvoiceService(
     /// <summary>Taslağı resmî faturaya çevirir: numara verir, durumu Issued yapar.</summary>
     public async Task<string> IssueAsync(Guid invoiceId, CancellationToken ct = default)
     {
+        await using var db = factory.Create();
         var invoice = await db.Invoices.Include(i => i.Lines)
                           .FirstOrDefaultAsync(i => i.Id == invoiceId, ct)
                       ?? throw new DomainException("Fatura bulunamadı.");
 
+        // ⚠️ numbers.NextAsync KENDİ context'inde, ham SQL ile çalışıyor ve anında
+        // commit ediyor — bu SaveChanges'e bağlı değil. Aşağısı patlarsa numara
+        // tüketilmiş olur ve seride boşluk kalır. (Fabrika öncesinde de böyleydi.)
         // Numara SADECE burada veriliyor, taslakta değil: taslak silinebilir ve
         // silinen taslağın numarası boşluk bırakır. Mevzuat boşluksuz seri ister.
         var (number, sequence) = await numbers.NextAsync(invoice.Series, invoice.Year, ct);
@@ -268,6 +267,7 @@ public sealed class InvoiceService(
 
     public async Task CancelAsync(Guid invoiceId, CancellationToken ct = default)
     {
+        await using var db = factory.Create();
         var invoice = await db.Invoices.FirstOrDefaultAsync(i => i.Id == invoiceId, ct)
                       ?? throw new DomainException("Fatura bulunamadı.");
 
@@ -277,6 +277,7 @@ public sealed class InvoiceService(
 
     public async Task DeleteDraftAsync(Guid invoiceId, CancellationToken ct = default)
     {
+        await using var db = factory.Create();
         var invoice = await db.Invoices.FirstOrDefaultAsync(i => i.Id == invoiceId, ct)
                       ?? throw new DomainException("Fatura bulunamadı.");
 

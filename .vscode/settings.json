@@ -11,14 +11,85 @@
   "[csharp]": { "editor.defaultFormatter": "ms-dotnettools.csharp" },
   "[razor]": { "editor.defaultFormatter": "ms-dotnettools.csharp" },
 
+  // --- Python (services/ocr) ---
+  // Ruff hem lint hem format yapıyor; black + flake8 ikilisine gerek yok.
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.codeActionsOnSave": { "source.organizeImports": "explicit" }
+  },
+  "python.analysis.typeCheckingMode": "basic",
+
+  // --- YAML ---
+  // docker-compose.yml'de yanlış anahtar yazınca anında uyarı verir
+  "yaml.schemas": {
+    "https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json": [
+      "docker-compose.yml",
+      "docker-compose.*.yml"
+    ]
+  },
+
+  // --- REST Client (.http dosyaları) ---
+  "rest-client.environmentVariables": {
+    "$shared": { "password": "Demo!2026" },
+    "local": {
+      "webUrl": "http://localhost:5283",
+      "apiUrl": "http://localhost:5299",
+      "user": "muhasebe@nexusdemo.com.tr"
+    }
+  },
+
+  // --- Error Lens ---
+  // Hataları satır sonunda gösterir; ipucu/bilgi seviyesi gürültü yapıyor, kapalı.
+  "errorLens.enabledDiagnosticLevels": ["error", "warning"],
+  "errorLens.excludeBySource": ["cSpell"],
+
+  // --- GitLens ---
+  // Satır içi blame varsayılan olarak açık ve dikkat dağıtıcı
+  "gitlens.currentLine.enabled": false,
+  "gitlens.codeLens.enabled": false,
+
+  // --- Better Comments ---
+  // Kod tabanında tuzak uyarıları ⚠️, kilit noktalar 🎯 ile işaretli.
+  // Bunları göz taramasında ayırt edebilmek için renklendiriyoruz.
+  "better-comments.tags": [
+    { "tag": "⚠️", "color": "#FF8C00", "bold": true, "backgroundColor": "transparent",
+      "strikethrough": false, "underline": false, "italic": false },
+    { "tag": "🎯", "color": "#4FC1FF", "bold": true, "backgroundColor": "transparent",
+      "strikethrough": false, "underline": false, "italic": false },
+    { "tag": "TODO", "color": "#FFD700", "bold": false, "backgroundColor": "transparent",
+      "strikethrough": false, "underline": false, "italic": false },
+    { "tag": "!", "color": "#FF2D00", "bold": false, "backgroundColor": "transparent",
+      "strikethrough": false, "underline": false, "italic": false },
+    { "tag": "?", "color": "#3498DB", "bold": false, "backgroundColor": "transparent",
+      "strikethrough": false, "underline": false, "italic": false }
+  ],
+
+  // --- TODO Tree ---
+  "todo-tree.general.tags": ["TODO", "FIXME", "HACK", "NOT", "⚠️"],
+  "todo-tree.filtering.excludeGlobs": ["**/bin/**", "**/obj/**", "**/node_modules/**"],
+  "todo-tree.highlights.defaultHighlight": { "type": "text-and-comment", "gutterIcon": true },
+
+  // --- SonarQube for IDE (SonarLint) ---
+  // Analizciyi kendi JRE'siyle çalıştırır; kurulum gerektirmez.
+  "sonarlint.analyzerProperties": {},
+  "sonarlint.output.showAnalyzerLogs": false,
+
   "files.exclude": {
     "**/bin": true,
-    "**/obj": true
+    "**/obj": true,
+    "**/__pycache__": true
   },
 
   "search.exclude": {
     "**/bin": true,
     "**/obj": true,
-    "**/Migrations/*.Designer.cs": true
+    "**/Migrations/*.Designer.cs": true,
+    "**/__pycache__": true
+  },
+
+  // .razor dosyaları HTML olarak algılanırsa Razor dil desteği çalışmaz
+  "files.associations": {
+    "*.razor": "aspnetcorerazor",
+    "*.http": "http"
   }
 }

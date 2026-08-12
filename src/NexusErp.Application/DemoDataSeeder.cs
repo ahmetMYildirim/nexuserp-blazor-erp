@@ -12,12 +12,14 @@ namespace NexusErp.Application;
 /// hesaplama motoru, numaralandırma ve cari hareket kaydı da böylece çalışmış oluyor.
 /// </summary>
 public sealed class DemoDataSeeder(
-    IAppDbContext db,
+    IAppDbContextFactory factory,
     InvoiceService invoices,
     PaymentService payments)
 {
     public async Task SeedAsync(CancellationToken ct = default)
     {
+        await using var db = factory.Create();
+
         // Yalnızca bir kez: elle kesilmiş (NEX serisi) fatura varsa çık
         if (await db.Invoices.AnyAsync(i => i.Series == "NEX", ct)) return;
 

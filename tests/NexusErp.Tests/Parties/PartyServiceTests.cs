@@ -16,8 +16,7 @@ public sealed class PartyServiceTests(DatabaseFixture fixture)
     [Fact]
     public async Task Ayni_kod_ikinci_kez_kullanilamaz()
     {
-        await using var db = fixture.CreateContext(NewTenant());
-        var service = new PartyService(db);
+        var service = new PartyService(fixture.CreateFactory(NewTenant()));
 
         await service.SaveAsync(new PartyForm { Code = "MUS9001", Title = "Test A" });
 
@@ -30,8 +29,7 @@ public sealed class PartyServiceTests(DatabaseFixture fixture)
     [Fact]
     public async Task Gecersiz_vkn_reddedilir()
     {
-        await using var db = fixture.CreateContext(NewTenant());
-        var service = new PartyService(db);
+        var service = new PartyService(fixture.CreateFactory(NewTenant()));
 
         await Should.ThrowAsync<DomainException>(
             () => service.SaveAsync(new PartyForm
@@ -52,29 +50,29 @@ public sealed class PartyServiceTests(DatabaseFixture fixture)
         var tenantA = NewTenant();
         var tenantB = NewTenant();
 
-        await using (var dbA = fixture.CreateContext(tenantA))
-        {
-            await new PartyService(dbA).SaveAsync(
-                new PartyForm { Code = "MUS9100", Title = "A Tenant Carisi" });
-        }
+        await new PartyService(fixture.CreateFactory(tenantA)).SaveAsync(
+            new PartyForm { Code = "MUS9100", Title = "A Tenant Carisi" });
 
-        await using var dbB = fixture.CreateContext(tenantB);
-        var resultB = await new PartyService(dbB).SearchAsync(new PartyQuery(Search: "MUS9100"));
+        var resultB = await new PartyService(fixture.CreateFactory(tenantB))
+            .SearchAsync(new PartyQuery(Search: "MUS9100"));
 
         resultB.TotalCount.ShouldBe(0);   // B, A'nın verisini GÖRMEMELİ
+
+        await using var dbB = fixture.CreateContext(tenantB);
         (await dbB.Parties.CountAsync()).ShouldBe(0);
     }
 
     /// <summary>
-    /// Blazor Server'da DbContext devre ömrü boyunca yaşar. Başarısız bir kayıt denemesi
-    /// Added durumundaki entity'yi takipte bırakırsa, kullanıcı düzeltip tekrar kaydettiğinde
-    /// İKİ kayıt eklenmeye çalışılır → unique index ihlali. Bu test onu engelliyor.
+    /// Eskiden bu senaryo Detach() yamasıyla çözülüyordu: uzun ömürlü context'te
+    /// başarısız kayıt Added entity'yi takipte bırakıyor, ikinci deneme unique index'e
+    /// takılıyordu. Fabrikaya geçtikten sonra her çağrı taze context açıyor —
+    /// test artık bunun gerçekten böyle olduğunu doğruluyor.
     /// </summary>
     [Fact]
     public async Task Basarisiz_kayit_denemesi_context_kirletmez()
     {
-        await using var db = fixture.CreateContext(NewTenant());
-        var service = new PartyService(db);
+        var tenant = NewTenant();
+        var service = new PartyService(fixture.CreateFactory(tenant));
 
         // 1. deneme: geçersiz VKN → hata
         await Should.ThrowAsync<DomainException>(() => service.SaveAsync(new PartyForm
@@ -93,14 +91,15 @@ public sealed class PartyServiceTests(DatabaseFixture fixture)
         });
 
         id.ShouldNotBe(Guid.Empty);
+
+        await using var db = fixture.CreateContext(tenant);
         (await db.Parties.CountAsync(p => p.Code == "MUS9500")).ShouldBe(1);
     }
 
     [Fact]
     public async Task Kod_onerisi_sirayla_ilerler()
     {
-        await using var db = fixture.CreateContext(NewTenant());
-        var service = new PartyService(db);
+        var service = new PartyService(fixture.CreateFactory(NewTenant()));
 
         (await service.SuggestCodeAsync(PartyType.Customer)).ShouldBe("MUS0001");
 
@@ -114,11 +113,11 @@ public sealed class PartyServiceTests(DatabaseFixture fixture)
     public async Task Soft_delete_sonrasi_ayni_kod_kullanilamaz_ama_kayit_kaybolmaz()
     {
         var tenant = NewTenant();
-        await using var db = fixture.CreateContext(tenant);
-        var service = new PartyService(db);
+        var service = new PartyService(fixture.CreateFactory(tenant));
 
         var id = await service.SaveAsync(new PartyForm { Code = "MUS9200", Title = "Silinecek" });
 
+        await using var db = fixture.CreateContext(tenant);
         var entity = await db.Parties.FirstAsync(p => p.Id == id);
         db.Parties.Remove(entity);            // SaveChanges override → soft delete
         await db.SaveChangesAsync();
@@ -132,8 +131,7 @@ public sealed class PartyServiceTests(DatabaseFixture fixture)
     [Fact]
     public async Task Turkce_arama_buyuk_kucuk_harf_duyarsiz()
     {
-        await using var db = fixture.CreateContext(NewTenant());
-        var service = new PartyService(db);
+        var service = new PartyService(fixture.CreateFactory(NewTenant()));
 
         await service.SaveAsync(new PartyForm { Code = "MUS9300", Title = "İstanbul Lojistik A.Ş." });
 
@@ -145,11 +143,12 @@ public sealed class PartyServiceTests(DatabaseFixture fixture)
     [Fact]
     public async Task Audit_alanlari_otomatik_dolar()
     {
-        await using var db = fixture.CreateContext(NewTenant());
-        var service = new PartyService(db);
+        var tenant = NewTenant();
+        var service = new PartyService(fixture.CreateFactory(tenant));
 
         var id = await service.SaveAsync(new PartyForm { Code = "MUS9400", Title = "Audit Testi" });
 
+        await using var db = fixture.CreateContext(tenant);
         var entity = await db.Parties.AsNoTracking().FirstAsync(p => p.Id == id);
         entity.CreatedBy.ShouldBe("test");
         entity.CreatedAt.ShouldNotBe(default);

@@ -8,13 +8,14 @@ using NexusErp.Domain.Enums;
 
 namespace NexusErp.Application.Payments;
 
-public sealed class PaymentService(IAppDbContext db, IInvoiceNumberGenerator numbers)
+public sealed class PaymentService(IAppDbContextFactory factory, IInvoiceNumberGenerator numbers)
 {
     private static readonly CultureInfo Tr = CultureInfo.GetCultureInfo("tr-TR");
 
     public async Task<PagedResult<PaymentListItem>> SearchAsync(
         string? search = null, int page = 0, int pageSize = 25, CancellationToken ct = default)
     {
+        await using var db = factory.Create();
         var query = db.Payments.AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(search))
@@ -47,6 +48,12 @@ public sealed class PaymentService(IAppDbContext db, IInvoiceNumberGenerator num
         if (form.Amount <= 0)
             throw new DomainException("Tahsilat tutarı sıfırdan büyük olmalıdır.");
 
+        // ⚠️ TEK context tüm çağrı zincirinde paylaşılıyor: tahsilat, eşleştirme ve
+        // fatura durumu aynı SaveChanges'te yazılmalı. Yardımcı metotlara bu yüzden
+        // parametre olarak geçiyor — her biri kendi context'ini açsaydı tahsilat
+        // yazılır ama fatura durumu güncellenmezdi.
+        await using var db = factory.Create();
+
         var party = await db.Parties.FirstOrDefaultAsync(p => p.Id == form.PartyId, ct)
                     ?? throw new DomainException("Cari kart bulunamadı.");
 
@@ -78,24 +85,17 @@ public sealed class PaymentService(IAppDbContext db, IInvoiceNumberGenerator num
         };
 
         if (form.AutoAllocate)
-            await AllocateFifoAsync(payment, party.Id, ct);
+            await AllocateFifoAsync(db, payment, party.Id, ct);
         else
             foreach (var manual in form.Allocations)
-                await AllocateAsync(payment, manual.InvoiceId, manual.Amount, form.PaymentDate, ct);
+                await AllocateAsync(db, payment, manual.InvoiceId, manual.Amount,
+                                    form.PaymentDate, ct);
 
         db.Payments.Add(payment);
         db.PartyLedgerEntries.Add(ledger);
 
-        try
-        {
-            await db.SaveChangesAsync(ct);
-        }
-        catch
-        {
-            db.Detach(payment);
-            db.Detach(ledger);
-            throw;
-        }
+        // Detach yamasına gerek kalmadı: context bu metoda ait, hata olursa onunla kapanıyor.
+        await db.SaveChangesAsync(ct);
 
         return payment.Id;
     }
@@ -104,7 +104,8 @@ public sealed class PaymentService(IAppDbContext db, IInvoiceNumberGenerator num
     /// Açık faturalara VADE sırasına göre (en eski önce) dağıtır.
     /// Kalan tutar avans olarak cari bakiyede kalır.
     /// </summary>
-    private async Task AllocateFifoAsync(Payment payment, Guid partyId, CancellationToken ct)
+    private static async Task AllocateFifoAsync(
+        IAppDbContext db, Payment payment, Guid partyId, CancellationToken ct)
     {
         var openInvoices = await db.Invoices
             .Where(i => i.PartyId == partyId
@@ -123,12 +124,13 @@ public sealed class PaymentService(IAppDbContext db, IInvoiceNumberGenerator num
             var amount = Math.Min(payment.UnallocatedAmount, invoice.RemainingAmount);
             if (amount <= 0) continue;
 
-            ApplyAllocation(payment, invoice, amount, payment.PaymentDate);
+            ApplyAllocation(db, payment, invoice, amount, payment.PaymentDate);
         }
     }
 
-    private async Task AllocateAsync(Payment payment, Guid invoiceId, decimal amount,
-                                     DateOnly date, CancellationToken ct)
+    private static async Task AllocateAsync(
+        IAppDbContext db, Payment payment, Guid invoiceId, decimal amount,
+        DateOnly date, CancellationToken ct)
     {
         var invoice = await db.Invoices.FirstOrDefaultAsync(i => i.Id == invoiceId, ct)
                       ?? throw new DomainException("Fatura bulunamadı.");
@@ -144,10 +146,11 @@ public sealed class PaymentService(IAppDbContext db, IInvoiceNumberGenerator num
                 $"{invoice.Number} faturasının kalan tutarı {invoice.RemainingAmount:N2}. " +
                 "Daha fazlası eşleştirilemez.");
 
-        ApplyAllocation(payment, invoice, amount, date);
+        ApplyAllocation(db, payment, invoice, amount, date);
     }
 
-    private void ApplyAllocation(Payment payment, Invoice invoice, decimal amount, DateOnly date)
+    private static void ApplyAllocation(
+        IAppDbContext db, Payment payment, Invoice invoice, decimal amount, DateOnly date)
     {
         db.PaymentAllocations.Add(new PaymentAllocation
         {
@@ -169,6 +172,7 @@ public sealed class PaymentService(IAppDbContext db, IInvoiceNumberGenerator num
     /// </summary>
     public async Task CancelAsync(Guid paymentId, CancellationToken ct = default)
     {
+        await using var db = factory.Create();
         var payment = await db.Payments
             .Include(p => p.Allocations).ThenInclude(a => a.Invoice)
             .FirstOrDefaultAsync(p => p.Id == paymentId, ct)

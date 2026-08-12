@@ -5,13 +5,14 @@ using NexusErp.Application.Parties;
 
 namespace NexusErp.Application.Products;
 
-public sealed class ProductService(IAppDbContext db)
+public sealed class ProductService(IAppDbContextFactory factory)
 {
     private static readonly CultureInfo Tr = CultureInfo.GetCultureInfo("tr-TR");
 
     public async Task<PagedResult<ProductListItem>> SearchAsync(
         ProductQuery q, CancellationToken ct = default)
     {
+        await using var db = factory.Create();
         var query = db.Products.AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(q.Search))
@@ -57,6 +58,7 @@ public sealed class ProductService(IAppDbContext db)
     public async Task<IReadOnlyList<ProductLookupItem>> LookupAsync(
         string? term, CancellationToken ct = default)
     {
+        await using var db = factory.Create();
         var query = db.Products.AsNoTracking().Where(p => p.IsActive);
 
         if (!string.IsNullOrWhiteSpace(term))

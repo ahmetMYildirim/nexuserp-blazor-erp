@@ -28,7 +28,8 @@ public sealed class UblInvoiceBuilderTests(DatabaseFixture fixture)
     {
         var db = fixture.CreateContext(tenant);
         var generator = new InvoiceNumberGenerator(db, fixture.CreateTenantContext(tenant));
-        var invoices = new InvoiceService(db, generator, TimeProvider.System);
+        var invoices = new InvoiceService(
+            fixture.CreateFactory(tenant), generator, TimeProvider.System);
 
         db.Tenants.Add(new Tenant
         {

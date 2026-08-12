@@ -62,5 +62,23 @@ services:
     ports:
       - "8080:8080"
 
+  rabbitmq:
+      image: rabbitmq:4-management-alpine
+      container_name: nexuserp-mq
+      restart: usnless-stopped
+      environment:
+        RABBITMQ_DEFAULT_USER: nexus
+        RABBITMQ_DEFAULT_PASS: nexus_dev_2026
+      ports:
+        - "5672:5672"
+        - "15672:15672"
+      volumes:
+        - nexuserp-mq-data:/var/lib/rabbitmq
+      healthcheck:
+        test: ["CMD-SHELL", "rabbitmqctl status"]
+        interval: 15s
+        timeout: 10s
+        retries: 5
+
 volumes:
   nexuserp-data:

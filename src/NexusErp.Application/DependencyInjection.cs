@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using NexusErp.Application.Auditing;
 using NexusErp.Application.Dashboard;
 using NexusErp.Application.Invoicing;
 using NexusErp.Application.Payments;
@@ -26,6 +27,7 @@ public static class DependencyInjection
         services.AddScoped<PaymentService>();
         services.AddScoped<PartyBalanceService>();
         services.AddScoped<DashboardService>();
+        services.AddScoped<AuditService>();
         services.AddScoped<DemoDataSeeder>();
 
         // .NET 8 zaman soyutlaması. Testte FakeTimeProvider ile zamanı ileri sarabiliyoruz —

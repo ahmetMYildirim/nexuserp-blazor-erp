@@ -18,6 +18,15 @@
       "group": { "kind": "test", "isDefault": true }
     },
     {
+      // Testcontainers gerektirmeyen saf birim testleri — saniyeler içinde biter.
+      // Hesaplama motorunda değişiklik yaparken bunu kullan.
+      "label": "test: sadece hızlı olanlar",
+      "command": "dotnet",
+      "type": "process",
+      "args": ["test", "${workspaceFolder}/NexusErp.sln", "--filter", "FullyQualifiedName~Domain"],
+      "problemMatcher": "$msCompile"
+    },
+    {
       "label": "docker: veritabanını başlat",
       "command": "docker",
       "type": "process",
@@ -29,6 +38,15 @@
       "command": "docker",
       "type": "process",
       "args": ["compose", "-f", "${workspaceFolder}/docker-compose.yml", "down"],
+      "problemMatcher": []
+    },
+    {
+      // ⚠️ -v volume'ü de siler; demo verisi sıfırdan üretilir.
+      // Locale/collation değişikliği sonrası ŞART (Bölüm 03).
+      "label": "docker: veritabanını SIFIRLA (-v)",
+      "command": "docker",
+      "type": "process",
+      "args": ["compose", "-f", "${workspaceFolder}/docker-compose.yml", "down", "-v"],
       "problemMatcher": []
     },
     {
@@ -52,13 +70,43 @@
         "--startup-project", "${workspaceFolder}/src/NexusErp.Web"
       ],
       "problemMatcher": []
+    },
+    {
+      // Migration'ın ürettiği SQL'i uygulamadan görmek için — üretimde DBA'ya bu verilir.
+      "label": "ef: SQL betiği üret (idempotent)",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "ef", "migrations", "script", "--idempotent",
+        "--project", "${workspaceFolder}/src/NexusErp.Infrastructure",
+        "--startup-project", "${workspaceFolder}/src/NexusErp.Web",
+        "--output", "${workspaceFolder}/artifacts/migrate.sql"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "ocr: servisi başlat (docker)",
+      "command": "docker",
+      "type": "process",
+      "args": ["compose", "-f", "${workspaceFolder}/docker-compose.yml", "up", "-d", "--build", "ocr"],
+      "problemMatcher": []
+    },
+    {
+      // EF'in ürettiği SQL'i konsola dökme anahtarı. Beklenmedik UPDATE/INSERT
+      // davranışında ilk bakılacak yer (bkz. ValueGeneratedNever hikayesi).
+      "label": "web: SQL logu açık çalıştır",
+      "type": "shell",
+      "command": "dotnet",
+      "args": ["run", "--project", "${workspaceFolder}/src/NexusErp.Web"],
+      "options": { "env": { "NEXUS_SQL_LOG": "1" } },
+      "problemMatcher": "$msCompile"
     }
   ],
   "inputs": [
     {
       "id": "migrationName",
       "type": "promptString",
-      "description": "Migration adı (örn. AddSubscriptions)"
+      "description": "Migration adı (örn. AddPurchaseInvoice)"
     }
   ]
 }

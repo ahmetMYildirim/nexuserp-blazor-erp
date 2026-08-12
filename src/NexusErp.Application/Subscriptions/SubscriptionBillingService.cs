@@ -9,7 +9,7 @@ using NexusErp.Domain.Subscriptions;
 namespace NexusErp.Application.Subscriptions;
 
 public sealed class SubscriptionBillingService(
-    IAppDbContext db,
+    IAppDbContextFactory factory,
     InvoiceService invoices,
     ILogger<SubscriptionBillingService> logger)
 {
@@ -19,6 +19,8 @@ public sealed class SubscriptionBillingService(
     /// </summary>
     public async Task<BillingRunResult> RunAsync(DateOnly asOf, CancellationToken ct = default)
     {
+        await using var db = factory.Create();
+
         var due = await db.Subscriptions
             .Include(s => s.Plan).ThenInclude(p => p.Product).ThenInclude(p => p.TaxRate)
             .Include(s => s.Party)
@@ -34,7 +36,7 @@ public sealed class SubscriptionBillingService(
         {
             try
             {
-                if (await BillOneAsync(sub, ct)) created++;
+                if (await BillOneAsync(db, sub, ct)) created++;
                 else skipped++;
             }
             catch (Exception ex)
@@ -51,8 +53,13 @@ public sealed class SubscriptionBillingService(
         return new BillingRunResult(created, skipped, failed);
     }
 
-    private async Task<bool> BillOneAsync(Subscription sub, CancellationToken ct)
+    private async Task<bool> BillOneAsync(IAppDbContext db, Subscription sub, CancellationToken ct)
     {
+        // ⚠️ invoices.SaveDraftAsync KENDİ context'ini açıyor — abonelik ve fatura
+        // FARKLI transaction'larda. Fatura yazılıp AdvanceSchedule başarısız olursa
+        // abonelik geride kalır; sonraki tur unique index'e takılır, atlar ve tarihi
+        // ilerletir. Kendini onarır. Tek transaction gerekseydi paylaşılan context
+        // veya TransactionScope kullanmak gerekirdi.
         var periodStart = sub.NextBillingDate;
         var periodEnd = BillingSchedule.PeriodEnd(periodStart, sub.Plan.Cycle, sub.BillingAnchorDay);
 

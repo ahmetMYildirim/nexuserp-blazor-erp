@@ -1,0 +1,167 @@
+@page "/denetim"
+@attribute [Authorize]
+@using NexusErp.Application.Auditing
+@using NexusErp.Domain.Entities
+@inject AuditService AuditService
+
+<PageTitle>Denetim Kaydı · NexusERP</PageTitle>
+
+<MudStack Row AlignItems="AlignItems.Center" Class="mb-4">
+    <MudText Typo="Typo.h5">Denetim Kaydı</MudText>
+</MudStack>
+
+<MudPaper Elevation="1" Class="pa-4 mb-4">
+    <MudGrid Spacing="2">
+        <MudItem xs="12" md="3">
+            <MudSelect T="string" @bind-Value="_entityName" @bind-Value:after="ReloadAsync"
+                       Label="Kayıt tipi" Variant="Variant.Outlined" Clearable Margin="Margin.Dense">
+                @foreach (var name in _entityNames)
+                {
+                    <MudSelectItem T="string" Value="@name">@name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="6" md="3">
+            <MudSelect T="AuditAction?" @bind-Value="_action" @bind-Value:after="ReloadAsync"
+                       Label="İşlem" Variant="Variant.Outlined" Clearable Margin="Margin.Dense">
+                <MudSelectItem T="AuditAction?" Value="@AuditAction.Insert">Ekleme</MudSelectItem>
+                <MudSelectItem T="AuditAction?" Value="@AuditAction.Update">Güncelleme</MudSelectItem>
+                <MudSelectItem T="AuditAction?" Value="@AuditAction.Delete">Silme</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="6" md="3">
+            <MudDatePicker @bind-Date="_from" @bind-Date:after="ReloadAsync"
+                           Label="Başlangıç" Variant="Variant.Outlined"
+                           Clearable Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="6" md="3">
+            <MudDatePicker @bind-Date="_to" @bind-Date:after="ReloadAsync"
+                           Label="Bitiş" Variant="Variant.Outlined"
+                           Clearable Margin="Margin.Dense" />
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@* Satır genişletilince ham JSON değil, eski → yeni tablosu açılıyor. *@
+<MudDataGrid T="AuditListItem" @ref="_grid" ServerData="LoadServerData"
+             Dense Hover Striped Elevation="1" RowsPerPage="25" SortMode="SortMode.None">
+    <Columns>
+        <TemplateColumn Title="Tarih">
+            <CellTemplate>
+                @context.Item.OccurredAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss")
+            </CellTemplate>
+        </TemplateColumn>
+        <PropertyColumn Property="x => x.EntityName" Title="Kayıt Tipi" />
+        <TemplateColumn Title="İşlem">
+            <CellTemplate>
+                <MudChip T="string" Size="Size.Small" Color="@ActionColor(context.Item.Action)">
+                    @ActionText(context.Item.Action)
+                </MudChip>
+            </CellTemplate>
+        </TemplateColumn>
+        <PropertyColumn Property="x => x.UserName" Title="Kullanıcı" />
+        <TemplateColumn Title="Değişiklik">
+            <CellTemplate>
+                @{
+                    var rows = AuditService.ParseChanges(context.Item.Changes);
+                }
+                @if (rows.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">—</MudText>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2">
+                        @string.Join(", ", rows.Take(3).Select(r => r.Field))@(rows.Count > 3 ? $" +{rows.Count - 3}" : "")
+                    </MudText>
+                }
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <ChildRowContent>
+        @{
+            var rows = AuditService.ParseChanges(context.Item.Changes);
+        }
+        <MudPaper Elevation="0" Class="pa-4">
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                Kayıt no: @context.Item.EntityId
+            </MudText>
+            @if (rows.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Class="mt-2">Ayrıntı yok.</MudText>
+            }
+            else
+            {
+                <MudSimpleTable Dense Bordered Class="mt-2">
+                    <thead>
+                        <tr>
+                            <th>Alan</th>
+                            <th>Eski</th>
+                            <th>Yeni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in rows)
+                        {
+                            <tr>
+                                <td>@row.Field</td>
+                                <td class="mud-text-secondary">@(row.Before ?? "—")</td>
+                                <td>@(row.After ?? "—")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            }
+        </MudPaper>
+    </ChildRowContent>
+    <PagerContent>
+        <MudDataGridPager T="AuditListItem" RowsPerPageString="Sayfa başına"
+                          InfoFormat="{first_item}-{last_item} / {all_items}" />
+    </PagerContent>
+    <NoRecordsContent>
+        <MudText Class="pa-6" Align="Align.Center">Denetim kaydı bulunamadı.</MudText>
+    </NoRecordsContent>
+</MudDataGrid>
+
+@code {
+    private MudDataGrid<AuditListItem> _grid = default!;
+    private IReadOnlyList<string> _entityNames = [];
+    private string? _entityName;
+    private AuditAction? _action;
+    private DateTime? _from;
+    private DateTime? _to;
+
+    protected override async Task OnInitializedAsync()
+        => _entityNames = await AuditService.GetEntityNamesAsync();
+
+    private async Task<GridData<AuditListItem>> LoadServerData(GridState<AuditListItem> state)
+    {
+        var result = await AuditService.SearchAsync(new AuditQuery(
+            EntityName: _entityName,
+            Action: _action,
+            From: _from is { } f ? DateOnly.FromDateTime(f) : null,
+            To: _to is { } t ? DateOnly.FromDateTime(t) : null,
+            Page: state.Page,
+            PageSize: state.PageSize));
+
+        return new GridData<AuditListItem> { Items = result.Items, TotalItems = result.TotalCount };
+    }
+
+    private Task ReloadAsync() => _grid.ReloadServerData();
+
+    private static string ActionText(AuditAction a) => a switch
+    {
+        AuditAction.Insert => "Ekleme",
+        AuditAction.Update => "Güncelleme",
+        AuditAction.Delete => "Silme",
+        _ => a.ToString()
+    };
+
+    private static Color ActionColor(AuditAction a) => a switch
+    {
+        AuditAction.Insert => Color.Success,
+        AuditAction.Update => Color.Info,
+        AuditAction.Delete => Color.Error,
+        _ => Color.Default
+    };
+}
