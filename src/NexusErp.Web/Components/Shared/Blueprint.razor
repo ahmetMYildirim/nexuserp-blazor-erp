@@ -1,0 +1,33 @@
+@*
+    Tasarım sisteminin temel çerçevesi: 1px hairline kenar + köşelerde "+" nişan
+    işaretleri. Dört köşeyi her kullanımda tekrar yazmamak için bileşen.
+
+    ⚠️ Kök öğeye overflow verilmez — nişan işaretleri kutunun 6px dışına taştığı
+    için kırpılır. Yatay kaydırma gerekiyorsa Scroll="true" kullan; içeriği ayrı
+    bir .scroll-x sarmalayıcıya alır.
+*@
+<div class="blueprint @Class" style="@Style">
+    <i class="corner tl"></i><i class="corner tr"></i>
+    <i class="corner bl"></i><i class="corner br"></i>
+
+    @if (Scroll)
+    {
+        <div class="scroll-x">@ChildContent</div>
+    }
+    else
+    {
+        @ChildContent
+    }
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Ek sınıflar. Dolgu için <c>bp-pad</c> veya <c>bp-table-pad</c>.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    [Parameter] public string? Style { get; set; }
+
+    /// <summary>İçeriği yatay kaydırma sarmalayıcısına alır (geniş tablolar).</summary>
+    [Parameter] public bool Scroll { get; set; }
+}
