@@ -1,6 +1,6 @@
 # NexusERP
 
-**Çok kiracılı ön muhasebe ve abonelik faturalandırma sistemi.**
+**Multi-tenant ön muhasebe ve abonelik faturalandırma sistemi.**
 
 .NET 9 · Blazor Server · MudBlazor · EF Core 9 · PostgreSQL 17 · Clean Architecture
 

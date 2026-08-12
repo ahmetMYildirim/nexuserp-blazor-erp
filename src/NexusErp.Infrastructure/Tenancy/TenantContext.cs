@@ -13,7 +13,7 @@ namespace NexusErp.Infrastructure.Tenancy;
 /// ⚠️ Neden Blazor'da IHttpContextAccessor kullanmıyoruz? Microsoft interaktif render
 /// için bunu ÖNERMİYOR: devre (circuit) açıldıktan sonra HttpContext null olabilir ve
 /// AsyncLocal üzerinden devreler arası sızabilir. Sessizce varsayılan tenant'a düşmek,
-/// çok kiracılı bir sistemde veri sızıntısı demektir.
+/// multi-tenant bir sistemde veri sızıntısı demektir.
 /// </summary>
 public sealed class TenantContext(IOptions<TenantOptions> options) : ITenantContext
 {
