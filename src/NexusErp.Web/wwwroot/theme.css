@@ -135,6 +135,9 @@ a:hover { color: var(--color-accent-700); }
   display: flex; align-items: center; gap: 14px;
   height: var(--topbar-h); padding: 0 20px;
   background: var(--color-topbar); color: var(--color-topbar-fg);
+  /* ⚠️ Scrim'in (z-index 20) ÜSTÜNDE kalmalı — yoksa menü açılınca üst bar da
+     bulanıklaşıp okunmaz hale geliyor. Bulanıklaşacak olan yalnızca içerik. */
+  position: relative; z-index: 50;
 }
 .nx-topbar-brand {
   font-family: var(--font-heading); font-weight: 600;
@@ -175,7 +178,7 @@ a:hover { color: var(--color-accent-700); }
   display: flex; align-items: stretch; gap: 24px;
   height: var(--modnav-h); padding: 0 20px;
   border-bottom: 1px solid var(--color-divider);
-  position: relative; z-index: 40;
+  position: relative; z-index: 50;   /* scrim'in üstünde */
   background: var(--color-bg);
 }
 .nx-modnav-tab {
@@ -191,7 +194,10 @@ a:hover { color: var(--color-accent-700); }
   border-bottom-color: var(--color-accent);
 }
 .nx-modnav-group { position: relative; display: flex; }
-.nx-dropdown {
+/* ⚠️ Seçici İKİ sınıflı olmak zorunda. Tek sınıf yazılırsa aşağıdaki
+   `.blueprint { position: relative }` kuralı — eşit özgüllükte ve daha sonra
+   geldiği için — bunu ezer, menü akışa girer ve satırın içine düşer. */
+.blueprint.nx-dropdown {
   position: absolute; top: 100%; left: -8px; z-index: 40;
   min-width: 300px; padding: 7px;
   background: var(--color-bg); box-shadow: var(--shadow-md);
@@ -208,7 +214,9 @@ a:hover { color: var(--color-accent-700); }
 
 /* Menü açıkken içerik hafifçe bulanıklaşır */
 .nx-scrim {
-  position: fixed; inset: 0; z-index: 20; pointer-events: none;
+  position: fixed; z-index: 20; pointer-events: none;
+  /* Yalnızca içerik alanı — üst bar ve menü satırı kapsam dışı */
+  top: calc(var(--topbar-h) + var(--modnav-h)); left: 0; right: 0; bottom: 0;
   backdrop-filter: blur(3px);
   background: color-mix(in srgb, var(--color-bg) 45%, transparent);
 }
