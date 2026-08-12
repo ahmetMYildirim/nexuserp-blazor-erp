@@ -84,7 +84,8 @@
                         HeaderClass="justify-end" CellClass="text-right">
             <CellTemplate>@context.Item.GrandTotal.ToMoney() @context.Item.Currency</CellTemplate>
         </TemplateColumn>
-        <TemplateColumn Title="Kalan" Sortable="false" CellClass="text-right">
+        <TemplateColumn Title="Kalan" Sortable="false"
+                        HeaderClass="justify-end" CellClass="text-right">
             <CellTemplate>@context.Item.RemainingAmount.ToMoney(dashOnZero: true)</CellTemplate>
         </TemplateColumn>
         <TemplateColumn Title="Durum" Sortable="false">

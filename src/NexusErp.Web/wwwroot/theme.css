@@ -432,6 +432,26 @@ a:hover { color: var(--color-accent-700); }
 /* Sayısal hücreler tabular — muhasebeci rakamları alt alta karşılaştırır */
 .mud-table-cell { font-variant-numeric: tabular-nums; }
 
+/* ⚠️ Sayısal kolonda BAŞLIK da sağa yaslanmalı. MudBlazor başlık hücresinin
+   içine bir sıralama düğmesi (flex) koyduğu için yalnızca text-align yetmiyor;
+   sort-label'ı da çevirmek gerekiyor. Aksi halde başlık solda, rakam sağda
+   kalır ve kolon kaymış görünür. */
+.mud-table-head .mud-table-cell.justify-end,
+.mud-table-root thead th.justify-end { text-align: right; }
+
+/* MudDataGrid başlığı iç içe sarmalayıcılar kullanıyor (column-header →
+   column-label + sıralama ikonu). Hangisi olursa olsun sağa yaslansın. */
+.mud-table-head .mud-table-cell.justify-end .mud-table-sort-label,
+.mud-table-head .mud-table-cell.justify-end .mud-table-cell-sortable,
+.mud-table-head .mud-table-cell.justify-end .column-header,
+th.justify-end .column-header,
+th.justify-end > div {
+  justify-content: flex-end;
+}
+
+/* Aksiyon kolonu: başlıksız, içerik sağda */
+.mud-table-cell.d-flex.justify-end { justify-content: flex-end; }
+
 /* Sayfalayıcı ve araç çubuğu sadeleşir */
 .mud-table-pagination { border-top: 1px solid var(--color-divider); font-size: 12px; }
 .mud-table-toolbar { padding-inline: 0; }

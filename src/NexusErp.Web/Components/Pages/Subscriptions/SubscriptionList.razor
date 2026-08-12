@@ -80,10 +80,10 @@
         <TemplateColumn Title="Çapa Günü">
             <CellTemplate>@context.Item.BillingAnchorDay</CellTemplate>
         </TemplateColumn>
-        <TemplateColumn Title="Dönem Ücreti" CellClass="text-right">
+        <TemplateColumn Title="Dönem Ücreti" HeaderClass="justify-end" CellClass="text-right">
             <CellTemplate>@context.Item.EffectivePrice.ToMoney() @context.Item.Currency</CellTemplate>
         </TemplateColumn>
-        <TemplateColumn Title="Aylık Değer" CellClass="text-right">
+        <TemplateColumn Title="Aylık Değer" HeaderClass="justify-end" CellClass="text-right">
             <CellTemplate>@context.Item.MonthlyValue.ToMoney()</CellTemplate>
         </TemplateColumn>
         <TemplateColumn Title="Durum">
