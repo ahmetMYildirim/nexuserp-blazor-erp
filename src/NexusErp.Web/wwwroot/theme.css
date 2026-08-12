@@ -375,8 +375,69 @@ a:hover { color: var(--color-accent-700); }
 /* MudBlazor paleti yalnızca bileşen içi renkler için; sayfa düzeni CSS
    değişkenleriyle kurulur ki koyu tema tek yerden dönsün. */
 
-.mud-dialog, .mud-paper { border-radius: 0 !important; }
-.mud-snackbar { border-radius: 0 !important; }
+/* Köşesiz dil — MudBlazor her yerde 4px yuvarlıyor */
+.mud-dialog, .mud-paper, .mud-snackbar, .mud-button-root,
+.mud-input-control .mud-input, .mud-chip, .mud-alert, .mud-menu-popover .mud-list {
+  border-radius: 0 !important;
+}
+
+/* Paneller: dolu zemin yerine hairline çerçeve (blueprint dili) */
+.mud-paper {
+  background: transparent !important;
+  border: 1px solid var(--color-divider);
+  box-shadow: none !important;
+}
+/* Açılır menü ve dialog opak kalmalı — altındaki içerik okunmasın */
+.mud-popover, .mud-dialog { background: var(--color-bg) !important; }
+.mud-popover { box-shadow: var(--shadow-md) !important; }
+
+/* Tipografi */
+.mud-typography { font-family: var(--font-body); }
+.mud-typography-h5, .mud-typography-h6, .mud-typography-subtitle1,
+.mud-button-label { font-family: var(--font-heading); font-weight: 600; }
+
+/* ---- Veri ızgarası: components.md §3'teki sıkı tablo ---- */
+.mud-table-container, .mud-table-root { background: transparent; }
+
+.mud-table-head .mud-table-cell,
+.mud-table-root thead th {
+  font-family: var(--font-body);
+  font-size: 11px; letter-spacing: .08em; text-transform: uppercase; font-weight: 400;
+  color: color-mix(in srgb, var(--color-text) 60%, transparent);
+  padding: 5px 8px !important;
+  border-bottom: 1px solid var(--color-divider) !important;
+  background: transparent !important;
+  white-space: nowrap;
+}
+.mud-table-body .mud-table-cell,
+.mud-table-root tbody td {
+  font-size: 13px;
+  padding: 5px 8px !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent) !important;
+}
+.mud-table-body .mud-table-row:hover {
+  background: color-mix(in srgb, var(--color-text) 4%, transparent) !important;
+}
+/* Striped kullanılmaz */
+.mud-table-striped tbody tr:nth-of-type(odd) { background: transparent !important; }
+
+/* Sayısal hücreler tabular — muhasebeci rakamları alt alta karşılaştırır */
+.mud-table-cell { font-variant-numeric: tabular-nums; }
+
+/* Sayfalayıcı ve araç çubuğu sadeleşir */
+.mud-table-pagination { border-top: 1px solid var(--color-divider); font-size: 12px; }
+.mud-table-toolbar { padding-inline: 0; }
+
+/* ---- Form alanları ---- */
+.mud-input-control .mud-input.mud-input-outlined { background: var(--color-surface); }
+.mud-input-outlined .mud-input-outlined-border { border-color: var(--color-divider) !important; }
+.mud-input-root { font-family: var(--font-body); font-size: 13px; }
+
+/* ---- Butonlar ---- */
+.mud-button-root {
+  font-family: var(--font-heading); font-weight: 600; text-transform: none;
+  letter-spacing: 0;
+}
 
 /* Blazor hata çubuğu */
 #blazor-error-ui {

@@ -56,6 +56,13 @@
     /// <summary>74×22 sparkline için ham değerler. En az 2 nokta gerekir.</summary>
     [Parameter] public IReadOnlyList<decimal>? Sparkline { get; set; }
 
+    /// <summary>
+    /// Eski çağrılarla uyum için tutuluyor. Yeni tasarım tek aksan kullanıyor,
+    /// renk ayrımı yapmıyor. ⚠️ Kaldırılırsa parametreyi geçen sayfalar ÇALIŞMA
+    /// ZAMANINDA patlar — Blazor parametre eşleşmesini derlemede denetlemez.
+    /// </summary>
+    [Parameter] public Color Color { get; set; } = Color.Default;
+
     private string SparkPoints()
     {
         var v = Sparkline!;
