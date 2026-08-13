@@ -1,9 +1,13 @@
 using System.Text;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NexusErp.Application.Events;
+using NexusErp.Domain.Entities;
+using NexusErp.Infrastructure.Persistence;
 using NexusErp.Infrastructure.Messaging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -16,10 +20,12 @@ namespace NexusErp.Infrastructure.BackgroundJobs;
 /// muhasebe fişi) buraya ya da ayrı tüketicilere eklenir.
 /// </summary>
 public sealed class InvoiceIssuedConsumer(
+    IServiceScopeFactory scopeFactory,
     IOptions<RabbitMqOptions> options,
     ILogger<InvoiceIssuedConsumer> logger) : BackgroundService
 {
     private const string QueueName = "nexuserp.invoice-issued";
+    private const string ConsumerName = "invoice-issued";
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -100,11 +106,19 @@ public sealed class InvoiceIssuedConsumer(
                 var evt = JsonSerializer.Deserialize<InvoiceIssued>(json)
                           ?? throw new InvalidOperationException("Boş gövde.");
 
-                // ⚠️ IDEMPOTENCY NOKTASI. Outbox "en az bir kez" teslim eder: işçi
-                // mesajı yayınlayıp ProcessedAt'i yazmadan çökerse aynı mesaj tekrar
-                // gelir. Yan etkisi olan bir iş eklendiğinde (e-posta, muhasebe fişi)
-                // işlenen messageId'ler bir tabloda tutulmalı ve görülmüşse ATLANMALI —
-                // abonelik faturalandırmasındaki unique index'le aynı prensip.
+                // ⚠️ IDEMPOTENCY. Outbox "en az bir kez" teslim eder: işçi mesajı
+                // yayınlayıp ProcessedAt'i yazmadan çökerse aynı mesaj tekrar gelir.
+                // Yan etkili işi (e-posta, muhasebe fişi) İKİ KEZ yapmamak için
+                // önce deftere yazmayı deniyoruz; unique index ihlali gelirse mesaj
+                // zaten işlenmiştir ve atlanır.
+                if (!await TryMarkProcessedAsync(ea, ct))
+                {
+                    logger.LogDebug("Mesaj zaten işlenmiş, atlandı: {MessageId}", messageId);
+                    await channel.BasicAckAsync(ea.DeliveryTag, multiple: false,
+                                                cancellationToken: ct);
+                    return;
+                }
+
                 logger.LogInformation(
                     "Fatura kesildi olayı alındı: {Number} — {Total} {Currency} ({MessageId})",
                     evt.Number, evt.GrandTotal, evt.Currency, messageId);
@@ -127,7 +141,66 @@ public sealed class InvoiceIssuedConsumer(
 
         logger.LogInformation("InvoiceIssued tüketicisi dinlemede: {Queue}", QueueName);
 
-        // Kanal açık kalsın; iptal edilene kadar bekle
+        // ⚠️ Burada beklemek ZORUNLU. Metot dönerse `await using` connection ve
+        // channel dispose edilir, tüketici sessizce ölür ve kuyruk birikir.
         await Task.Delay(Timeout.Infinite, ct);
     }
+
+    /// <summary>
+    /// İdempotency defterine yazmayı dener. <c>false</c> dönerse mesaj daha önce
+    /// işlenmiştir.
+    ///
+    /// ⚠️ Garanti "önce sorgula sonra yaz" kontrolünde değil, veri tabanındaki
+    /// <c>(consumer_name, message_id)</c> unique index'inde. İki tüketici örneği
+    /// aynı mesajı aynı anda alırsa sorgu ikisine de "yok" der; index yanılmaz.
+    /// </summary>
+    private async Task<bool> TryMarkProcessedAsync(BasicDeliverEventArgs ea, CancellationToken ct)
+    {
+        if (!Guid.TryParse(ea.BasicProperties.MessageId, out var messageId))
+            return true;   // kimliği yoksa tekilleştiremeyiz, işle geç
+
+        Guid.TryParse(TenantHeader(ea), out var tenantId);
+
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        db.ProcessedMessages.Add(new ProcessedMessage
+        {
+            ConsumerName = ConsumerName,
+            MessageId = messageId,
+            TenantId = tenantId,
+            ProcessedAt = DateTimeOffset.UtcNow
+        });
+
+        try
+        {
+            await db.SaveChangesAsync(ct);
+            return true;
+        }
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+        {
+            return false;   // zaten işlenmiş — hata değil, idempotency çalışıyor
+        }
+    }
+
+    private static string? TenantHeader(BasicDeliverEventArgs ea)
+    {
+        if (ea.BasicProperties.Headers is null) return null;
+        if (!ea.BasicProperties.Headers.TryGetValue("tenant-id", out var raw)) return null;
+
+        // RabbitMQ header'ları byte[] olarak taşır
+        return raw switch
+        {
+            byte[] bytes => Encoding.UTF8.GetString(bytes),
+            string s => s,
+            _ => raw?.ToString()
+        };
+    }
+
+    /// <summary>PostgreSQL 23505 = unique_violation.</summary>
+    private static bool IsUniqueViolation(DbUpdateException ex)
+        => ex.InnerException?.GetType().Name == "PostgresException"
+           && ex.InnerException.GetType().GetProperty("SqlState")?
+                 .GetValue(ex.InnerException) as string == "23505";
+
 }

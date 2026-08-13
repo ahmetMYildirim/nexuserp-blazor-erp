@@ -31,6 +31,7 @@ public class AppDbContext(
     public DbSet<PartyLedgerEntry> PartyLedgerEntries => Set<PartyLedgerEntry>();
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
     public DbSet<OutBoxMessage> OutboxMessages => Set<OutBoxMessage>();
+    public DbSet<ProcessedMessage> ProcessedMessages => Set<ProcessedMessage>();
 
 
     /// <summary>
@@ -152,6 +153,9 @@ public class AppDbContext(
             // güncellemesi bir Update denetimi üretir. Denetim tablosu outbox'ın
             // İKİ KATI hızla büyür ve gerçek iş kayıtları çöpün içinde kaybolur.
             if (entry.Entity is OutBoxMessage) continue;
+
+            // Idempotency defteri de altyapi kaydi — denetlenmez.
+            if (entry.Entity is ProcessedMessage) continue;
 
             var action = entry.State switch
             {

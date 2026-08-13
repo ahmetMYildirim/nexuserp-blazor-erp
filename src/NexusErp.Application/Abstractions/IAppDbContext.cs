@@ -22,6 +22,7 @@ public interface IAppDbContext : IAsyncDisposable
     DbSet<PartyLedgerEntry> PartyLedgerEntries { get; }
     DbSet<AuditEntry> AuditEntries { get; }
     DbSet<OutBoxMessage> OutboxMessages { get; }
+    DbSet<ProcessedMessage> ProcessedMessages { get; }
 
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
