@@ -1,0 +1,224 @@
+@page "/abonelikler/yeni"
+@attribute [Authorize(Roles = "Admin,Muhasebe,Satis")]
+@using NexusErp.Application.Parties
+@using NexusErp.Application.Subscriptions
+@using NexusErp.Domain.Common
+@using NexusErp.Domain.Enums
+@inject SubscriptionService SubscriptionService
+@inject PartyService PartyService
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>Yeni Abonelik · NexusERP</PageTitle>
+
+<PageHeader Kicker="ABONELİK" Title="Yeni Abonelik"
+            Description="Cari ve plan seç; ilk faturanın ne zaman ve ne kadar kesileceğini altta gör.">
+    <Actions>
+        <a class="btn btn-secondary btn-sm" href="/abonelikler">Vazgeç</a>
+        <button class="btn btn-primary btn-sm" disabled="@_busy" @onclick="SaveAsync">
+            Aboneliği Başlat
+        </button>
+    </Actions>
+</PageHeader>
+
+<div class="grid-2">
+    @* ---------------- SOL: FORM ---------------- *@
+    <Blueprint Class="bp-pad">
+        <h5 style="margin-bottom:12px">Abonelik Bilgileri</h5>
+
+        <div class="field" style="margin-bottom:12px">
+            <label>Cari *</label>
+            <MudAutocomplete T="PartyLookupItem" Value="_party" ValueChanged="OnPartyChanged"
+                             SearchFunc="SearchParties" ToStringFunc="@(p => p?.ToString() ?? "")"
+                             Variant="Variant.Outlined" Margin="Margin.Dense"
+                             Placeholder="Kod veya unvan ile ara" ResetValueOnEmptyText CoerceText />
+        </div>
+
+        <div class="field" style="margin-bottom:12px">
+            <label>Plan *</label>
+            <select class="input" @bind="_form.PlanId" @bind:after="RefreshPreviewAsync">
+                <option value="@Guid.Empty">— seçiniz —</option>
+                @foreach (var p in _plans.Where(p => p.IsActive))
+                {
+                    <option value="@p.Id">
+                        @p.Name — @p.Price.ToMoney() @p.Currency / @CycleText(p.Cycle)
+                    </option>
+                }
+            </select>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+            <div class="field">
+                <label>Başlangıç Tarihi</label>
+                <input type="date" class="input" @bind="_startDate" @bind:after="RefreshPreviewAsync" />
+            </div>
+            <div class="field">
+                <label>Faturalandırma Günü</label>
+                <input type="number" min="1" max="31" class="input" placeholder="başlangıç günü"
+                       @bind="_form.BillingAnchorDay" @bind:after="RefreshPreviewAsync" />
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+            <div class="field">
+                <label>Miktar</label>
+                <input type="number" min="1" step="1" class="input"
+                       @bind="_form.Quantity" @bind:after="RefreshPreviewAsync" />
+            </div>
+            <div class="field">
+                <label>Özel Fiyat (boşsa plan fiyatı)</label>
+                <input type="number" step="0.01" class="input"
+                       @bind="_form.CustomPrice" @bind:after="RefreshPreviewAsync" />
+            </div>
+        </div>
+
+        <div class="field" style="margin-bottom:12px">
+            <label>Deneme Süresi (gün) — boşsa planın varsayılanı</label>
+            <input type="number" min="0" class="input"
+                   @bind="_form.TrialDays" @bind:after="RefreshPreviewAsync" />
+        </div>
+
+        <div class="field">
+            <label>Not</label>
+            <input class="input" @bind="_form.Notes" />
+        </div>
+    </Blueprint>
+
+    @* ---------------- SAĞ: ÖNİZLEME ---------------- *@
+    <div class="stack">
+        <Blueprint Class="bp-pad">
+            <h5 style="margin-bottom:10px">İlk Fatura</h5>
+
+            @if (_preview is null)
+            {
+                <div class="text-muted">Plan seçince ilk faturanın tarihi ve tutarı burada görünür.</div>
+            }
+            else
+            {
+                <div class="kpi-kicker">TUTAR</div>
+                <div class="kpi-value" style="margin:4px 0 2px">
+                    <span class="cur">@_preview.Currency</span>@_preview.FirstAmount.ToMoney()
+                </div>
+                <div class="kpi-hint" style="margin-bottom:12px">
+                    @_preview.CycleText dönem ücreti
+                </div>
+
+                <table class="table">
+                    <tbody>
+                        @if (_preview.TrialEndsOn.HasValue)
+                        {
+                            <tr>
+                                <td>Deneme bitişi</td>
+                                <td class="num">@_preview.TrialEndsOn!.Value.ToString("dd.MM.yyyy")</td>
+                            </tr>
+                        }
+                        <tr>
+                            <td>İlk fatura tarihi</td>
+                            <td class="num">@_preview.FirstBillingDate.ToString("dd.MM.yyyy")</td>
+                        </tr>
+                        <tr>
+                            <td>İlk dönem</td>
+                            <td class="num">
+                                @_preview.PeriodStart.ToString("dd.MM") – @_preview.PeriodEnd.ToString("dd.MM.yyyy")
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                @if (_preview.TrialEndsOn is not null)
+                {
+                    <div class="kpi-hint" style="margin-top:10px">
+                        Deneme süresi boyunca fatura kesilmez. İlk fatura deneme bitiminin
+                        ertesi günü oluşur.
+                    </div>
+                }
+            }
+        </Blueprint>
+
+        @if (_error is not null)
+        {
+            <Blueprint Class="bp-pad" Style="border-color:var(--color-accent-700)">
+                <div class="kpi-kicker" style="color:var(--color-accent-700)">UYARI</div>
+                <div style="margin-top:4px">@_error</div>
+            </Blueprint>
+        }
+    </div>
+</div>
+
+@code {
+    private readonly SubscriptionForm _form = new();
+    private List<PlanListItem> _plans = [];
+    private PartyLookupItem? _party;
+    private SubscriptionPreview? _preview;
+    private string? _error;
+    private bool _busy;
+
+    // MudBlazor/HTML tarih girdisi DateTime ister, domain DateOnly kullanır
+    private DateTime _startDate = DateTime.Today;
+
+    protected override async Task OnInitializedAsync()
+        => _plans = await SubscriptionService.GetPlansAsync();
+
+    private Task<IEnumerable<PartyLookupItem>> SearchParties(string term, CancellationToken ct)
+        => PartyService.LookupAsync(term, PartyType.Customer, ct)
+                       .ContinueWith(t => t.Result.AsEnumerable(), ct);
+
+    private async Task OnPartyChanged(PartyLookupItem? p)
+    {
+        _party = p;
+        _form.PartyId = p?.Id ?? Guid.Empty;
+        await RefreshPreviewAsync();
+    }
+
+    /// <summary>
+    /// Önizleme sunucudan geliyor — arayüzde ikinci bir hesap YAZMIYORUZ.
+    /// Takvim mantığı (çapa günü, deneme bitişi) Domain'de tek yerde.
+    /// </summary>
+    private async Task RefreshPreviewAsync()
+    {
+        _form.StartDate = DateOnly.FromDateTime(_startDate);
+        _error = null;
+
+        if (_form.PlanId == Guid.Empty)
+        {
+            _preview = null;
+            return;
+        }
+
+        try
+        {
+            _preview = await SubscriptionService.PreviewAsync(_form);
+        }
+        catch (DomainException ex)
+        {
+            _preview = null;
+            _error = ex.Message;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        _form.StartDate = DateOnly.FromDateTime(_startDate);
+
+        if (_form.PartyId == Guid.Empty) { Snackbar.Add("Cari seçilmedi.", Severity.Warning); return; }
+        if (_form.PlanId == Guid.Empty) { Snackbar.Add("Plan seçilmedi.", Severity.Warning); return; }
+
+        _busy = true;
+        Guid id = default;
+        var ok = await Snackbar.RunAsync(
+            async () => id = await SubscriptionService.CreateAsync(_form),
+            "Abonelik başlatıldı.");
+        _busy = false;
+
+        if (ok) Nav.NavigateTo($"/abonelikler/{id}");
+    }
+
+    private static string CycleText(BillingCycle c) => c switch
+    {
+        BillingCycle.Monthly => "Aylık",
+        BillingCycle.Quarterly => "3 Aylık",
+        BillingCycle.SemiAnnual => "6 Aylık",
+        BillingCycle.Yearly => "Yıllık",
+        _ => "?"
+    };
+}

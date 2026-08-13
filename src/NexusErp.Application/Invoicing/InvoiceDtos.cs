@@ -20,6 +20,9 @@ public sealed record InvoiceListItem(
     public bool IsOverdue =>
         Status is InvoiceStatus.Issued or InvoiceStatus.PartiallyPaid &&
         DueDate < DateOnly.FromDateTime(DateTime.Today);
+
+    /// <summary>Alışta borç bizde — listede tutarı ters işaretle göstermek için.</summary>
+    public bool IsPurchase => Type == InvoiceType.Purchase;
 }
 
 public sealed class InvoiceLineForm
@@ -52,6 +55,9 @@ public sealed class InvoiceForm
     public DiscountType DocumentDiscountType { get; set; } = DiscountType.None;
     public decimal DocumentDiscountValue { get; set; }
     public string? Notes { get; set; }
+
+    /// <summary>Alış faturasında ZORUNLU: tedarikçinin kendi fatura numarası.</summary>
+    public string? SupplierInvoiceNo { get; set; }
 
     // Abonelik faturalandırması doldurur (Bölüm 09)
     public Guid? SubscriptionId { get; set; }

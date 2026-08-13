@@ -1,257 +1,491 @@
 @page "/"
 @attribute [Authorize]
 @using NexusErp.Application.Dashboard
+@using NexusErp.Application.Subscriptions
 @using NexusErp.Domain.Enums
 @inject DashboardService Dashboard
 
 <PageTitle>Genel Bakış · NexusERP</PageTitle>
 
-<MudStack Row AlignItems="AlignItems.Center" Class="mb-4">
-    <MudText Typo="Typo.h5">Genel Bakış</MudText>
-    <MudSpacer />
-    <MudText Typo="Typo.caption">@DateTime.Today.ToString("dd MMMM yyyy")</MudText>
-</MudStack>
-
-@if (_data is null)
-{
-    @* İskelet: Blazor Server ilk render'ı sunucudan gelir, veri hazır olmadan sayfa çizilir *@
-    <MudGrid>
-        @for (var i = 0; i < 4; i++)
-        {
-            <MudItem xs="12" sm="6" md="3">
-                <MudSkeleton Height="110px" SkeletonType="SkeletonType.Rectangle" />
-            </MudItem>
+<AuthorizeView>
+    <Authorized Context="auth">
+        @{
+            var canCollect = auth.User.IsInRole("Admin") || auth.User.IsInRole("Muhasebe");
+            var isSales = auth.User.IsInRole("Satis");
+            var canWrite = canCollect || isSales;
         }
-    </MudGrid>
-}
-else
-{
-    @* ---------------- ANA KPI'LAR ---------------- *@
-    <MudGrid Class="mb-2">
-        <MudItem xs="12" sm="6" md="3">
-            <StatCard Title="Açık Alacak" Value="@_data.OpenReceivables.ToMoney()" Suffix="₺"
-                      Hint="@($"{_data.InvoiceCount} fatura kayıtlı")"
-                      Icon="@Icons.Material.Filled.AccountBalanceWallet" Color="Color.Primary" />
-        </MudItem>
-        <MudItem xs="12" sm="6" md="3">
-            <StatCard Title="Vadesi Geçen" Value="@_data.OverdueReceivables.ToMoney()" Suffix="₺"
-                      Hint="@($"{_data.OverdueInvoiceCount} fatura gecikmede")"
-                      Icon="@Icons.Material.Filled.Warning" Color="Color.Error" />
-        </MudItem>
-        <MudItem xs="12" sm="6" md="3">
-            <StatCard Title="MRR" Value="@_data.Mrr.ToMoney()" Suffix="₺"
-                      Hint="@($"{_data.ActiveSubscriptions} aktif abonelik · ARR {_data.Arr.ToMoney()} ₺")"
-                      Icon="@Icons.Material.Filled.Autorenew" Color="Color.Success" />
-        </MudItem>
-        <MudItem xs="12" sm="6" md="3">
-            <MudPaper Elevation="1" Class="pa-4" Style="height:100%">
-                <MudStack Row AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween">
-                    <div>
-                        <MudText Typo="Typo.caption">Bu Ay Ciro (KDV hariç)</MudText>
-                        <MudText Typo="Typo.h5" Class="mt-1">
-                            @_data.MonthRevenue.ToMoney()<span style="font-size:.65em">₺</span>
-                        </MudText>
-                        @if (_data.PreviousMonthRevenue > 0)
+
+        <PageHeader Kicker="@($"DÖNEM {DateTime.Today:MMMM yyyy}")"
+                    Title="Genel Bakış"
+                    Description="Günün alacak, tahsilat ve abonelik durumu">
+            <Actions>
+                <span class="text-muted">@DateTime.Today.ToString("dd MMMM yyyy")</span>
+            </Actions>
+        </PageHeader>
+
+        @if (_data is null)
+        {
+            <div class="grid-kpi">
+                @for (var i = 0; i < 4; i++)
+                {
+                    <Blueprint Class="bp-pad" Style="height:96px"></Blueprint>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="stack">
+
+                @* ─────────── 1. ANA KPI BANDI ─────────── *@
+                <div class="grid-kpi">
+                    <StatCard Title="Açık Alacak" Suffix="₺"
+                              Value="@_data.OpenReceivables.ToMoney()"
+                              Hint="@($"{_data.InvoiceCount} fatura kayıtlı")" />
+
+                    <StatCard Title="Vadesi Geçen" Suffix="₺"
+                              Value="@_data.OverdueReceivables.ToMoney()"
+                              Hint="@($"{_data.OverdueInvoiceCount} fatura gecikmede")" />
+
+                    <StatCard Title="MRR" Suffix="₺" Value="@_data.Mrr.ToMoney()"
+                              Hint="@($"{_data.ActiveSubscriptions} abonelik · ARR {_data.Arr.ToMoney()} ₺")" />
+
+                    <StatCard Title="Bu Ay Ciro (KDV hariç)" Suffix="₺"
+                              Value="@_data.MonthRevenue.ToMoney()"
+                              Delta="@(_data.PreviousMonthRevenue > 0 ? _data.RevenueChangePercent : null)"
+                              Hint="geçen aya göre"
+                              Sparkline="@_data.RevenueTrend.Select(t => t.Amount).ToList()" />
+                </div>
+
+                @* ─────────── 2. MİNİ İSTATİSTİK BANDI ─────────── *@
+                <div class="grid-mini">
+                    <MiniStat Label="Tahsilat Oranı" Value="@($"%{_data.CollectionRate:N1}")" />
+                    <MiniStat Label="Bu Ay Tahsilat" Value="@($"{_data.MonthCollected.ToMoney()} ₺")" />
+                    <MiniStat Label="Ort. Tahsil Süresi"
+                              Value="@($"{_data.DaysSalesOutstanding:N1} gün")" Hint="DSO" />
+                    <MiniStat Label="Ortalama Fatura" Value="@($"{_data.AverageInvoice.ToMoney()} ₺")" />
+                    <MiniStat Label="Bu Ay Kesilen" Value="@_data.IssuedThisMonth.ToString()" />
+                    <MiniStat Label="Taslak" Value="@_data.DraftInvoiceCount.ToString()" />
+                    <MiniStat Label="Aktif Cari" Value="@_data.PartyCount.ToString()" />
+                    @* ⚠️ Borç ALACAK kartına karışmıyor: alış faturaları ayrı hesaplanır.
+                       Net pozisyon nakit değil TAHAKKUK — henüz tahsil/ödeme yapılmamış olabilir. *@
+                    <MiniStat Label="Tedarikçi Borcu" Value="@($"{_data.OpenPayables.ToMoney()} ₺")"
+                              Hint="@(_data.OverduePayables > 0 ? $"{_data.OverduePayables.ToMoney()} ₺ vadesi geçti" : "vadesi geçen yok")" />
+                    <MiniStat Label="Net Pozisyon" Value="@($"{_data.NetPosition.ToMoney()} ₺")"
+                              Hint="alacak − borç" />
+                </div>
+
+                @* ─────────── 3. TREND + YAŞLANDIRMA ─────────── *@
+                <div class="grid-2">
+                    <Blueprint Class="bp-pad">
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+                            <h5>Son 12 Ay</h5>
+                            <span style="margin-left:auto;display:flex;align-items:center;gap:12px">
+                                <span class="kpi-hint">
+                                    <svg width="16" height="3" style="vertical-align:middle">
+                                        <line x1="0" y1="1.5" x2="16" y2="1.5"
+                                              stroke="var(--color-accent)" stroke-width="2" />
+                                    </svg> Ciro
+                                </span>
+                                <span class="kpi-hint">
+                                    <svg width="16" height="3" style="vertical-align:middle">
+                                        <line x1="0" y1="1.5" x2="16" y2="1.5"
+                                              stroke="var(--color-accent-600)" stroke-width="1.5"
+                                              stroke-dasharray="3 3" />
+                                    </svg> Tahsilat
+                                </span>
+                            </span>
+                        </div>
+                        @TrendChart()
+                    </Blueprint>
+
+                    @if (canCollect)
+                    {
+                        <Blueprint Class="bp-pad">
+                            <h5 style="margin-bottom:10px">Yaşlandırma</h5>
+                            @AgingStack(_data.AgingBuckets)
+                            <table class="table" style="margin-top:10px">
+                                <tbody>
+                                    @foreach (var (label, value) in AgingRows(_data.AgingBuckets))
+                                    {
+                                        <tr>
+                                            <td>@label</td>
+                                            <td class="num">@Fmt(value)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td>Toplam</td>
+                                        <td class="num">@Fmt(_data.AgingBuckets.Total)</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </Blueprint>
+                    }
+                    else
+                    {
+                        @* Satış rolü tahsilat panellerini görmez — ürün kırılımını görür *@
+                        <Blueprint Class="bp-pad">
+                            <h5 style="margin-bottom:10px">Bu Ay Ürün Kırılımı</h5>
+                            @ProductBars()
+                        </Blueprint>
+                    }
+                </div>
+
+                @* ─────────── 4. DURUM · ALACAKLI · ABONELİK ─────────── *@
+                <div class="grid-3">
+                    <Blueprint Class="bp-pad">
+                        <h5 style="margin-bottom:10px">Fatura Durumları</h5>
+                        @if (_data.StatusBreakdown.Count == 0)
                         {
-                            <MudStack Row Spacing="1" AlignItems="AlignItems.Center" Class="mt-1">
-                                <MudIcon Size="Size.Small"
-                                         Icon="@(_data.RevenueChangePercent >= 0 ? Icons.Material.Filled.ArrowUpward : Icons.Material.Filled.ArrowDownward)"
-                                         Color="@(_data.RevenueChangePercent >= 0 ? Color.Success : Color.Error)" />
-                                <MudText Typo="Typo.caption"
-                                         Color="@(_data.RevenueChangePercent >= 0 ? Color.Success : Color.Error)">
-                                    %@Math.Abs(_data.RevenueChangePercent).ToString("N1")
-                                </MudText>
-                                <MudText Typo="Typo.caption">geçen aya göre</MudText>
-                            </MudStack>
+                            <div class="text-muted">Henüz fatura yok.</div>
                         }
-                    </div>
-                    <MudAvatar Color="Color.Info" Variant="Variant.Outlined">
-                        <MudIcon Icon="@Icons.Material.Filled.TrendingUp" />
-                    </MudAvatar>
-                </MudStack>
-            </MudPaper>
-        </MudItem>
-    </MudGrid>
-
-    @* ---------------- İKİNCİL İSTATİSTİKLER ---------------- *@
-    <MudGrid Class="mb-2">
-        <MudItem xs="6" sm="4" md="2">
-            <MiniStat Label="Tahsilat Oranı" Value="@($"%{_data.CollectionRate:N1}")"
-                      Icon="@Icons.Material.Filled.Percent" Color="Color.Success" />
-        </MudItem>
-        <MudItem xs="6" sm="4" md="2">
-            <MiniStat Label="Bu Ay Tahsilat" Value="@($"{_data.MonthCollected.ToMoney()} ₺")"
-                      Icon="@Icons.Material.Filled.Payments" Color="Color.Info" />
-        </MudItem>
-        <MudItem xs="6" sm="4" md="2">
-            <MiniStat Label="Ortalama Fatura" Value="@($"{_data.AverageInvoice.ToMoney()} ₺")"
-                      Icon="@Icons.Material.Filled.Receipt" Color="Color.Primary" />
-        </MudItem>
-        <MudItem xs="6" sm="4" md="2">
-            <MiniStat Label="Aktif Cari" Value="@_data.PartyCount.ToString()"
-                      Icon="@Icons.Material.Filled.People" Color="Color.Secondary" />
-        </MudItem>
-        <MudItem xs="6" sm="4" md="2">
-            <MiniStat Label="Taslak Fatura" Value="@_data.DraftInvoiceCount.ToString()"
-                      Icon="@Icons.Material.Filled.EditNote" Color="Color.Warning" />
-        </MudItem>
-        <MudItem xs="6" sm="4" md="2">
-            <MiniStat Label="Aktif Abonelik" Value="@_data.ActiveSubscriptions.ToString()"
-                      Icon="@Icons.Material.Filled.Subscriptions" Color="Color.Success" />
-        </MudItem>
-    </MudGrid>
-
-    <MudGrid>
-        @* ---------------- CİRO / TAHSİLAT GRAFİĞİ ---------------- *@
-        <MudItem xs="12" md="8">
-            <MudPaper Elevation="1" Class="pa-4" Style="height:100%">
-                <MudStack Row AlignItems="AlignItems.Center" Class="mb-3">
-                    <MudText Typo="Typo.subtitle1">Son 12 Ay</MudText>
-                    <MudSpacer />
-                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text">
-                        Ciro (KDV hariç)
-                    </MudChip>
-                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">
-                        Tahsilat
-                    </MudChip>
-                </MudStack>
-                <MudChart ChartType="ChartType.Line" ChartSeries="@_series" XAxisLabels="@_labels"
-                          Height="300px"
-                          ChartOptions="@(new ChartOptions { YAxisFormat = "N0", LineStrokeWidth = 3, InterpolationOption = InterpolationOption.NaturalSpline })" />
-            </MudPaper>
-        </MudItem>
-
-        @* ---------------- FATURA DURUM DAĞILIMI ---------------- *@
-        <MudItem xs="12" md="4">
-            <MudPaper Elevation="1" Class="pa-4" Style="height:100%">
-                <MudText Typo="Typo.subtitle1" Class="mb-3">Fatura Durumları</MudText>
-                @if (_data.StatusBreakdown.Count == 0)
-                {
-                    <MudText Typo="Typo.body2">Henüz fatura yok.</MudText>
-                }
-                else
-                {
-                    @foreach (var s in _data.StatusBreakdown.OrderBy(x => x.Status))
-                    {
-                        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center"
-                                  Class="mb-2">
-                            <MudChip T="string" Size="Size.Small" Color="@StatusColor(s.Status)">
-                                @StatusText(s.Status)
-                            </MudChip>
-                            <MudStack Row Spacing="2" AlignItems="AlignItems.Center">
-                                <MudText Typo="Typo.caption">@s.Count adet</MudText>
-                                <MudText Typo="Typo.body2"
-                                         Style="font-weight:600;font-variant-numeric:tabular-nums">
-                                    @s.Amount.ToMoney() ₺
-                                </MudText>
-                            </MudStack>
-                        </MudStack>
-                        <MudProgressLinear Color="@StatusColor(s.Status)" Rounded Size="Size.Small"
-                                           Value="@ShareOf(s.Amount)" Class="mb-3" />
-                    }
-                }
-            </MudPaper>
-        </MudItem>
-
-        @* ---------------- EN ÇOK ALACAKLI CARİLER ---------------- *@
-        <MudItem xs="12" md="5">
-            <MudPaper Elevation="1" Class="pa-4" Style="height:100%">
-                <MudText Typo="Typo.subtitle1" Class="mb-3">En Çok Alacaklı Cariler</MudText>
-                @if (_data.TopDebtors.Count == 0)
-                {
-                    <MudText Typo="Typo.body2">Açık alacak yok.</MudText>
-                }
-                else
-                {
-                    @foreach (var d in _data.TopDebtors)
-                    {
-                        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center"
-                                  Class="mb-3">
-                            <div>
-                                <MudText Typo="Typo.body2">@d.Title</MudText>
-                                <MudText Typo="Typo.caption">@d.InvoiceCount açık fatura</MudText>
-                            </div>
-                            <MudText Typo="Typo.body2"
-                                     Style="font-weight:600;font-variant-numeric:tabular-nums">
-                                @d.Amount.ToMoney() ₺
-                            </MudText>
-                        </MudStack>
-                    }
-                }
-            </MudPaper>
-        </MudItem>
-
-        @* ---------------- YAKLAŞAN VADELER ---------------- *@
-        <MudItem xs="12" md="7">
-            <MudPaper Elevation="1" Class="pa-4" Style="height:100%">
-                <MudText Typo="Typo.subtitle1" Class="mb-3">Yaklaşan Vadeler</MudText>
-                @if (_data.UpcomingDue.Count == 0)
-                {
-                    <MudText Typo="Typo.body2">Vadesi yaklaşan fatura yok.</MudText>
-                }
-                else
-                {
-                    <MudSimpleTable Dense Hover Elevation="0">
-                        <thead>
-                            <tr>
-                                <th>Fatura No</th><th>Cari</th><th>Vade</th>
-                                <th class="text-right">Kalan</th><th>Kalan Gün</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var i in _data.UpcomingDue)
+                        else
+                        {
+                            @foreach (var s in _data.StatusBreakdown.OrderBy(x => x.Status))
                             {
-                                <tr>
-                                    <td style="font-family:Consolas,monospace">@i.Number</td>
-                                    <td>@i.PartyTitle</td>
-                                    <td>@i.DueDate.ToString("dd.MM.yyyy")</td>
-                                    <td class="text-right">@i.Remaining.ToMoney() ₺</td>
-                                    <td>
-                                        <MudChip T="string" Size="Size.Small"
-                                                 Color="@(i.DaysLeft <= 3 ? Color.Warning : Color.Default)">
-                                            @i.DaysLeft gün
-                                        </MudChip>
-                                    </td>
-                                </tr>
+                                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                                    <StatusTag Text="@StatusText(s.Status)" Variant="@StatusVariant(s.Status)" />
+                                    <span class="text-muted" style="font-size:11px">@s.Count adet</span>
+                                    <span class="num" style="margin-left:auto;font-weight:600">@Fmt(s.Amount)</span>
+                                </div>
+                                <div class="bar-track" style="margin-bottom:10px">
+                                    <div class="bar-fill" style="width:@(ShareOf(s.Amount).ToString("0.#", Inv))%"></div>
+                                </div>
                             }
-                        </tbody>
-                    </MudSimpleTable>
-                }
-            </MudPaper>
-        </MudItem>
-    </MudGrid>
-}
+                        }
+                    </Blueprint>
+
+                    <Blueprint Class="bp-pad">
+                        <h5 style="margin-bottom:10px">En Çok Alacaklı Cariler</h5>
+                        @if (_data.TopDebtors.Count == 0)
+                        {
+                            <div class="text-muted">Açık alacak yok.</div>
+                        }
+                        else
+                        {
+                            <table class="table">
+                                <tbody>
+                                    @foreach (var d in _data.TopDebtors)
+                                    {
+                                        <tr>
+                                            <td>
+                                                @d.Title
+                                                <div class="text-muted" style="font-size:11px">
+                                                    @d.InvoiceCount açık fatura
+                                                </div>
+                                            </td>
+                                            <td class="num">@Fmt(d.Amount)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                    </Blueprint>
+
+                    <Blueprint Class="bp-pad">
+                        <h5 style="margin-bottom:10px">Abonelik Hareketi</h5>
+                        @{
+                            var m = _data.SubscriptionMovement;
+                        }
+                        <table class="table">
+                            <tbody>
+                                <tr><td>Bu ay yeni</td><td class="num">@m.NewCount</td></tr>
+                                <tr><td>Bu ay iptal</td><td class="num">@m.CancelledCount</td></tr>
+                                <tr>
+                                    <td>MRR değişimi</td>
+                                    <td class="num">@(m.MrrDelta >= 0 ? "+" : "")@Fmt(m.MrrDelta)</td>
+                                </tr>
+                                <tr><td>Churn</td><td class="num">%@m.ChurnRate.ToString("N1")</td></tr>
+                                <tr>
+                                    <td>Bu hafta faturalanacak</td>
+                                    <td class="num">@m.BillingThisWeek adet</td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td>Hafta tutarı</td>
+                                    <td class="num">@Fmt(m.BillingThisWeekAmount)</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+
+                        @* Churn ORANI değil, SEBEBİ — fiyat sorunu ile ürün sorunu
+                           bambaşka aksiyon gerektirir. *@
+                        <div class="kpi-kicker" style="margin-top:12px">
+                            NEDEN KAYBEDİLDİ · SON 90 GÜN
+                        </div>
+                        @if (_data.Churn.CancelledCount == 0)
+                        {
+                            <div class="text-muted" style="margin-top:4px">
+                                Bu dönemde iptal yok.
+                            </div>
+                        }
+                        else
+                        {
+                            <table class="table" style="margin-top:4px">
+                                <tbody>
+                                    @foreach (var r in _data.Churn.Reasons)
+                                    {
+                                        <tr>
+                                            <td>@r.Label</td>
+                                            <td class="num">@r.Count</td>
+                                            <td class="num">@Fmt(r.LostMrr)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td>Kayıp MRR</td>
+                                        <td class="num">@_data.Churn.CancelledCount</td>
+                                        <td class="num">@Fmt(_data.Churn.LostMrr)</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        }
+                    </Blueprint>
+                </div>
+
+                @* ─────────── 5. YAKLAŞAN VADELER + ROL PANELİ ─────────── *@
+                <div class="grid-2">
+                    <Blueprint Class="bp-pad">
+                        <h5 style="margin-bottom:10px">Yaklaşan Vadeler</h5>
+                        @if (_data.UpcomingDue.Count == 0)
+                        {
+                            <div class="text-muted">Vadesi yaklaşan fatura yok.</div>
+                        }
+                        else
+                        {
+                            <div class="scroll-x">
+                                <table class="table" style="min-width:520px">
+                                    <thead>
+                                        <tr>
+                                            <th>Fatura No</th><th>Cari</th><th>Vade</th>
+                                            <th class="num">Kalan</th><th class="num">Gün</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var i in _data.UpcomingDue)
+                                        {
+                                            <tr>
+                                                <td class="mono">@i.Number</td>
+                                                <td>@i.PartyTitle</td>
+                                                <td>@i.DueDate.ToString("dd.MM.yyyy")</td>
+                                                <td class="num">@Fmt(i.Remaining)</td>
+                                                <td class="num">
+                                                    @if (i.DaysLeft <= 3)
+                                                    {
+                                                        <StatusTag Text="@($"{i.DaysLeft} gün")" Variant="outline" />
+                                                    }
+                                                    else
+                                                    {
+                                                        @($"{i.DaysLeft} gün")
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    </Blueprint>
+
+                    @if (canCollect)
+                    {
+                        <Blueprint Class="bp-pad">
+                            <h5 style="margin-bottom:10px">Eşleşme Bekleyen</h5>
+                            @if (_data.UnallocatedPayments.Count == 0)
+                            {
+                                <div class="text-muted">Eşleşmemiş tahsilat yok.</div>
+                            }
+                            else
+                            {
+                                <table class="table">
+                                    <tbody>
+                                        @foreach (var p in _data.UnallocatedPayments)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    @p.PartyTitle
+                                                    <div class="text-muted mono" style="font-size:11px">
+                                                        @(p.Reference ?? p.Number ?? "—")
+                                                    </div>
+                                                </td>
+                                                <td class="num">@Fmt(p.Amount)</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                                <a class="btn btn-secondary btn-sm" href="/tahsilatlar"
+                                   style="margin-top:10px">Tahsilatlara git</a>
+                            }
+                        </Blueprint>
+                    }
+                    else
+                    {
+                        <Blueprint Class="bp-pad">
+                            <h5 style="margin-bottom:10px">Bekleyen İşlerim</h5>
+                            <table class="table">
+                                <tbody>
+                                    <tr>
+                                        <td>Taslak fatura</td>
+                                        <td class="num">@_data.DraftInvoiceCount</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Vadesi geçen fatura</td>
+                                        <td class="num">@_data.OverdueInvoiceCount</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Bu hafta yenilenecek abonelik</td>
+                                        <td class="num">@_data.SubscriptionMovement.BillingThisWeek</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            @if (canWrite)
+                            {
+                                <a class="btn btn-primary btn-sm" href="/faturalar/yeni"
+                                   style="margin-top:10px">Yeni fatura</a>
+                            }
+                        </Blueprint>
+                    }
+                </div>
+            </div>
+        }
+    </Authorized>
+</AuthorizeView>
 
 @code {
+    private static readonly System.Globalization.CultureInfo Inv =
+        System.Globalization.CultureInfo.InvariantCulture;
+
     private DashboardSummary? _data;
-    private List<ChartSeries> _series = [];
-    private string[] _labels = [];
 
     protected override async Task OnInitializedAsync()
-    {
-        _data = await Dashboard.GetAsync(DateOnly.FromDateTime(DateTime.Today));
+        => _data = await Dashboard.GetAsync(DateOnly.FromDateTime(DateTime.Today));
 
-        _labels = _data.RevenueTrend.Select(t => t.Label).ToArray();
-        _series =
-        [
-            new ChartSeries
-            {
-                Name = "Ciro",
-                Data = _data.RevenueTrend.Select(t => (double)t.Amount).ToArray()
-            },
-            new ChartSeries
-            {
-                Name = "Tahsilat",
-                Data = _data.CollectionTrend.Select(t => (double)t.Amount).ToArray()
-            }
-        ];
-    }
+    private static string Fmt(decimal v) => v == 0m ? "—" : v.ToMoney();
 
     private double ShareOf(decimal amount)
     {
         var total = _data!.StatusBreakdown.Sum(x => x.Amount);
         return total == 0 ? 0 : (double)(amount / total * 100m);
     }
+
+    private static IEnumerable<(string Label, decimal Value)> AgingRows(AgingBuckets a) =>
+    [
+        ("Vadesi gelmemiş", a.NotDue),
+        ("1–30 gün", a.Days1To30),
+        ("31–60 gün", a.Days31To60),
+        ("61–90 gün", a.Days61To90),
+        ("90+ gün", a.Over90)
+    ];
+
+    /// <summary>Yaşlandırma yığın çubuğu — beş dilim, koyu temada ters rampa okunur kalır.</summary>
+    private RenderFragment AgingStack(AgingBuckets a) => builder =>
+    {
+        var total = a.Total;
+        if (total <= 0m)
+        {
+            builder.AddMarkupContent(0, "<div class=\"text-muted\">Açık alacak yok.</div>");
+            return;
+        }
+
+        var slices = new (decimal Value, string Color)[]
+        {
+            (a.NotDue,      "var(--color-accent-200)"),
+            (a.Days1To30,   "var(--color-accent-400)"),
+            (a.Days31To60,  "var(--color-accent-600)"),
+            (a.Days61To90,  "var(--color-accent-800)"),
+            (a.Over90,      "var(--color-accent-900)")
+        };
+
+        var html = new System.Text.StringBuilder(
+            "<div style=\"display:flex;height:26px;overflow:hidden\">");
+
+        foreach (var (value, color) in slices)
+        {
+            if (value <= 0m) continue;
+            var pct = (value / total * 100m).ToString("0.##", Inv);
+            html.Append($"<div style=\"width:{pct}%;background:{color}\"></div>");
+        }
+
+        html.Append("</div>");
+        builder.AddMarkupContent(0, html.ToString());
+    };
+
+    /// <summary>Ürün kırılımı oran çubukları.</summary>
+    private RenderFragment ProductBars() => builder =>
+    {
+        var rows = _data!.ProductBreakdown;
+        if (rows.Count == 0)
+        {
+            builder.AddMarkupContent(0, "<div class=\"text-muted\">Bu ay kesilmiş fatura yok.</div>");
+            return;
+        }
+
+        var max = rows.Max(r => r.Amount);
+        var html = new System.Text.StringBuilder();
+
+        foreach (var r in rows)
+        {
+            var pct = max <= 0m ? "0" : (r.Amount / max * 100m).ToString("0.#", Inv);
+            html.Append("<div style=\"display:flex;align-items:center;gap:8px;margin-bottom:3px\">")
+                .Append($"<span style=\"flex:1;min-width:0\">{System.Net.WebUtility.HtmlEncode(r.Name)}</span>")
+                .Append($"<span class=\"num\" style=\"font-weight:600\">{r.Amount.ToMoney()}</span></div>")
+                .Append("<div class=\"bar-track\" style=\"margin-bottom:9px\">")
+                .Append($"<div class=\"bar-fill\" style=\"width:{pct}%\"></div></div>");
+        }
+
+        builder.AddMarkupContent(0, html.ToString());
+    };
+
+    /// <summary>12 ay çizgi grafiği — kütüphane yok, düz SVG (components.md §10).</summary>
+    private RenderFragment TrendChart() => builder =>
+    {
+        var revenue = _data!.RevenueTrend;
+        var collected = _data.CollectionTrend;
+
+        const int w = 730, h = 232, padL = 4, padB = 18, padT = 8;
+        var max = Math.Max(revenue.Max(t => t.Amount), collected.Max(t => t.Amount));
+        if (max <= 0m) max = 1m;
+
+        string Points(IReadOnlyList<MonthlyRevenue> src)
+        {
+            var parts = new string[src.Count];
+            for (var i = 0; i < src.Count; i++)
+            {
+                var x = padL + (w - padL * 2) * i / (double)(src.Count - 1);
+                var y = h - padB - (double)(src[i].Amount / max) * (h - padB - padT);
+                parts[i] = string.Create(Inv, $"{x:0.#},{y:0.#}");
+            }
+            return string.Join(' ', parts);
+        }
+
+        var svg = new System.Text.StringBuilder();
+        svg.Append($"<svg viewBox=\"0 0 {w} {h}\" width=\"100%\" height=\"232\" role=\"img\" aria-label=\"Son 12 ay ciro ve tahsilat\">");
+
+        // Yatay kılavuz çizgileri
+        for (var g = 0; g <= 4; g++)
+        {
+            var y = padT + (h - padB - padT) * g / 4.0;
+            svg.Append(string.Create(Inv,
+                $"<line x1=\"{padL}\" y1=\"{y:0.#}\" x2=\"{w - padL}\" y2=\"{y:0.#}\" stroke=\"var(--color-divider)\" stroke-width=\"1\" stroke-dasharray=\"2 4\" />"));
+        }
+
+        svg.Append($"<polyline points=\"{Points(collected)}\" fill=\"none\" stroke=\"var(--color-accent-600)\" stroke-width=\"1.5\" stroke-dasharray=\"4 3\" />");
+        svg.Append($"<polyline points=\"{Points(revenue)}\" fill=\"none\" stroke=\"var(--color-accent)\" stroke-width=\"2\" />");
+
+        // Eksen etiketleri — her üç ayda bir, kalabalık olmasın
+        for (var i = 0; i < revenue.Count; i += 3)
+        {
+            var x = padL + (w - padL * 2) * i / (double)(revenue.Count - 1);
+            svg.Append(string.Create(Inv,
+                $"<text x=\"{x:0.#}\" y=\"{h - 4}\" font-size=\"9.5\" fill=\"currentColor\" opacity=\".55\">{revenue[i].Label}</text>"));
+        }
+
+        svg.Append("</svg>");
+        builder.AddMarkupContent(0, svg.ToString());
+    };
 
     private static string StatusText(InvoiceStatus s) => s switch
     {
@@ -263,13 +497,11 @@ else
         _ => "?"
     };
 
-    private static Color StatusColor(InvoiceStatus s) => s switch
+    private static string StatusVariant(InvoiceStatus s) => s switch
     {
-        InvoiceStatus.Draft => Color.Default,
-        InvoiceStatus.Issued => Color.Info,
-        InvoiceStatus.PartiallyPaid => Color.Warning,
-        InvoiceStatus.Paid => Color.Success,
-        InvoiceStatus.Cancelled => Color.Error,
-        _ => Color.Default
+        InvoiceStatus.Issued => "accent",
+        InvoiceStatus.Paid => "accent-2",
+        InvoiceStatus.PartiallyPaid => "outline",
+        _ => "neutral"
     };
 }

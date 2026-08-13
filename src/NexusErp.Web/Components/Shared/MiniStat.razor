@@ -1,17 +1,27 @@
-@* Dashboard'daki küçük istatistik kutusu. *@
-<MudPaper Elevation="0" Class="pa-3" Style="height:100%;border:1px solid var(--mud-palette-lines-default)">
-    <MudStack Row Spacing="2" AlignItems="AlignItems.Center">
-        <MudIcon Icon="@Icon" Color="@Color" Size="Size.Small" />
-        <div>
-            <MudText Typo="Typo.caption">@Label</MudText>
-            <MudText Typo="Typo.subtitle2" Style="font-weight:600">@Value</MudText>
-        </div>
-    </MudStack>
-</MudPaper>
+@*
+    İkincil (mini) istatistik hücresi — kicker 9.5px + rakam 20px, dolgu 10px 13px.
+    Mevcut parametre adları korundu.
+*@
+<Blueprint Style="height:100%;padding:10px 13px">
+    <div class="mini-kicker">@Label</div>
+    <div class="mini-value" style="margin-top:3px">@Value</div>
+    @if (!string.IsNullOrWhiteSpace(Hint))
+    {
+        <div class="kpi-hint" style="margin-top:2px">@Hint</div>
+    }
+</Blueprint>
 
 @code {
     [Parameter, EditorRequired] public string Label { get; set; } = default!;
     [Parameter, EditorRequired] public string Value { get; set; } = default!;
-    [Parameter] public string Icon { get; set; } = Icons.Material.Filled.Analytics;
-    [Parameter] public Color Color { get; set; } = Color.Primary;
+    [Parameter] public string? Hint { get; set; }
+
+    /// <summary>Eski çağrılarla uyum için tutuldu; yeni tasarımda ikon kullanılmıyor.</summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>
+    /// Eski çağrılarla uyum için tutuluyor. ⚠️ Kaldırılırsa parametreyi geçen
+    /// sayfalar ÇALIŞMA ZAMANINDA patlar — Blazor bunu derlemede denetlemez.
+    /// </summary>
+    [Parameter] public Color Color { get; set; } = Color.Default;
 }

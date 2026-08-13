@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using NexusErp.Application.Abstractions;
 using NexusErp.Application.Parties;
+using NexusErp.Application.Events;
 using NexusErp.Domain.Common;
 using NexusErp.Domain.Entities;
 using NexusErp.Domain.Enums;
@@ -94,7 +95,12 @@ public sealed class PaymentService(IAppDbContextFactory factory, IInvoiceNumberG
         db.Payments.Add(payment);
         db.PartyLedgerEntries.Add(ledger);
 
+        db.AddEvent(new PaymentReceived(
+            payment.Id, number, party.Id,
+            payment.Amount, payment.Currency, payment.PaymentDate), DateTimeOffset.UtcNow);
+
         // Detach yamasına gerek kalmadı: context bu metoda ait, hata olursa onunla kapanıyor.
+        // Tahsilat + eşleştirme + cari hareket + outbox = TEK transaction.
         await db.SaveChangesAsync(ct);
 
         return payment.Id;

@@ -1,6 +1,7 @@
 using System.Globalization;
 using MudBlazor.Services;
 using NexusErp.Application;
+using NexusErp.Application.Messaging;
 using NexusErp.Infrastructure;
 using NexusErp.Infrastructure.BackgroundJobs;
 using NexusErp.Infrastructure.Persistence;
@@ -35,6 +36,15 @@ builder.Services.AddAuthorization();
 // bunu engeller ama boşuna iş yapılır. Tek sahibi olsun.
 builder.Services.AddHostedService<SubscriptionBillingWorker>();
 
+// Outbox yayıncısı ve tüketici.
+// ⚠️ Abonelik işçisinin aksine outbox işçisi birden fazla instance'ta güvenle
+// çalışır — FOR UPDATE SKIP LOCKED aynı satırı iki kez vermez.
+builder.Services.AddHostedService<OutboxPublisherWorker>();
+builder.Services.AddHostedService<InvoiceIssuedConsumer>();
+builder.Services.AddHostedService<OutboxCleanupWorker>();
+builder.Services.AddHostedService<DunningWorker>();
+builder.Services.AddHostedService<NotificationConsumer>();
+
 var app = builder.Build();
 
 // Migration + tohum verisi (geliştirme ortamı)
@@ -63,6 +73,17 @@ app.UseAuthorization();
 app.UseAntiforgery();
 
 app.MapAccountEndpoints();
+
+// Sağlık ucu — konteyner orkestratörü ve izleme için.
+// ⚠️ Asıl metrik bekleyen SAYISI değil, en eski bekleyen mesajın YAŞI.
+app.MapGet("/saglik", async (OutboxHealthService health, CancellationToken ct) =>
+{
+    var h = await health.CheckAsync(ct);
+    return h.IsHealthy
+        ? Results.Ok(new { durum = h.Status, ozet = h.Summary, bekleyen = h.Pending, hatali = h.Failed })
+        : Results.Json(new { durum = h.Status, ozet = h.Summary, bekleyen = h.Pending, hatali = h.Failed },
+                       statusCode: StatusCodes.Status503ServiceUnavailable);
+}).AllowAnonymous();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()

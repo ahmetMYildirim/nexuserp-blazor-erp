@@ -337,8 +337,8 @@ namespace NexusErp.Infrastructure.Migrations
                         .HasColumnName("notes");
 
                     b.Property<string>("Number")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
                         .HasColumnName("number");
 
                     b.Property<decimal>("PaidAmount")
@@ -396,6 +396,11 @@ namespace NexusErp.Infrastructure.Migrations
                     b.Property<Guid?>("SubscriptionId")
                         .HasColumnType("uuid")
                         .HasColumnName("subscription_id");
+
+                    b.Property<string>("SupplierInvoiceNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("supplier_invoice_no");
 
                     b.Property<decimal>("TaxBaseTotal")
                         .HasPrecision(18, 4)
@@ -456,10 +461,15 @@ namespace NexusErp.Infrastructure.Migrations
                     b.HasIndex("TenantId", "Number")
                         .IsUnique()
                         .HasDatabaseName("ix_invoices_tenant_id_number")
-                        .HasFilter("number IS NOT NULL AND is_deleted = false");
+                        .HasFilter("number IS NOT NULL AND is_deleted = false AND type <> 4");
 
                     b.HasIndex("TenantId", "PartyId", "Status")
                         .HasDatabaseName("ix_invoices_tenant_id_party_id_status");
+
+                    b.HasIndex("TenantId", "PartyId", "SupplierInvoiceNo")
+                        .IsUnique()
+                        .HasDatabaseName("ix_invoices_tenant_id_party_id_supplier_invoice_no")
+                        .HasFilter("supplier_invoice_no IS NOT NULL AND is_deleted = false");
 
                     b.HasIndex("TenantId", "Status", "DueDate")
                         .HasDatabaseName("ix_invoices_tenant_id_status_due_date");
@@ -1126,6 +1136,10 @@ namespace NexusErp.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<int>("BillingModel")
+                        .HasColumnType("integer")
+                        .HasColumnName("billing_model");
+
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -1157,6 +1171,11 @@ namespace NexusErp.Infrastructure.Migrations
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("description");
 
+                    b.Property<decimal>("IncludedUnits")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("included_units");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean")
                         .HasColumnName("is_active");
@@ -1170,6 +1189,11 @@ namespace NexusErp.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("name");
+
+                    b.Property<decimal>("OveragePrice")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("overage_price");
 
                     b.Property<decimal>("Price")
                         .HasPrecision(18, 4)
@@ -1197,6 +1221,11 @@ namespace NexusErp.Infrastructure.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("updated_by");
 
+                    b.Property<string>("UsageUnitName")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("usage_unit_name");
+
                     b.HasKey("Id")
                         .HasName("pk_plans");
 
@@ -1209,6 +1238,66 @@ namespace NexusErp.Infrastructure.Migrations
                         .HasFilter("is_deleted = false");
 
                     b.ToTable("plans", (string)null);
+                });
+
+            modelBuilder.Entity("NexusErp.Domain.Entities.ProcessedMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ConsumerName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("consumer_name");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("created_by");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("message_id");
+
+                    b.Property<DateTimeOffset>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("processed_at");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_processed_messages");
+
+                    b.HasIndex("ProcessedAt")
+                        .HasDatabaseName("ix_processed_messages_processed_at");
+
+                    b.HasIndex("ConsumerName", "MessageId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_processed_messages_consumer_message");
+
+                    b.ToTable("processed_messages", (string)null);
                 });
 
             modelBuilder.Entity("NexusErp.Domain.Entities.Product", b =>
@@ -1322,6 +1411,14 @@ namespace NexusErp.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("billing_anchor_day");
 
+                    b.Property<string>("CancellationNote")
+                        .HasColumnType("text")
+                        .HasColumnName("cancellation_note");
+
+                    b.Property<int>("CancellationReason")
+                        .HasColumnType("integer")
+                        .HasColumnName("cancellation_reason");
+
                     b.Property<DateOnly?>("CancelledOn")
                         .HasColumnType("date")
                         .HasColumnName("cancelled_on");
@@ -1340,6 +1437,10 @@ namespace NexusErp.Infrastructure.Migrations
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)")
                         .HasColumnName("custom_price");
+
+                    b.Property<int>("DunningLevel")
+                        .HasColumnType("integer")
+                        .HasColumnName("dunning_level");
 
                     b.Property<DateOnly?>("EndDate")
                         .HasColumnType("date")
@@ -1361,6 +1462,14 @@ namespace NexusErp.Infrastructure.Migrations
                     b.Property<Guid>("PartyId")
                         .HasColumnType("uuid")
                         .HasColumnName("party_id");
+
+                    b.Property<DateOnly?>("PastDueSince")
+                        .HasColumnType("date")
+                        .HasColumnName("past_due_since");
+
+                    b.Property<DateOnly?>("PausedOn")
+                        .HasColumnType("date")
+                        .HasColumnName("paused_on");
 
                     b.Property<Guid>("PlanId")
                         .HasColumnType("uuid")
@@ -1573,6 +1682,84 @@ namespace NexusErp.Infrastructure.Migrations
                         .HasName("pk_tenants");
 
                     b.ToTable("tenants", (string)null);
+                });
+
+            modelBuilder.Entity("NexusErp.Domain.Entities.UsageRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("ExternalId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("external_id");
+
+                    b.Property<Guid?>("InvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("invoice_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<DateOnly>("OccurredOn")
+                        .HasColumnType("date")
+                        .HasColumnName("occurred_on");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("quantity");
+
+                    b.Property<Guid>("SubscriptionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("subscription_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_usage_records");
+
+                    b.HasIndex("SubscriptionId", "OccurredOn")
+                        .HasDatabaseName("ix_usage_records_subscription_id_occurred_on")
+                        .HasFilter("invoice_id IS NULL AND is_deleted = false");
+
+                    b.HasIndex("TenantId", "OccurredOn")
+                        .HasDatabaseName("ix_usage_records_tenant_id_occurred_on");
+
+                    b.HasIndex("TenantId", "SubscriptionId", "ExternalId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_usage_records_tenant_id_subscription_id_external_id")
+                        .HasFilter("external_id IS NOT NULL AND is_deleted = false");
+
+                    b.ToTable("usage_records", (string)null);
                 });
 
             modelBuilder.Entity("NexusErp.Infrastructure.Identity.AppUser", b =>
@@ -1842,6 +2029,18 @@ namespace NexusErp.Infrastructure.Migrations
                     b.Navigation("Party");
 
                     b.Navigation("Plan");
+                });
+
+            modelBuilder.Entity("NexusErp.Domain.Entities.UsageRecord", b =>
+                {
+                    b.HasOne("NexusErp.Domain.Entities.Subscription", "Subscription")
+                        .WithMany()
+                        .HasForeignKey("SubscriptionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_usage_records_subscriptions_subscription_id");
+
+                    b.Navigation("Subscription");
                 });
 
             modelBuilder.Entity("NexusErp.Domain.Entities.Invoice", b =>

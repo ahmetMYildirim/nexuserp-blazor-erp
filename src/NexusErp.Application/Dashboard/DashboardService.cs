@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NexusErp.Application.Abstractions;
+using NexusErp.Application.Subscriptions;
 using NexusErp.Domain.Enums;
 
 namespace NexusErp.Application.Dashboard;
@@ -16,10 +17,39 @@ public sealed record UpcomingInvoice(
 
 public sealed record StatusBreakdown(InvoiceStatus Status, int Count, decimal Amount);
 
+/// <summary>Yaşlandırma özeti — beş kova, rapor sayfasının toplam satırıyla aynı mantık.</summary>
+public sealed record AgingBuckets(
+    decimal NotDue, decimal Days1To30, decimal Days31To60, decimal Days61To90, decimal Over90)
+{
+    public decimal Total => NotDue + Days1To30 + Days31To60 + Days61To90 + Over90;
+
+    public static readonly AgingBuckets Empty = new(0m, 0m, 0m, 0m, 0m);
+}
+
+/// <summary>Bu ayki cironun ürün bazında kırılımı (ilk 4 + "Diğer").</summary>
+public sealed record ProductShare(string Name, decimal Amount);
+
+/// <summary>
+/// Abonelik hareketi. MrrDelta bu ay başlayan ve iptal edilen aboneliklerin
+/// aylık tutar farkıdır — geçmiş MRR saklanmadığı için yaklaşık değerdir.
+/// </summary>
+public sealed record SubscriptionMovement(
+    int NewCount, int CancelledCount, decimal MrrDelta, decimal ChurnRate,
+    int BillingThisWeek, decimal BillingThisWeekAmount)
+{
+    public static readonly SubscriptionMovement Empty = new(0, 0, 0m, 0m, 0, 0m);
+}
+
+/// <summary>Faturaya eşleşmemiş (avans) tahsilat.</summary>
+public sealed record UnallocatedPayment(
+    Guid PaymentId, string? Number, string PartyTitle, string? Reference, decimal Amount);
+
 public sealed record DashboardSummary(
     decimal OpenReceivables,
     decimal OverdueReceivables,
     int OverdueInvoiceCount,
+    decimal OpenPayables,
+    decimal OverduePayables,
     decimal Mrr,
     decimal Arr,
     int ActiveSubscriptions,
@@ -35,8 +65,18 @@ public sealed record DashboardSummary(
     IReadOnlyList<MonthlyRevenue> CollectionTrend,
     IReadOnlyList<TopDebtor> TopDebtors,
     IReadOnlyList<UpcomingInvoice> UpcomingDue,
-    IReadOnlyList<StatusBreakdown> StatusBreakdown)
+    IReadOnlyList<StatusBreakdown> StatusBreakdown,
+    AgingBuckets AgingBuckets,
+    IReadOnlyList<ProductShare> ProductBreakdown,
+    SubscriptionMovement SubscriptionMovement,
+    decimal DaysSalesOutstanding,
+    int IssuedThisMonth,
+    IReadOnlyList<UnallocatedPayment> UnallocatedPayments,
+    ChurnAnalysis Churn)
 {
+    /// <summary>Alacak eksi borç. Nakit değil, TAHAKKUK pozisyonu.</summary>
+    public decimal NetPosition => OpenReceivables - OpenPayables;
+
     public decimal RevenueChangePercent => PreviousMonthRevenue == 0
         ? 0m
         : Math.Round((MonthRevenue - PreviousMonthRevenue) / PreviousMonthRevenue * 100m, 1);
@@ -56,9 +96,18 @@ public sealed class DashboardService(IAppDbContextFactory factory)
         var monthStart = new DateOnly(today.Year, today.Month, 1);
         var trendStart = monthStart.AddMonths(-11);
 
+        // ⚠️ ALIŞ faturası bir ALACAK değil BORÇtur. Buraya karışırsa "açık alacak"
+        // kartı olduğundan büyük görünür ve en çok alacaklı cari listesine kendi
+        // tedarikçilerimiz düşer. Proforma da bağlayıcı olmadığı için dışarıda.
         var openInvoices = db.Invoices.Where(i =>
             (i.Status == InvoiceStatus.Issued || i.Status == InvoiceStatus.PartiallyPaid)
-            && i.Type != InvoiceType.Proforma);
+            && i.Type != InvoiceType.Proforma
+            && i.Type != InvoiceType.Purchase);
+
+        // Borçlar: aynı ölçüt, alış tarafı.
+        var openPurchases = db.Invoices.Where(i =>
+            (i.Status == InvoiceStatus.Issued || i.Status == InvoiceStatus.PartiallyPaid)
+            && i.Type == InvoiceType.Purchase);
 
         // --- Alacaklar: üç ölçüt, TEK sorgu (GroupBy(_ => 1) numarası) ---
         var receivables = await openInvoices
@@ -68,6 +117,15 @@ public sealed class DashboardService(IAppDbContextFactory factory)
                 Open = g.Sum(i => i.GrandTotal - i.PaidAmount),
                 Overdue = g.Sum(i => i.DueDate < today ? i.GrandTotal - i.PaidAmount : 0m),
                 OverdueCount = g.Count(i => i.DueDate < today)
+            })
+            .FirstOrDefaultAsync(ct);
+
+        var payables = await openPurchases
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Open = g.Sum(i => i.GrandTotal - i.PaidAmount),
+                Overdue = g.Sum(i => i.DueDate < today ? i.GrandTotal - i.PaidAmount : 0m)
             })
             .FirstOrDefaultAsync(ct);
 
@@ -90,8 +148,12 @@ public sealed class DashboardService(IAppDbContextFactory factory)
             .ToListAsync(ct);
 
         // --- Abonelikler (MRR) ---
+        // ⚠️ Saf KULLANIM planları MRR'a girmez: taahhüt edilmiş yinelenen gelir yok,
+        // tutar her ay kullanımla değişir. MRR "tahmin edilebilir gelir" demek;
+        // değişken kullanımı buraya karıştırmak metriği anlamsızlaştırır.
         var subs = await db.Subscriptions
-            .Where(s => s.Status == SubscriptionStatus.Active)
+            .Where(s => s.Status == SubscriptionStatus.Active
+                     && s.Plan.BillingModel != BillingModel.Metered)
             .Select(s => new
             {
                 s.Quantity,
@@ -129,13 +191,14 @@ public sealed class DashboardService(IAppDbContextFactory factory)
 
         // --- Durum dağılımı ---
         var breakdown = await db.Invoices
-            .Where(i => i.Type != InvoiceType.Proforma)
+            .Where(i => i.Type != InvoiceType.Proforma && i.Type != InvoiceType.Purchase)
             .GroupBy(i => i.Status)
             .Select(g => new StatusBreakdown(g.Key, g.Count(), g.Sum(i => i.GrandTotal)))
             .ToListAsync(ct);
 
         // --- Sayaçlar ---
         var counters = await db.Invoices
+            .Where(i => i.Type != InvoiceType.Purchase)
             .GroupBy(_ => 1)
             .Select(g => new
             {
@@ -156,6 +219,159 @@ public sealed class DashboardService(IAppDbContextFactory factory)
             .Where(p => !p.IsCancelled && p.PaymentDate >= monthStart)
             .SumAsync(p => p.Amount, ct);
 
+        // ---------------------------------------------------------------
+        // Aşağıdaki bloklar arayüzün yeni panelleri için. Hepsi BU çağrının
+        // içinde üretilir — panel başına ayrı servis çağrısı yapılmaz.
+        // ---------------------------------------------------------------
+
+        // --- Yaşlandırma özeti (rapor sayfasıyla aynı kova mantığı) ---
+        var d30 = today.AddDays(-30);
+        var d60 = today.AddDays(-60);
+        var d90 = today.AddDays(-90);
+
+        var aging = await openInvoices
+            .GroupBy(_ => 1)
+            .Select(g => new AgingBuckets(
+                g.Sum(i => i.DueDate >= today ? i.GrandTotal - i.PaidAmount : 0m),
+                g.Sum(i => i.DueDate < today && i.DueDate >= d30 ? i.GrandTotal - i.PaidAmount : 0m),
+                g.Sum(i => i.DueDate < d30 && i.DueDate >= d60 ? i.GrandTotal - i.PaidAmount : 0m),
+                g.Sum(i => i.DueDate < d60 && i.DueDate >= d90 ? i.GrandTotal - i.PaidAmount : 0m),
+                g.Sum(i => i.DueDate < d90 ? i.GrandTotal - i.PaidAmount : 0m)))
+            .FirstOrDefaultAsync(ct);
+
+        // --- Bu ayki cironun ürün kırılımı ---
+        var productRows = await db.InvoiceLines
+            .Where(l => l.Invoice.Status != InvoiceStatus.Draft
+                     && l.Invoice.Status != InvoiceStatus.Cancelled
+                     && l.Invoice.Type == InvoiceType.Sales
+                     && l.Invoice.IssueDate >= monthStart)
+            .GroupBy(l => l.ProductName)
+            // ⚠️ Sıralama GRUPLAMA aşamasında. Select ile ProductShare'e projekte
+            // ettikten sonra .OrderByDescending(p => p.Amount) yazarsan EF Core
+            // çeviremez: projeksiyon sonrası kayıt üyesine SQL'de erişemiyor.
+            .OrderByDescending(g => g.Sum(l => l.TaxBase))
+            .Select(g => new ProductShare(g.Key, g.Sum(l => l.TaxBase)))
+            .ToListAsync(ct);
+
+        // İlk 4 + "Diğer" — panel dar, uzun liste okunmuyor
+        var productBreakdown = productRows.Count <= 5
+            ? productRows
+            : [.. productRows.Take(4), new ProductShare("Diğer", productRows.Skip(4).Sum(p => p.Amount))];
+
+        // --- Abonelik hareketi ---
+        var weekEnd = today.AddDays(7);
+
+        var subMovementRows = await db.Subscriptions
+            .Where(s => s.StartDate >= monthStart
+                     || (s.CancelledOn != null && s.CancelledOn >= monthStart)
+                     || (s.Status == SubscriptionStatus.Active
+                         && s.NextBillingDate >= today && s.NextBillingDate <= weekEnd))
+            .Select(s => new
+            {
+                s.Status,
+                s.StartDate,
+                s.CancelledOn,
+                s.NextBillingDate,
+                s.Quantity,
+                // ⚠️ Saf kullanım planında Plan.Price sabit ücret DEĞİL, sıfır kabul
+                // edilmeli — yoksa MRR deltası olmayan bir gelir gösterir.
+                Price = s.Plan.BillingModel == BillingModel.Metered
+                    ? 0m : s.CustomPrice ?? s.Plan.Price,
+                Months = (int)s.Plan.Cycle
+            })
+            .ToListAsync(ct);
+
+        var newSubs = subMovementRows.Where(s => s.StartDate >= monthStart).ToList();
+        var cancelledSubs = subMovementRows.Where(s => s.CancelledOn >= monthStart).ToList();
+        var weekSubs = subMovementRows
+            .Where(s => s.Status == SubscriptionStatus.Active
+                     && s.NextBillingDate >= today && s.NextBillingDate <= weekEnd)
+            .ToList();
+
+        static decimal MonthlyOf(decimal price, decimal qty, int months) => price * qty / months;
+
+        var movement = new SubscriptionMovement(
+            NewCount: newSubs.Count,
+            CancelledCount: cancelledSubs.Count,
+            // ⚠️ Yaklaşık: geçmiş MRR saklanmıyor, bu ayki giriş/çıkış farkı alınıyor.
+            MrrDelta: Math.Round(
+                newSubs.Sum(s => MonthlyOf(s.Price, s.Quantity, s.Months))
+                - cancelledSubs.Sum(s => MonthlyOf(s.Price, s.Quantity, s.Months)),
+                2, MidpointRounding.AwayFromZero),
+            ChurnRate: subs.Count + cancelledSubs.Count == 0
+                ? 0m
+                : Math.Round(cancelledSubs.Count * 100m / (subs.Count + cancelledSubs.Count),
+                             1, MidpointRounding.AwayFromZero),
+            BillingThisWeek: weekSubs.Count,
+            BillingThisWeekAmount: Math.Round(
+                weekSubs.Sum(s => s.Price * s.Quantity), 2, MidpointRounding.AwayFromZero));
+
+        // --- Ortalama tahsil süresi (DSO) ---
+        // ⚠️ DateOnly farkı SQL'e çevrilemediği için son 12 ayın eşleştirmeleri
+        // belleğe alınıp orada hesaplanıyor. Pencere sınırlı olduğu için maliyeti kabul edilebilir.
+        var allocationRows = await db.PaymentAllocations
+            .Where(a => a.AllocatedOn >= trendStart)
+            .Select(a => new { a.Amount, a.AllocatedOn, a.Invoice.IssueDate })
+            .ToListAsync(ct);
+
+        var weightSum = allocationRows.Sum(a => a.Amount);
+        var dso = weightSum == 0m
+            ? 0m
+            : Math.Round(
+                allocationRows.Sum(a => a.Amount * (a.AllocatedOn.DayNumber - a.IssueDate.DayNumber))
+                / weightSum,
+                1, MidpointRounding.AwayFromZero);
+
+        // --- Bu ay kesilen fatura adedi ---
+        var issuedThisMonth = await db.Invoices
+            .CountAsync(i => i.Status != InvoiceStatus.Draft
+                          && i.Status != InvoiceStatus.Cancelled
+                          && i.IssueDate >= monthStart, ct);
+
+        // --- Churn: neden kaybettik ---
+        // Son 90 gün; tek ay örneklem olarak çok küçük kalıyor, sebep dağılımı
+        // anlamsız görünüyor.
+        var churnFrom = today.AddDays(-90);
+
+        var churnRows = await db.Subscriptions
+            .Where(s => s.Status == SubscriptionStatus.Cancelled
+                     && s.CancelledOn != null
+                     && s.CancelledOn >= churnFrom && s.CancelledOn <= today)
+            .Select(s => new
+            {
+                s.CancellationReason,
+                s.Quantity,
+                Price = s.Plan.BillingModel == BillingModel.Metered
+                    ? 0m : s.CustomPrice ?? s.Plan.Price,
+                Months = (int)s.Plan.Cycle
+            })
+            .ToListAsync(ct);
+
+        var churn = new ChurnAnalysis(
+            From: churnFrom,
+            To: today,
+            CancelledCount: churnRows.Count,
+            LostMrr: Math.Round(churnRows.Sum(r => r.Price * r.Quantity / r.Months),
+                                2, MidpointRounding.AwayFromZero),
+            Reasons: [.. churnRows
+                .GroupBy(r => r.CancellationReason)
+                .Select(g => new ChurnReasonRow(
+                    g.Key,
+                    ChurnReasonRow.TextOf(g.Key),
+                    g.Count(),
+                    Math.Round(g.Sum(x => x.Price * x.Quantity / x.Months),
+                               2, MidpointRounding.AwayFromZero)))
+                .OrderByDescending(r => r.Count)]);
+
+        // --- Eşleşmemiş (avans) tahsilatlar ---
+        var unallocated = await db.Payments
+            .Where(p => !p.IsCancelled && p.AllocatedAmount < p.Amount)
+            .OrderByDescending(p => p.PaymentDate)
+            .Take(5)
+            .Select(p => new UnallocatedPayment(
+                p.Id, p.Number, p.Party.Title, p.Reference, p.Amount - p.AllocatedAmount))
+            .ToListAsync(ct);
+
         // Zaman serisinde EKSİK AYLARI DOLDUR — veri tabanı sadece dolu ayları döner,
         // ham veriyi grafiğe verirsen çizgi yalan söyler.
         var fullTrend = FillMonths(trend, trendStart);
@@ -168,6 +384,8 @@ public sealed class DashboardService(IAppDbContextFactory factory)
             OpenReceivables: receivables?.Open ?? 0m,
             OverdueReceivables: receivables?.Overdue ?? 0m,
             OverdueInvoiceCount: receivables?.OverdueCount ?? 0,
+            OpenPayables: payables?.Open ?? 0m,
+            OverduePayables: payables?.Overdue ?? 0m,
             Mrr: mrr,
             Arr: Math.Round(mrr * 12m, 2, MidpointRounding.AwayFromZero),
             ActiveSubscriptions: subs.Count,
@@ -187,7 +405,14 @@ public sealed class DashboardService(IAppDbContextFactory factory)
             CollectionTrend: fullCollections,
             TopDebtors: topDebtors,
             UpcomingDue: upcoming,
-            StatusBreakdown: breakdown);
+            StatusBreakdown: breakdown,
+            AgingBuckets: aging ?? AgingBuckets.Empty,
+            ProductBreakdown: productBreakdown,
+            SubscriptionMovement: movement,
+            DaysSalesOutstanding: dso,
+            IssuedThisMonth: issuedThisMonth,
+            UnallocatedPayments: unallocated,
+            Churn: churn);
     }
 
     private static List<MonthlyRevenue> FillMonths(List<MonthlyRevenue> source, DateOnly start) =>

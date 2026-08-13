@@ -3,10 +3,12 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NexusErp.Application.Abstractions;
 using Microsoft.AspNetCore.Identity;
+using NexusErp.Infrastructure.Diagnostics;
 using NexusErp.Infrastructure.Documents;
 using NexusErp.Infrastructure.EInvoice;
 using NexusErp.Infrastructure.Identity;
 using NexusErp.Infrastructure.Invoicing;
+using NexusErp.Infrastructure.Messaging;
 using NexusErp.Infrastructure.Persistence;
 using NexusErp.Infrastructure.Tenancy;
 
@@ -64,6 +66,9 @@ public static class DependencyInjection
                 .AddClaimsPrincipalFactory<AppUserClaimsPrincipalFactory>()
                 .AddDefaultTokenProviders();
 
+        services.AddScoped<UserAdminService>();
+        services.AddScoped<SelfTestService>();
+
         services.ConfigureApplicationCookie(opt =>
         {
             opt.LoginPath = "/giris";
@@ -73,6 +78,13 @@ public static class DependencyInjection
             opt.SlidingExpiration = true;
             opt.Cookie.Name = "NexusErp.Auth";
         });
+        // Mesajlaşma. Publisher SINGLETON — bağlantı pahalı, her mesajda açılmaz.
+        services.Configure<RabbitMqOptions>(config.GetSection(RabbitMqOptions.SectionName));
+        services.AddSingleton<IEventPublisher, RabbitMqEventPublisher>();
+
+        services.Configure<SmtpOptions>(config.GetSection(SmtpOptions.SectionName));
+        services.AddScoped<IEmailSender, SmtpEmailSender>();
+
         services.AddScoped<IInvoicePdfGenerator, InvoicePdfGenerator>();
         services.AddSingleton<IExcelExporter, ExcelExporter>();
         services.AddScoped<IUblInvoiceBuilder, UblInvoiceBuilder>();

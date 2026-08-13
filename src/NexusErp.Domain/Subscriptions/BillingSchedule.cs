@@ -27,6 +27,17 @@ public static class BillingSchedule
     public static DateOnly NextPeriodStart(DateOnly current, BillingCycle cycle, int anchorDay)
         => WithAnchorDay(current.AddMonths((int)cycle), anchorDay);
 
+    /// <summary>
+    /// Bir ÖNCEKİ dönem başlangıcı.
+    ///
+    /// ⚠️ Kullanım bazlı faturalandırma bunu gerektiriyor: sabit ücret peşin
+    /// alınırken kullanım ücreti geçmişe dönük hesaplanır, dolayısıyla "şu an
+    /// işleyen dönem" NextBillingDate'in bir öncesidir. Çapa günü burada da
+    /// uygulanmak zorunda — yoksa 31 Mart'tan geriye giderken gün kayar.
+    /// </summary>
+    public static DateOnly PreviousPeriodStart(DateOnly current, BillingCycle cycle, int anchorDay)
+        => WithAnchorDay(current.AddMonths(-(int)cycle), anchorDay);
+
     private static DateOnly WithAnchorDay(DateOnly date, int anchorDay)
     {
         if (anchorDay is < 1 or > 31)

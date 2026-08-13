@@ -17,6 +17,10 @@ public sealed class PlanConfiguration : IEntityTypeConfiguration<Plan>
         b.Property(x => x.Price).HasPrecision(18, 4).IsRequired();
         b.Property(x => x.Currency).HasMaxLength(3).IsRequired();
         b.Property(x => x.Cycle).HasConversion<int>();
+        b.Property(x => x.BillingModel).HasConversion<int>();
+        b.Property(x => x.UsageUnitName).HasMaxLength(30);
+        b.Property(x => x.IncludedUnits).HasPrecision(18, 4);
+        b.Property(x => x.OveragePrice).HasPrecision(18, 4);
         b.Property(x => x.CreatedBy).HasMaxLength(100).IsRequired();
         b.Property(x => x.UpdatedBy).HasMaxLength(100);
 

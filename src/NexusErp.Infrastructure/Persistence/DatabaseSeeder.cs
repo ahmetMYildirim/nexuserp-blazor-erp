@@ -23,6 +23,7 @@ public static class DatabaseSeeder
         await db.Database.MigrateAsync(ct);
         await SeedCoreAsync(db, ct);
         await SeedSubscriptionsAsync(db, ct);
+        await SeedMeteredDemoAsync(db, ct);
         // Fatura ve tahsilat demo verisi Application katmanındaki DemoDataSeeder'da —
         // servisleri kullanması gerekiyor, Infrastructure oraya bağımlı olamaz.
     }
@@ -137,6 +138,107 @@ public static class DatabaseSeeder
     // ------------------------------------------------------------------
     // Abonelik planları ve abonelikler (Bölüm 09)
     // ------------------------------------------------------------------
+    /// <summary>
+    /// Kullanım bazlı demo verisi — AYRI ve kendi başına idempotent bir adım.
+    ///
+    /// ⚠️ Neden <see cref="SeedSubscriptionsAsync"/> içinde değil: o metot "hiç plan
+    /// yoksa" diye başlıyor ve mevcut bir veri tabanında hemen çıkıyor. Yeni demo
+    /// verisini oraya koysaydık yalnızca sıfırdan kurulumda görünürdü; eldeki
+    /// veri tabanını kullananlar özelliği hiç göremezdi.
+    /// </summary>
+    private static async Task SeedMeteredDemoAsync(AppDbContext db, CancellationToken ct)
+    {
+        if (await db.Plans.IgnoreQueryFilters().AnyAsync(p => p.Code == "SMS-AY", ct)) return;
+
+        var now = DateTimeOffset.UtcNow;
+        var today = DateOnly.FromDateTime(DateTime.Today);
+
+        var bakim = await db.Products.IgnoreQueryFilters()
+                            .FirstAsync(p => p.Code == "HZM0001", ct);
+        var danismanlik = await db.Products.IgnoreQueryFilters()
+                            .FirstAsync(p => p.Code == "HZM0002", ct);
+
+        // Hibrit: taban ücret + kotayı aşan kullanım
+        var hybridPlan = NewPlan("SMS-AY", "SMS Paketi — Aylık", 750m, bakim.Id,
+                                 BillingModel.Hybrid, "SMS", 1_000m, 0.45m);
+
+        // Saf kullanım: sabit ücret YOK, kullanım yoksa fatura da yok
+        var meteredPlan = NewPlan("API-AY", "API Kullanımı — Aylık", 0m, danismanlik.Id,
+                                  BillingModel.Metered, "çağrı", 0m, 0.02m);
+
+        db.Plans.AddRange(hybridPlan, meteredPlan);
+
+        var customers = await db.Parties.IgnoreQueryFilters()
+                                .Where(p => (p.Type & PartyType.Customer) != 0)
+                                .OrderBy(p => p.Code).ToListAsync(ct);
+
+        var hybridSub = NewSub(customers[0].Id, hybridPlan.Id);
+        var meteredSub = NewSub(customers[1].Id, meteredPlan.Id);
+
+        db.Subscriptions.AddRange(hybridSub, meteredSub);
+
+        // ⚠️ Kullanım tarihleri GEÇMİŞTE: kullanım ücreti geriye dönük faturalandığı
+        // için bugün kaydedilen kullanım bir sonraki dönemde tahsil edilir. Demo
+        // verisini bugüne yazsaydık "Faturalandır" butonu boş fatura üretirdi.
+        db.UsageRecords.AddRange(
+            // Hibrit: 1.000 kota, 1.340 kullanım → 340 birim ücretlendirilir
+            NewUsage(hybridSub.Id, today.AddDays(-25), 620m, "Toplu SMS gönderimi"),
+            NewUsage(hybridSub.Id, today.AddDays(-18), 480m, "Kampanya SMS"),
+            NewUsage(hybridSub.Id, today.AddDays(-6), 240m, "Bildirim SMS"),
+            // Saf kullanım: kota yok, hepsi ücretlendirilir
+            NewUsage(meteredSub.Id, today.AddDays(-20), 18_400m, "API çağrıları (hafta 1)"),
+            NewUsage(meteredSub.Id, today.AddDays(-13), 21_150m, "API çağrıları (hafta 2)"),
+            NewUsage(meteredSub.Id, today.AddDays(-4), 9_800m, "API çağrıları (hafta 3)")
+        );
+
+        await db.SaveChangesAsync(ct);
+
+        // --- yerel yardımcılar ---
+
+        Plan NewPlan(string code, string name, decimal price, Guid productId,
+                     BillingModel model, string unit, decimal included, decimal overage) => new()
+        {
+            TenantId = DemoTenantId,
+            Code = code,
+            Name = name,
+            Price = price,
+            Cycle = BillingCycle.Monthly,
+            ProductId = productId,
+            BillingModel = model,
+            UsageUnitName = unit,
+            IncludedUnits = included,
+            OveragePrice = overage,
+            CreatedAt = now,
+            CreatedBy = "seed"
+        };
+
+        Subscription NewSub(Guid partyId, Guid planId) => new()
+        {
+            TenantId = DemoTenantId,
+            PartyId = partyId,
+            PlanId = planId,
+            Status = SubscriptionStatus.Active,
+            StartDate = today.AddMonths(-2),
+            // Vadesi GELMİŞ — "Şimdi Faturalandır" bunları kullanımla birlikte kesecek
+            NextBillingDate = today.AddDays(-1),
+            BillingAnchorDay = today.AddDays(-1).Day,
+            CreatedAt = now,
+            CreatedBy = "seed"
+        };
+
+        UsageRecord NewUsage(Guid subscriptionId, DateOnly on, decimal quantity,
+                             string description) => new()
+        {
+            TenantId = DemoTenantId,
+            SubscriptionId = subscriptionId,
+            OccurredOn = on,
+            Quantity = quantity,
+            Description = description,
+            CreatedAt = now,
+            CreatedBy = "seed"
+        };
+    }
+
     private static async Task SeedSubscriptionsAsync(AppDbContext db, CancellationToken ct)
     {
         if (await db.Plans.IgnoreQueryFilters().AnyAsync(ct)) return;

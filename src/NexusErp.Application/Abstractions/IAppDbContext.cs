@@ -17,11 +17,13 @@ public interface IAppDbContext : IAsyncDisposable
     DbSet<InvoiceLine> InvoiceLines { get; }
     DbSet<Plan> Plans { get; }
     DbSet<Subscription> Subscriptions { get; }
+    DbSet<UsageRecord> UsageRecords { get; }
     DbSet<Payment> Payments { get; }
     DbSet<PaymentAllocation> PaymentAllocations { get; }
     DbSet<PartyLedgerEntry> PartyLedgerEntries { get; }
     DbSet<AuditEntry> AuditEntries { get; }
     DbSet<OutBoxMessage> OutboxMessages { get; }
+    DbSet<ProcessedMessage> ProcessedMessages { get; }
 
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

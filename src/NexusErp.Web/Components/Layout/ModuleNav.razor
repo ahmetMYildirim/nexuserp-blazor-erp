@@ -1,0 +1,114 @@
+@implements IDisposable
+@inject NavigationManager Nav
+
+@*
+    38px kategorili üst menü. MudDrawer + MudNavMenu yerine geçer.
+    Gruplar repo'daki eski NavMenu gruplarıyla birebir aynı.
+    Her satırın altında tek satır açıklama var — "yaşlandırma nedir" diye sorulmasın.
+*@
+
+<nav class="nx-modnav" @onmouseleave="Close">
+    <a class="nx-modnav-tab @(IsActive("/") ? "active" : "")" href="/">Genel Bakış</a>
+
+    @foreach (var group in Groups)
+    {
+        <span class="nx-modnav-group" @onmouseenter="() => Open(group.Key)">
+            <a class="nx-modnav-tab @(IsGroupActive(group) ? "active" : "")"
+               href="javascript:void(0)" @onclick="() => Toggle(group.Key)">
+                @group.Key
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="1.5">
+                    <path d="M6 9l6 6 6-6"></path>
+                </svg>
+            </a>
+
+            @if (_open == group.Key)
+            {
+                <div class="blueprint nx-dropdown">
+                    <i class="corner tl"></i><i class="corner tr"></i>
+                    <i class="corner bl"></i><i class="corner br"></i>
+                    @foreach (var item in group.Value)
+                    {
+                        <a class="nx-dropdown-item" href="@item.Href" @onclick="Close">
+                            <strong>@item.Title</strong>
+                            <span class="text-muted">@item.Description</span>
+                        </a>
+                    }
+                </div>
+            }
+        </span>
+    }
+</nav>
+
+@if (_open is not null)
+{
+    @* Menü açıkken içerik hafifçe bulanıklaşır (components.md §8) *@
+    <div class="nx-scrim"></div>
+}
+
+@code {
+    private sealed record NavItem(string Title, string Href, string Description);
+
+    private static readonly Dictionary<string, NavItem[]> Groups = new()
+    {
+        ["Cari"] =
+        [
+            new("Cari Kartlar", "/cariler",
+                "Müşteri ve tedarikçi kartları, bakiye ve vade"),
+            new("Cari Ekstre", "/cari-ekstre",
+                "Bir carinin borç / alacak hareketleri ve yürüyen bakiye")
+        ],
+        ["Satış"] =
+        [
+            new("Faturalar", "/faturalar",
+                "Taslak, kesilen ve iptal faturaların listesi"),
+            new("Yeni Fatura", "/faturalar/yeni",
+                "Satır girişi, canlı KDV ve tevkifat önizlemesi"),
+            new("Ürün / Hizmet", "/urunler",
+                "Ürün kataloğu, KDV ve tevkifat oranları")
+        ],
+        ["Finans"] =
+        [
+            new("Tahsilatlar", "/tahsilatlar",
+                "Havale, çek ve nakit kayıtları · fatura eşleştirme"),
+            new("Yaşlandırma Raporu", "/yaslandirma",
+                "Tahsil edilmemiş alacaklar kaç gündür bekliyor: 30 / 60 / 90 gün")
+        ],
+        ["Abonelik"] =
+        [
+            new("Planlar", "/planlar", "Abonelik planları, fiyat ve döngü"),
+            new("Abonelikler", "/abonelikler", "Aktif abonelikler, MRR ve yenileme takvimi")
+        ],
+        ["Sistem"] =
+        [
+            new("Denetim Kaydı", "/denetim",
+                "Kim, ne zaman, hangi alanı neyden neye çevirdi"),
+            new("Kullanıcılar", "/kullanicilar",
+                "Erişim yetkileri, rol atamaları ve hesap durumu"),
+            new("Sistem Testi", "/sistem-testi",
+                "Her iş kuralını canlı veri tabanında çalıştırıp sonucu raporlar")
+        ]
+    };
+
+    private string? _open;
+
+    protected override void OnInitialized() => Nav.LocationChanged += OnLocationChanged;
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+        => InvokeAsync(() => { _open = null; StateHasChanged(); });
+
+    private void Open(string key) => _open = key;
+    private void Close() => _open = null;
+    private void Toggle(string key) => _open = _open == key ? null : key;
+
+    private string CurrentPath =>
+        "/" + Nav.ToBaseRelativePath(Nav.Uri).Split('?')[0].TrimEnd('/');
+
+    private bool IsActive(string href) =>
+        href == "/" ? CurrentPath == "/" : CurrentPath.StartsWith(href, StringComparison.OrdinalIgnoreCase);
+
+    private bool IsGroupActive(KeyValuePair<string, NavItem[]> group) =>
+        group.Value.Any(i => CurrentPath.StartsWith(i.Href, StringComparison.OrdinalIgnoreCase));
+
+    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
+}

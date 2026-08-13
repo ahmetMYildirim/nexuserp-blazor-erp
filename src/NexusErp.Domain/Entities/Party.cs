@@ -69,6 +69,15 @@ public sealed class Party : AuditableEntity, ITenantScoped
     /// <summary>Vade tarihi. Fatura entity'sinden bağımsız test edilebilir.</summary>
     public DateOnly CalculateDueDate(DateOnly invoiceDate) => invoiceDate.AddDays(PaymentTermDays);
 
+    /// <summary>Alış faturası kesilebilmesi için cari tedarikçi olmalı.</summary>
+    public void EnsureCanBePurchasedFrom()
+    {
+        if (!IsActive)
+            throw new DomainException($"'{Title}' pasif durumda, alış faturası girilemez.");
+        if (!IsSupplier)
+            throw new DomainException($"'{Title}' tedarikçi tipinde değil, alış faturası girilemez.");
+    }
+
     public void EnsureCanBeInvoiced()
     {
         if (!IsActive)

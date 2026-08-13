@@ -1,0 +1,711 @@
+@page "/abonelikler/{Id:guid}"
+@attribute [Authorize]
+@using NexusErp.Application.Subscriptions
+@using NexusErp.Domain.Enums
+@inject SubscriptionService SubscriptionService
+@inject UsageService UsageService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>Abonelik · NexusERP</PageTitle>
+
+@*
+    Razor tuzakları — bu dosyada bilinçli kaçınılan üç kalıp:
+      1. @if (x is { } y)          süslü parantez, kod bloğunun sonunu arayan
+                                   Razor sayacını bozar
+      2. attr="@x.ToString("...")" içteki tırnak özniteliği erken kapatır
+      3. @($"{a:dd.MM}") kod bloğu içinde — biçim belirteci yine sayacı bozar
+    Karmaşık ifadelerin hepsi aşağıdaki yardımcı özelliklere alındı.
+*@
+
+@if (_data is null)
+{
+    <Blueprint Class="bp-pad">
+        <div class="text-muted">Yükleniyor…</div>
+    </Blueprint>
+}
+
+@if (_data is not null)
+{
+    <PageHeader Kicker="@KickerText" Title="@_data.PartyTitle" Description="@HeaderDescription">
+        <Actions>
+            <a class="btn btn-secondary btn-sm" href="/abonelikler">Listeye dön</a>
+
+            <AuthorizeView Roles="Admin,Muhasebe" Context="auth">
+                @if (CanResume)
+                {
+                    <button class="btn btn-primary btn-sm" disabled="@_busy" @onclick="ResumeAsync">
+                        Sürdür
+                    </button>
+                }
+                @if (CanPause)
+                {
+                    <button class="btn btn-secondary btn-sm" disabled="@_busy" @onclick="PauseAsync">
+                        Duraklat
+                    </button>
+                }
+                @if (IsLive)
+                {
+                    <button class="btn btn-secondary btn-sm" disabled="@_busy" @onclick="TogglePlanChange">
+                        Plan Değiştir
+                    </button>
+                    <button class="btn btn-secondary btn-sm" disabled="@_busy" @onclick="ToggleCancel">
+                        İptal Et
+                    </button>
+                }
+            </AuthorizeView>
+        </Actions>
+    </PageHeader>
+
+    <div class="stack">
+
+        <div class="grid-kpi">
+            <StatCard Title="Dönem Ücreti" Suffix="@_data.Currency"
+                      Value="@_data.PeriodAmount.ToMoney()" Hint="@PeriodHint" />
+
+            <StatCard Title="Aylık Değer (MRR katkısı)" Suffix="@_data.Currency"
+                      Value="@_data.MonthlyValue.ToMoney()" Hint="@MonthlyHint" />
+
+            <StatCard Title="Sonraki Fatura"
+                      Value="@NextBillingDateText" Hint="@NextBillingHint" />
+
+            <StatCard Title="Toplam Faturalanan" Suffix="@_data.Currency"
+                      Value="@_data.TotalBilled.ToMoney()" Hint="@InvoiceHint" />
+        </div>
+
+        @* ─────────── İPTAL: SEBEP SORULUYOR ─────────── *@
+        @if (_showCancel)
+        {
+            <Blueprint Class="bp-pad">
+                <h5 style="margin-bottom:10px">Aboneliği İptal Et</h5>
+                <div class="kpi-hint" style="margin-bottom:12px">
+                    Hizmet dönem sonuna kadar sürer, sonrasında faturalandırma durur.
+                    Sebep churn analizinde kullanılır — "neden kaybettik" sorusunun
+                    cevabı buradan geliyor.
+                </div>
+
+                <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+                    <div class="field" style="min-width:220px">
+                        <label>İptal sebebi</label>
+                        <select class="input" @bind="_cancelReason">
+                            @foreach (var r in CancelReasons)
+                            {
+                                <option value="@r">@ReasonText(r)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="field" style="flex:1;min-width:240px">
+                        <label>Açıklama (opsiyonel)</label>
+                        <input class="input" @bind="_cancelNote"
+                               placeholder="Müşterinin kendi ifadesi" />
+                    </div>
+                    <button class="btn btn-secondary" @onclick="ToggleCancel">Vazgeç</button>
+                    <button class="btn btn-primary" disabled="@_busy" @onclick="ConfirmCancelAsync">
+                        İptal Et
+                    </button>
+                </div>
+            </Blueprint>
+        }
+
+        @if (_showPlanChange)
+        {
+            <Blueprint Class="bp-pad">
+                <h5 style="margin-bottom:10px">Plan Değiştir</h5>
+
+                <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+                    <div class="field" style="min-width:260px;flex:1">
+                        <label>Yeni plan</label>
+                        <select class="input" @bind="_newPlanId" @bind:after="PreviewPlanChangeAsync">
+                            <option value="@Guid.Empty">— seçiniz —</option>
+                            @foreach (var p in SelectablePlans)
+                            {
+                                <option value="@p.Id">@PlanOptionText(p)</option>
+                            }
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" disabled="@ApplyDisabled"
+                            @onclick="ApplyPlanChangeAsync">
+                        Değişikliği Uygula
+                    </button>
+                </div>
+
+                @if (_planPreview is not null)
+                {
+                    <div style="margin-top:14px">
+                        <table class="table">
+                            <tbody>
+                                <tr>
+                                    <td>Mevcut plan</td>
+                                    <td>@_planPreview.CurrentPlanName</td>
+                                    <td class="num">@_planPreview.CurrentPeriodPrice.ToMoney() @_planPreview.Currency</td>
+                                </tr>
+                                <tr>
+                                    <td>Yeni plan</td>
+                                    <td>@_planPreview.NewPlanName</td>
+                                    <td class="num">@_planPreview.NewPeriodPrice.ToMoney() @_planPreview.Currency</td>
+                                </tr>
+                                <tr>
+                                    <td>İçinde bulunulan dönem</td>
+                                    <td colspan="2" class="num">@ChangePeriodText</td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="2">
+                                        Dönem ortası fark
+                                        <StatusTag Text="@ChangeKindText" Variant="@ChangeKindVariant" />
+                                    </td>
+                                    <td class="num">@_planPreview.ProrationAmount.ToMoney() @_planPreview.Currency</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+
+                        <div class="kpi-hint" style="margin-top:8px">@_planPreview.Explanation</div>
+                        <div class="kpi-hint">Değişiklikten sonraki ilk fatura: <b>@ChangeNextBillingText</b></div>
+                    </div>
+                }
+            </Blueprint>
+        }
+
+        @* ─────────── KULLANIM (yalnızca kullanım bazlı planlarda) ─────────── *@
+        @if (IsMetered)
+        {
+            <Blueprint Class="bp-pad">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+                    <h5 style="margin:0">Kullanım</h5>
+                    <StatusTag Text="@UsagePeriodText" Variant="neutral" />
+                    <span style="margin-left:auto" class="kpi-hint">@UsageBillingNote</span>
+                </div>
+
+                @if (_usage is not null)
+                {
+                    <div class="grid-mini" style="margin-bottom:14px">
+                        <MiniStat Label="@UsagePeriodLabel" Value="@UsagePeriodQuantityText" />
+                        <MiniStat Label="Ücretsiz kota" Value="@UsageAllowanceText"
+                                  Hint="@UsageAllowanceHint" />
+                        <MiniStat Label="Ücretlendirilecek" Value="@UsageBillableText" />
+                        <MiniStat Label="Tahmini tutar" Value="@UsageEstimateText"
+                                  Hint="KDV hariç" />
+                        <MiniStat Label="Faturalanmamış toplam" Value="@UsageUnbilledText"
+                                  Hint="geç gelen kayıtlar dahil" />
+                    </div>
+
+                    @if (UsageOverQuota)
+                    {
+                        <div class="kpi-hint" style="margin-bottom:10px">
+                            ⚠️ Kota aşıldı. Aşan miktar bir sonraki faturaya ayrı satır
+                            olarak eklenecek.
+                        </div>
+                    }
+                }
+
+                <AuthorizeView Roles="Admin,Muhasebe" Context="usageAuth">
+                    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;
+                                margin-bottom:14px">
+                        <div class="field" style="width:150px">
+                            <label>Tarih</label>
+                            <input class="input" type="date" @bind="_usageDate" />
+                        </div>
+                        <div class="field" style="width:140px">
+                            <label>@UsageQuantityLabel</label>
+                            <input class="input" type="number" step="0.01" @bind="_usageQuantity" />
+                        </div>
+                        <div class="field" style="min-width:220px;flex:1">
+                            <label>Açıklama</label>
+                            <input class="input" @bind="_usageNote"
+                                   placeholder="Kaynak / referans" />
+                        </div>
+                        <button class="btn btn-primary" disabled="@_busy" @onclick="AddUsageAsync">
+                            Kullanım Ekle
+                        </button>
+                    </div>
+                </AuthorizeView>
+
+                @if (HasNoUsage)
+                {
+                    <div class="text-muted">Bu abonelik için henüz kullanım kaydı yok.</div>
+                }
+                @if (HasUsage)
+                {
+                    <div class="scroll-x">
+                        <table class="table" style="min-width:560px">
+                            <thead>
+                                <tr>
+                                    <th>Tarih</th><th class="num">Miktar</th>
+                                    <th>Açıklama</th><th>Kaynak No</th><th>Durum</th><th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var u in _usageRows)
+                                {
+                                    <tr>
+                                        <td>@UsageDateText(u)</td>
+                                        <td class="num">@u.Quantity.ToMoney()</td>
+                                        <td>@u.Description</td>
+                                        <td>@u.ExternalId</td>
+                                        <td>
+                                            <StatusTag Text="@UsageStatusText(u)"
+                                                       Variant="@UsageStatusVariant(u)" />
+                                        </td>
+                                        <td class="num">
+                                            @if (!u.IsBilled)
+                                            {
+                                                <button class="btn btn-ghost btn-sm" disabled="@_busy"
+                                                        @onclick="@(() => DeleteUsageAsync(u.Id))">
+                                                    Sil
+                                                </button>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </Blueprint>
+        }
+
+        <div class="grid-2">
+            <Blueprint Class="bp-pad">
+                <h5 style="margin-bottom:10px">Faturalar</h5>
+
+                @if (HasNoInvoice)
+                {
+                    <div class="text-muted">@EmptyInvoiceText</div>
+                }
+                @if (HasInvoice)
+                {
+                    <div class="scroll-x">
+                        <table class="table" style="min-width:560px">
+                            <thead>
+                                <tr>
+                                    <th>Fatura No</th><th>Dönem</th><th>Tarih</th>
+                                    <th class="num">Tutar</th><th class="num">Kalan</th><th>Durum</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var i in _data.Invoices)
+                                {
+                                    <tr>
+                                        <td class="mono"><a href="@InvoiceHref(i)">@InvoiceNumberText(i)</a></td>
+                                        <td>@PeriodText(i)</td>
+                                        <td>@DateText(i.IssueDate)</td>
+                                        <td class="num">@i.GrandTotal.ToMoney()</td>
+                                        <td class="num">@RemainingText(i)</td>
+                                        <td>
+                                            <StatusTag Text="@StatusText(i.Status)"
+                                                       Variant="@StatusVariant(i.Status)" />
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="3">Toplam</td>
+                                    <td class="num">@_data.TotalBilled.ToMoney()</td>
+                                    <td class="num">@_data.TotalOutstanding.ToMoney()</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                }
+            </Blueprint>
+
+            <Blueprint Class="bp-pad">
+                <h5 style="margin-bottom:10px">Abonelik Kartı</h5>
+                <table class="table">
+                    <tbody>
+                        <tr>
+                            <td>Durum</td>
+                            <td class="num">
+                                <StatusTag Text="@_data.StatusText" Variant="@SubVariant(_data.Status)" />
+                            </td>
+                        </tr>
+                        <tr><td>Plan</td><td class="num">@_data.PlanName</td></tr>
+                        <tr><td>Döngü</td><td class="num">@_data.CycleText</td></tr>
+                        <tr><td>Başlangıç</td><td class="num">@StartDateText</td></tr>
+                        <tr><td>Faturalandırma günü</td><td class="num">@AnchorText</td></tr>
+
+                        @foreach (var row in OptionalDates())
+                        {
+                            <tr><td>@row.Label</td><td class="num">@row.Value</td></tr>
+                        }
+
+                        <tr>
+                            <td>Plan fiyatı</td>
+                            <td class="num">@_data.PlanPrice.ToMoney() @_data.Currency</td>
+                        </tr>
+                        @if (HasCustomPrice)
+                        {
+                            <tr>
+                                <td>Özel fiyat</td>
+                                <td class="num">@CustomPriceText @_data.Currency</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                @if (HasNotes)
+                {
+                    <div class="kpi-hint" style="margin-top:10px">@_data.Notes</div>
+                }
+
+                <div style="margin-top:10px">
+                    <a class="btn btn-ghost btn-sm" href="@StatementHref">Cari ekstreyi aç</a>
+                </div>
+            </Blueprint>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private SubscriptionDetail? _data;
+    private List<PlanListItem> _plans = [];
+    private PlanChangePreview? _planPreview;
+    private Guid _newPlanId;
+    private bool _showPlanChange;
+    private bool _showCancel;
+    private CancellationReason _cancelReason = CancellationReason.Unspecified;
+    private string? _cancelNote;
+    private bool _busy;
+
+    // Kullanım paneli
+    private UsageSummary? _usage;
+    private IReadOnlyList<UsageListItem> _usageRows = [];
+    private DateTime? _usageDate = DateTime.Today;
+    private decimal _usageQuantity;
+    private string? _usageNote;
+
+    private static DateOnly Today => DateOnly.FromDateTime(DateTime.Today);
+
+    protected override async Task OnParametersSetAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _data = await SubscriptionService.GetDetailAsync(Id);
+        if (_data is null) { Nav.NavigateTo("/abonelikler"); return; }
+
+        if (_plans.Count == 0)
+            _plans = await SubscriptionService.GetPlansAsync();
+
+        // ⚠️ Kullanım verisi yalnızca kullanım bazlı planda okunuyor — sabit ücretli
+        // aboneliklerin çoğunluk olduğu bir kurulumda her açılışta iki gereksiz sorgu
+        // atmanın anlamı yok.
+        if (IsMetered)
+        {
+            _usage = await UsageService.GetSummaryAsync(Id);
+            _usageRows = await UsageService.ListAsync(Id);
+        }
+    }
+
+    // ---------------- Kullanım ----------------
+
+    private PlanListItem? CurrentPlan => _plans.FirstOrDefault(p => p.Id == _data!.PlanId);
+
+    private bool IsMetered => CurrentPlan?.IsMetered == true;
+
+    private string UsageUnit => CurrentPlan?.UsageUnitName ?? "birim";
+
+    private bool HasUsage => _usageRows.Count > 0;
+    private bool HasNoUsage => _usageRows.Count == 0;
+
+    private bool UsageOverQuota => _usage is not null && _usage.Billable > 0m;
+
+    private string UsagePeriodLabel => "Bu dönem";
+    private string UsageQuantityLabel => $"Miktar ({UsageUnit})";
+
+    private string UsagePeriodText => _usage is null
+        ? "—"
+        : _usage.PeriodStart.ToString("dd.MM.yyyy") + " – " + _usage.PeriodEnd.ToString("dd.MM.yyyy");
+
+    private string UsageBillingNote =>
+        "Kullanım ücreti geçmişe dönük, sabit ücret peşin faturalanır.";
+
+    private string UsagePeriodQuantityText =>
+        _usage is null ? "—" : _usage.PeriodQuantity.ToMoney() + " " + UsageUnit;
+
+    private string UsageAllowanceText =>
+        _usage is null ? "—" : _usage.Allowance.ToMoney() + " " + UsageUnit;
+
+    private string UsageAllowanceHint =>
+        _usage is null ? "" : _usage.AllowanceRemaining.ToMoney() + " " + UsageUnit + " kaldı";
+
+    private string UsageBillableText =>
+        _usage is null ? "—" : _usage.Billable.ToMoney() + " " + UsageUnit;
+
+    private string UsageEstimateText =>
+        _usage is null ? "—" : _usage.EstimatedAmount.ToMoney() + " " + _usage.Currency;
+
+    private string UsageUnbilledText =>
+        _usage is null ? "—" : _usage.UnbilledQuantity.ToMoney() + " " + UsageUnit;
+
+    private static string UsageDateText(UsageListItem u) => u.OccurredOn.ToString("dd.MM.yyyy");
+
+    private static string UsageStatusText(UsageListItem u) =>
+        u.IsBilled ? "Faturalandı " + (u.InvoiceNumber ?? "") : "Bekliyor";
+
+    // Tema yalnızca accent / accent-2 / neutral / outline tanımlıyor; olmayan bir
+    // varyant adı sessizce stilsiz etiket üretir.
+    private static string UsageStatusVariant(UsageListItem u) =>
+        u.IsBilled ? "accent-2" : "outline";
+
+    private async Task AddUsageAsync()
+    {
+        if (_usageQuantity == 0m)
+        {
+            Snackbar.Add("Miktar sıfır olamaz.", Severity.Warning);
+            return;
+        }
+
+        _busy = true;
+        var on = DateOnly.FromDateTime(_usageDate ?? DateTime.Today);
+
+        var ok = await Snackbar.RunAsync(
+            () => UsageService.RecordAsync(new UsageEntry(Id, _usageQuantity, on, _usageNote)),
+            "Kullanım kaydedildi.");
+        _busy = false;
+
+        if (ok)
+        {
+            _usageQuantity = 0m;
+            _usageNote = null;
+            await LoadAsync();
+        }
+    }
+
+    private async Task DeleteUsageAsync(Guid usageId)
+    {
+        _busy = true;
+        var ok = await Snackbar.RunAsync(
+            () => UsageService.DeleteAsync(usageId), "Kullanım kaydı silindi.");
+        _busy = false;
+
+        if (ok) await LoadAsync();
+    }
+
+    // ---------------- Görünüm yardımcıları ----------------
+    // Markup'ta karmaşık ifade bırakmıyoruz; hepsi buradan okunuyor.
+
+    private string KickerText => $"ABONELİK · {_data!.PlanCode}";
+
+    private string HeaderDescription =>
+        $"{_data!.PlanName} · {_data.CycleText} · {_data.StatusText}";
+
+    private bool IsLive => _data!.Status != SubscriptionStatus.Cancelled;
+    private bool CanPause => _data!.Status is SubscriptionStatus.Active or SubscriptionStatus.Trialing;
+    private bool CanResume => _data!.Status == SubscriptionStatus.Paused;
+
+    private bool HasInvoice => _data!.Invoices.Count > 0;
+    private bool HasNoInvoice => _data!.Invoices.Count == 0;
+    private bool HasCustomPrice => _data!.CustomPrice.HasValue;
+    private bool HasNotes => !string.IsNullOrWhiteSpace(_data!.Notes);
+
+    private string PeriodHint
+    {
+        get
+        {
+            var text = $"{_data!.Quantity:N0} × {_data.EffectivePrice.ToMoney()}";
+            return _data.CustomPrice.HasValue ? text + " · özel fiyat" : text;
+        }
+    }
+
+    private string MonthlyHint => $"{_data!.CycleText} ücret aya normalize edildi";
+    private string NextBillingDateText => DateText(_data!.NextBillingDate);
+    private string StartDateText => DateText(_data!.StartDate);
+
+    private string InvoiceHint =>
+        $"{_data!.InvoiceCount} fatura · {_data.TotalOutstanding.ToMoney()} açık";
+
+    private string NextBillingHint
+    {
+        get
+        {
+            var d = _data!;
+            if (d.Status == SubscriptionStatus.Cancelled) return "abonelik iptal edildi";
+            if (d.Status == SubscriptionStatus.Paused) return "duraklatıldı — faturalandırma durdu";
+
+            var days = d.DaysToNextBilling;
+            if (days < 0) return $"{Math.Abs(days)} gün gecikti";
+            return days == 0 ? "bugün" : $"{days} gün kaldı";
+        }
+    }
+
+    private string AnchorText => $"ayın {_data!.BillingAnchorDay}. günü";
+    private string CustomPriceText => _data!.CustomPrice!.Value.ToMoney();
+    private string StatementHref => $"/cari-ekstre?partyId={_data!.PartyId}";
+
+    private string EmptyInvoiceText =>
+        _data!.Status == SubscriptionStatus.Trialing
+            ? "Bu abonelik için henüz fatura kesilmemiş. Deneme süresi devam ediyor."
+            : "Bu abonelik için henüz fatura kesilmemiş.";
+
+    private IEnumerable<PlanListItem> SelectablePlans =>
+        _plans.Where(p => p.IsActive && p.Id != _data!.PlanId);
+
+    private static string PlanOptionText(PlanListItem p) =>
+        $"{p.Name} — {p.Price.ToMoney()} {p.Currency}";
+
+    private bool ApplyDisabled => _planPreview is null || _busy;
+
+    private string ChangePeriodText =>
+        $"{DateText(_planPreview!.PeriodStart)} – {DateText(_planPreview.PeriodEnd)}";
+
+    private string ChangeNextBillingText => DateText(_planPreview!.NextBillingDate);
+    private string ChangeKindText => _planPreview!.IsUpgrade ? "Yükseltme" : "Düşürme";
+    private string ChangeKindVariant => _planPreview!.IsUpgrade ? "accent" : "outline";
+
+    private static string DateText(DateOnly d) => d.ToString("dd.MM.yyyy");
+
+    private static string InvoiceHref(SubscriptionInvoiceRow i) => $"/faturalar/{i.Id}";
+    private static string InvoiceNumberText(SubscriptionInvoiceRow i) => i.Number ?? "— taslak —";
+
+    private static string RemainingText(SubscriptionInvoiceRow i) =>
+        i.Remaining == 0 ? "—" : i.Remaining.ToMoney();
+
+    private static string PeriodText(SubscriptionInvoiceRow i)
+    {
+        if (!i.PeriodStart.HasValue || !i.PeriodEnd.HasValue) return "—";
+        return $"{i.PeriodStart.Value:dd.MM} – {i.PeriodEnd.Value:dd.MM.yyyy}";
+    }
+
+    /// <summary>Yalnızca dolu tarih alanları — markup'ta dört ayrı @if olmasın.</summary>
+    private IEnumerable<(string Label, string Value)> OptionalDates()
+    {
+        var d = _data!;
+        if (d.TrialEndsOn.HasValue) yield return ("Deneme bitişi", DateText(d.TrialEndsOn.Value));
+        if (d.PausedOn.HasValue) yield return ("Duraklatıldı", DateText(d.PausedOn.Value));
+        if (d.CancelledOn.HasValue) yield return ("İptal tarihi", DateText(d.CancelledOn.Value));
+        if (d.EndDate.HasValue) yield return ("Hizmet bitişi", DateText(d.EndDate.Value));
+    }
+
+    // ---------------- Eylemler ----------------
+
+    private void TogglePlanChange() => _showPlanChange = !_showPlanChange;
+
+    private async Task PreviewPlanChangeAsync()
+    {
+        if (_newPlanId == Guid.Empty) { _planPreview = null; return; }
+
+        _planPreview = null;
+        await Snackbar.RunAsync(async () =>
+            _planPreview = await SubscriptionService.PreviewPlanChangeAsync(Id, _newPlanId, Today));
+    }
+
+    private async Task ApplyPlanChangeAsync()
+    {
+        if (_newPlanId == Guid.Empty) return;
+
+        var confirmed = await DialogService.ShowMessageBox(
+            "Plan Değişikliği",
+            _planPreview?.Explanation ?? "Plan değiştirilsin mi?",
+            yesText: "Uygula", cancelText: "Vazgeç");
+
+        if (confirmed != true) return;
+
+        _busy = true;
+        var ok = await Snackbar.RunAsync(
+            () => SubscriptionService.ChangePlanAsync(Id, _newPlanId, Today),
+            "Plan değiştirildi.");
+        _busy = false;
+
+        if (ok)
+        {
+            _showPlanChange = false;
+            _planPreview = null;
+            _newPlanId = Guid.Empty;
+            await LoadAsync();
+        }
+    }
+
+    private async Task PauseAsync()
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Aboneliği Duraklat",
+            "Faturalandırma duracak. Sürdürdüğünüzde takvim ileri sarılır — " +
+            "duraklama süresi için geriye dönük fatura kesilmez.",
+            yesText: "Duraklat", cancelText: "Vazgeç");
+
+        if (confirmed != true) return;
+
+        _busy = true;
+        var ok = await Snackbar.RunAsync(
+            () => SubscriptionService.PauseAsync(Id, Today), "Abonelik duraklatıldı.");
+        _busy = false;
+
+        if (ok) await LoadAsync();
+    }
+
+    private async Task ResumeAsync()
+    {
+        _busy = true;
+        var ok = await Snackbar.RunAsync(
+            () => SubscriptionService.ResumeAsync(Id, Today), "Abonelik sürdürüldü.");
+        _busy = false;
+
+        if (ok) await LoadAsync();
+    }
+
+    private void ToggleCancel() => _showCancel = !_showCancel;
+
+    /// <summary>Ödeme alınamadı seçeneği dunning tarafından set edilir, elle seçilmez.</summary>
+    private static readonly CancellationReason[] CancelReasons =
+    [
+        CancellationReason.Unspecified,
+        CancellationReason.TooExpensive,
+        CancellationReason.NotUsing,
+        CancellationReason.SwitchedToCompetitor,
+        CancellationReason.MissingFeatures,
+        CancellationReason.TemporaryPause,
+        CancellationReason.BusinessClosed,
+        CancellationReason.Other
+    ];
+
+    private static string ReasonText(CancellationReason r) => ChurnReasonRow.TextOf(r);
+
+    private async Task ConfirmCancelAsync()
+    {
+        _busy = true;
+        var ok = await Snackbar.RunAsync(
+            () => SubscriptionService.CancelAsync(Id, Today, immediately: false,
+                                                  _cancelReason, _cancelNote),
+            "Abonelik iptal edildi.");
+        _busy = false;
+
+        if (ok)
+        {
+            _showCancel = false;
+            _cancelNote = null;
+            await LoadAsync();
+        }
+    }
+
+    private static string StatusText(InvoiceStatus s) => s switch
+    {
+        InvoiceStatus.Draft => "Taslak",
+        InvoiceStatus.Issued => "Kesildi",
+        InvoiceStatus.PartiallyPaid => "Kısmi Tahsil",
+        InvoiceStatus.Paid => "Tahsil Edildi",
+        InvoiceStatus.Cancelled => "İptal",
+        _ => "?"
+    };
+
+    private static string StatusVariant(InvoiceStatus s) => s switch
+    {
+        InvoiceStatus.Issued => "accent",
+        InvoiceStatus.Paid => "accent-2",
+        InvoiceStatus.PartiallyPaid => "outline",
+        _ => "neutral"
+    };
+
+    private static string SubVariant(SubscriptionStatus s) => s switch
+    {
+        SubscriptionStatus.Active => "accent-2",
+        SubscriptionStatus.Trialing => "outline",
+        SubscriptionStatus.PastDue => "outline",
+        _ => "neutral"
+    };
+}

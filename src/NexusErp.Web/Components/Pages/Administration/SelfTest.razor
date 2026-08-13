@@ -1,0 +1,206 @@
+@page "/sistem-testi"
+@attribute [Authorize(Roles = "Admin,Muhasebe")]
+@using NexusErp.Infrastructure.Diagnostics
+@inject SelfTestService Tester
+
+@*
+    Canlı sistem testi.
+
+    ⚠️ Bu ekran DEMO/DOĞRULAMA amaçlıdır: her iş kuralını gerçek servisler ve
+    gerçek veri tabanı üzerinde çalıştırır. Kontroller AYRI BİR TENANT'ta koşar —
+    fatura kesmek numara tükettiği için demo tenant'ında koşsaydı her tur GİB'e
+    bildirilecek seride boşluk açardı. Tur bitiminde sandbox verisi siliniyor.
+*@
+
+<PageTitle>Sistem Testi · NexusERP</PageTitle>
+
+<PageHeader Kicker="SİSTEM" Title="Canlı Sistem Testi"
+            Description="Her iş kuralı gerçek veri tabanı üzerinde çalıştırılır ve sonucu burada raporlanır">
+    <Actions>
+        <button class="btn btn-primary btn-sm" disabled="@_running" @onclick="RunAsync">
+            @RunButtonText
+        </button>
+    </Actions>
+</PageHeader>
+
+<div class="stack">
+
+    @if (_running)
+    {
+        <Blueprint Class="bp-pad">
+            <div class="text-muted">
+                Kontroller çalışıyor… Mesajlaşma kontrolü broker'ın mesajı almasını
+                bekliyor, bu adım birkaç saniye sürebilir.
+            </div>
+        </Blueprint>
+    }
+
+    @if (_run is not null)
+    {
+        <Blueprint Class="bp-pad">
+            <div class="grid-mini">
+                <MiniStat Label="Toplam kontrol" Value="@_run.Total.ToString()" />
+                <MiniStat Label="Geçti" Value="@_run.PassedCount.ToString()" />
+                <MiniStat Label="Kaldı" Value="@_run.FailedCount.ToString()" />
+                <MiniStat Label="Atlandı" Value="@_run.SkippedCount.ToString()" />
+                <MiniStat Label="Süre" Value="@DurationText" />
+            </div>
+
+            <div style="margin-top:12px;display:flex;align-items:center;gap:12px">
+                <StatusTag Text="@OverallText" Variant="@OverallVariant" />
+                <span class="kpi-hint">@_run.Summary</span>
+            </div>
+
+            <div class="kpi-hint" style="margin-top:8px">
+                Kontroller <b>@SandboxText</b> kimlikli ayrı bir firmada koşar ve tur
+                sonunda silinir; demo verisi ve fatura numara serisi etkilenmez.
+            </div>
+        </Blueprint>
+
+        @foreach (var category in _run.Categories)
+        {
+            <Blueprint Class="bp-pad">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+                    <h5 style="margin:0">@category</h5>
+                    <StatusTag Text="@CategoryText(category)"
+                               Variant="@CategoryVariant(category)" />
+                </div>
+
+                <div class="scroll-x">
+                    <table class="table" style="min-width:820px">
+                        <thead>
+                            <tr>
+                                <th style="width:90px">Sonuç</th>
+                                <th style="width:290px">Kontrol</th>
+                                <th>Ne gördük / Neden önemli</th>
+                                <th class="num" style="width:70px">Süre</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var r in _run.InCategory(category))
+                            {
+                                <tr>
+                                    <td>
+                                        <StatusTag Text="@r.OutcomeText" Variant="@r.OutcomeVariant" />
+                                    </td>
+                                    <td>@r.Name</td>
+                                    <td>
+                                        <div style="font-family:Consolas,monospace;font-size:12px">
+                                            @r.Detail
+                                        </div>
+                                        <div class="kpi-hint" style="margin-top:4px">@r.Why</div>
+                                    </td>
+                                    <td class="num">@DurationOf(r)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </Blueprint>
+        }
+    }
+
+    @if (_run is null && !_running)
+    {
+        <Blueprint Class="bp-pad">
+            <h5 style="margin-bottom:10px">Bu test neyi doğruluyor?</h5>
+            <div class="scroll-x">
+                <table class="table" style="min-width:620px">
+                    <thead>
+                        <tr><th>Alan</th><th>Doğrulanan davranış</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Altyapı</td>
+                            <td>PostgreSQL, şema güncelliği, outbox sağlığı, RabbitMQ, SMTP</td>
+                        </tr>
+                        <tr>
+                            <td>Cari ve satış faturası</td>
+                            <td>
+                                VKN/TCKN kontrol basamağı · iskonto → KDV → tevkifat sırası ·
+                                boşluksuz numara serisi · kesilen fatura değişmezliği ·
+                                cari borç yönü
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Alış faturası</td>
+                            <td>
+                                Numara tedarikçiden gelir, kendi serimiz tüketilmez ·
+                                cari yönü satışın tersi · mükerrer tedarikçi faturası reddi
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Tahsilat</td>
+                            <td>FIFO dağıtım · fatura durumu · cari bakiye</td>
+                        </tr>
+                        <tr>
+                            <td>Abonelik</td>
+                            <td>
+                                Çapa günü kaymaz · oransal tutar · faturalandırma önizlemesi ·
+                                aynı dönem iki kez faturalanmaz · dunning ve normale dönüş
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Kullanım bazlı faturalama</td>
+                            <td>
+                                Kota aşımı hesabı · kaynak numarası idempotency ·
+                                faturalanan kullanımın damgalanması · geç gelen kayıt
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Mesajlaşma</td>
+                            <td>Outbox'a yazma ve broker'a yayınlanma</td>
+                        </tr>
+                        <tr>
+                            <td>Kullanıcı ve yetki</td>
+                            <td>Firma (tenant) izolasyonu · rol doğrulaması · denetim kaydı</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </Blueprint>
+    }
+</div>
+
+@code {
+    private SelfTestRun? _run;
+    private bool _running;
+
+    private string RunButtonText => _running ? "Çalışıyor…" : "Testleri Çalıştır";
+
+    private string SandboxText => SelfTestService.SandboxTenantId.ToString();
+
+    private string DurationText => $"{_run!.DurationMs} ms";
+
+    private static string DurationOf(CheckResult r) => $"{r.DurationMs} ms";
+
+    private string OverallText => _run!.AllPassed ? "TÜMÜ GEÇTİ" : "HATA VAR";
+
+    private string OverallVariant => _run!.AllPassed ? "accent-2" : "outline";
+
+    private string CategoryText(string category)
+    {
+        var rows = _run!.InCategory(category).ToList();
+        var passed = rows.Count(r => r.Passed);
+        return $"{passed}/{rows.Count}";
+    }
+
+    private string CategoryVariant(string category)
+        => _run!.InCategory(category).Any(r => r.Failed) ? "outline" : "accent-2";
+
+    private async Task RunAsync()
+    {
+        _running = true;
+        _run = null;
+        StateHasChanged();
+
+        try
+        {
+            _run = await Tester.RunAsync();
+        }
+        finally
+        {
+            _running = false;
+        }
+    }
+}

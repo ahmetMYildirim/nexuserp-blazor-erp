@@ -51,7 +51,8 @@
                         HeaderClass="justify-end" CellClass="text-right">
             <CellTemplate>@context.Item.UnitPrice.ToMoney() @context.Item.Currency</CellTemplate>
         </TemplateColumn>
-        <TemplateColumn Title="KDV" Sortable="false" CellClass="text-right">
+        <TemplateColumn Title="KDV" Sortable="false"
+                        HeaderClass="justify-end" CellClass="text-right">
             <CellTemplate>@context.Item.TaxRate.ToRate()</CellTemplate>
         </TemplateColumn>
         <TemplateColumn Title="Tevkifat" Sortable="false">

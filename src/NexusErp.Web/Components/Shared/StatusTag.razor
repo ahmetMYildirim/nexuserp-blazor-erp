@@ -1,0 +1,17 @@
+@*
+    Durum rozeti. MudChip yerine düz span — köşesiz tasarım diline daha temiz oturuyor.
+
+    Varyant eşlemesi (components.md §4):
+      accent    → kesildi, aktif eşleşme
+      accent-2  → tahsil edildi, ekleme
+      outline   → kısmi tahsil, avans, uyarı
+      neutral   → taslak, iptal, pasif, nötr bilgi
+*@
+<span class="tag tag-@Variant">@Text</span>
+
+@code {
+    [Parameter, EditorRequired] public string Text { get; set; } = default!;
+
+    /// <summary>accent · accent-2 · outline · neutral</summary>
+    [Parameter] public string Variant { get; set; } = "neutral";
+}

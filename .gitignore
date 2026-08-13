@@ -11,8 +11,13 @@ logs/
 
 # Geliştirme rehberi ve çıktıları.
 # Bu repo mülakatta gösterilecek bir portföy projesi — "nasıl yapılır" rehberini
-# içinde taşıması gerekmiyor. Repo'ya dahil etmek istersen bu üç satırı sil.
-docs/
+# içinde taşıması gerekmiyor.
+#
+# ⚠️ "docs/" değil "docs/*": git hariç tutulan bir KLASÖRÜN içine hiç girmez,
+# dolayısıyla "docs/" yazılıp altından "!docs/screenshots/" ile istisna
+# tanımlanamaz. İçeriği hariç tutup istisnayı öyle veriyoruz.
+docs/*
+!docs/screenshots/
 *.pdf
 *.xlsx
 *.zip
