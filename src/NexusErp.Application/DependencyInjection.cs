@@ -25,6 +25,7 @@ public static class DependencyInjection
         services.AddScoped<TaxRateService>();
         services.AddScoped<SubscriptionService>();
         services.AddScoped<SubscriptionBillingService>();
+        services.AddScoped<DunningService>();
         services.AddScoped<PaymentService>();
         services.AddScoped<PartyBalanceService>();
         services.AddScoped<DashboardService>();

@@ -49,7 +49,7 @@
                     <button class="btn btn-secondary btn-sm" disabled="@_busy" @onclick="TogglePlanChange">
                         Plan Değiştir
                     </button>
-                    <button class="btn btn-secondary btn-sm" disabled="@_busy" @onclick="CancelAsync">
+                    <button class="btn btn-secondary btn-sm" disabled="@_busy" @onclick="ToggleCancel">
                         İptal Et
                     </button>
                 }
@@ -72,6 +72,40 @@
             <StatCard Title="Toplam Faturalanan" Suffix="@_data.Currency"
                       Value="@_data.TotalBilled.ToMoney()" Hint="@InvoiceHint" />
         </div>
+
+        @* ─────────── İPTAL: SEBEP SORULUYOR ─────────── *@
+        @if (_showCancel)
+        {
+            <Blueprint Class="bp-pad">
+                <h5 style="margin-bottom:10px">Aboneliği İptal Et</h5>
+                <div class="kpi-hint" style="margin-bottom:12px">
+                    Hizmet dönem sonuna kadar sürer, sonrasında faturalandırma durur.
+                    Sebep churn analizinde kullanılır — "neden kaybettik" sorusunun
+                    cevabı buradan geliyor.
+                </div>
+
+                <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+                    <div class="field" style="min-width:220px">
+                        <label>İptal sebebi</label>
+                        <select class="input" @bind="_cancelReason">
+                            @foreach (var r in CancelReasons)
+                            {
+                                <option value="@r">@ReasonText(r)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="field" style="flex:1;min-width:240px">
+                        <label>Açıklama (opsiyonel)</label>
+                        <input class="input" @bind="_cancelNote"
+                               placeholder="Müşterinin kendi ifadesi" />
+                    </div>
+                    <button class="btn btn-secondary" @onclick="ToggleCancel">Vazgeç</button>
+                    <button class="btn btn-primary" disabled="@_busy" @onclick="ConfirmCancelAsync">
+                        İptal Et
+                    </button>
+                </div>
+            </Blueprint>
+        }
 
         @if (_showPlanChange)
         {
@@ -235,6 +269,9 @@
     private PlanChangePreview? _planPreview;
     private Guid _newPlanId;
     private bool _showPlanChange;
+    private bool _showCancel;
+    private CancellationReason _cancelReason = CancellationReason.Unspecified;
+    private string? _cancelNote;
     private bool _busy;
 
     private static DateOnly Today => DateOnly.FromDateTime(DateTime.Today);
@@ -412,22 +449,38 @@
         if (ok) await LoadAsync();
     }
 
-    private async Task CancelAsync()
+    private void ToggleCancel() => _showCancel = !_showCancel;
+
+    /// <summary>Ödeme alınamadı seçeneği dunning tarafından set edilir, elle seçilmez.</summary>
+    private static readonly CancellationReason[] CancelReasons =
+    [
+        CancellationReason.Unspecified,
+        CancellationReason.TooExpensive,
+        CancellationReason.NotUsing,
+        CancellationReason.SwitchedToCompetitor,
+        CancellationReason.MissingFeatures,
+        CancellationReason.TemporaryPause,
+        CancellationReason.BusinessClosed,
+        CancellationReason.Other
+    ];
+
+    private static string ReasonText(CancellationReason r) => ChurnReasonRow.TextOf(r);
+
+    private async Task ConfirmCancelAsync()
     {
-        var confirmed = await DialogService.ShowMessageBox(
-            "Aboneliği İptal Et",
-            "Hizmet dönem sonuna kadar sürer, sonrasında faturalandırma durur.",
-            yesText: "İptal Et", cancelText: "Vazgeç");
-
-        if (confirmed != true) return;
-
         _busy = true;
         var ok = await Snackbar.RunAsync(
-            () => SubscriptionService.CancelAsync(Id, Today, immediately: false),
+            () => SubscriptionService.CancelAsync(Id, Today, immediately: false,
+                                                  _cancelReason, _cancelNote),
             "Abonelik iptal edildi.");
         _busy = false;
 
-        if (ok) await LoadAsync();
+        if (ok)
+        {
+            _showCancel = false;
+            _cancelNote = null;
+            await LoadAsync();
+        }
     }
 
     private static string StatusText(InvoiceStatus s) => s switch

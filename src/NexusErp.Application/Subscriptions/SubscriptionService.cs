@@ -81,18 +81,63 @@ public sealed class SubscriptionService(IAppDbContextFactory factory)
     }
 
     public async Task CancelAsync(Guid id, DateOnly on, bool immediately,
+                                  CancellationReason reason = CancellationReason.Unspecified,
+                                  string? note = null,
                                   CancellationToken ct = default)
     {
         await using var db = factory.Create();
         var sub = await db.Subscriptions.FirstOrDefaultAsync(s => s.Id == id, ct)
                   ?? throw new DomainException("Abonelik bulunamadı.");
 
-        sub.Cancel(on, immediately);
+        sub.Cancel(on, immediately, reason, note);
 
         db.AddEvent(new SubscriptionCancelled(sub.Id, sub.PartyId, on, immediately),
                     DateTimeOffset.UtcNow);
 
         await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// Verilen aralıkta iptal edilen abonelikleri sebebe göre gruplar.
+    /// Kayıp MRR aya normalize edilir — yıllık plan 12'ye bölünür, aksi halde
+    /// kayıp 12 kat şişik görünür.
+    /// </summary>
+    public async Task<ChurnAnalysis> GetChurnAsync(
+        DateOnly from, DateOnly to, CancellationToken ct = default)
+    {
+        await using var db = factory.Create();
+
+        var rows = await db.Subscriptions.AsNoTracking()
+            .Where(s => s.Status == SubscriptionStatus.Cancelled
+                     && s.CancelledOn != null
+                     && s.CancelledOn >= from && s.CancelledOn <= to)
+            .Select(s => new
+            {
+                s.CancellationReason,
+                s.Quantity,
+                Price = s.CustomPrice ?? s.Plan.Price,
+                Months = (int)s.Plan.Cycle
+            })
+            .ToListAsync(ct);
+
+        var reasons = rows
+            .GroupBy(r => r.CancellationReason)
+            .Select(g => new ChurnReasonRow(
+                g.Key,
+                ChurnReasonRow.TextOf(g.Key),
+                g.Count(),
+                Math.Round(g.Sum(x => x.Price * x.Quantity / x.Months),
+                           2, MidpointRounding.AwayFromZero)))
+            .OrderByDescending(r => r.Count)
+            .ToList();
+
+        return new ChurnAnalysis(
+            From: from,
+            To: to,
+            CancelledCount: rows.Count,
+            LostMrr: Math.Round(rows.Sum(r => r.Price * r.Quantity / r.Months),
+                                2, MidpointRounding.AwayFromZero),
+            Reasons: reasons);
     }
 
     // ==================================================================

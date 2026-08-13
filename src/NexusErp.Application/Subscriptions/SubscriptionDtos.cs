@@ -127,6 +127,42 @@ public sealed record PlanChangePreview(
     };
 }
 
+/// <summary>Tek bir iptal sebebinin churn içindeki payı.</summary>
+public sealed record ChurnReasonRow(
+    CancellationReason Reason, string Label, int Count, decimal LostMrr)
+{
+    public static string TextOf(CancellationReason r) => r switch
+    {
+        CancellationReason.TooExpensive => "Fiyat yüksek",
+        CancellationReason.NotUsing => "Kullanmıyor",
+        CancellationReason.SwitchedToCompetitor => "Rakibe geçti",
+        CancellationReason.MissingFeatures => "Eksik özellik",
+        CancellationReason.TemporaryPause => "Geçici ara",
+        CancellationReason.BusinessClosed => "Müşteri kapandı",
+        CancellationReason.PaymentFailure => "Ödeme alınamadı",
+        CancellationReason.Other => "Diğer",
+        _ => "Belirtilmemiş"
+    };
+}
+
+/// <summary>
+/// Churn analizi. Oran zaten hesaplanabiliyordu; buradaki değer NEDEN
+/// kaybedildiğini göstermek — fiyat sorunu ile ürün sorunu farklı aksiyon ister.
+/// </summary>
+public sealed record ChurnAnalysis(
+    DateOnly From, DateOnly To,
+    int CancelledCount, decimal LostMrr,
+    IReadOnlyList<ChurnReasonRow> Reasons)
+{
+    public ChurnReasonRow? TopReason =>
+        Reasons.Count == 0 ? null : Reasons.MaxBy(r => r.Count);
+
+    public string Summary => CancelledCount == 0
+        ? "Bu dönemde iptal yok."
+        : $"{CancelledCount} iptal, aylık {LostMrr:N2} kayıp. " +
+          $"En sık sebep: {TopReason?.Label ?? "—"}.";
+}
+
 public sealed record SubscriptionStats(
     int ActiveCount,
     decimal Mrr,
