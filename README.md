@@ -124,7 +124,7 @@ Başlıca uçlar: `/api/auth/token` · `/api/cariler` · `/api/faturalar` (+ `/k
 
 ---
 
-## Performans — ölçüldü, iddia edilmedi
+## Performans
 
 100.000 fatura / 500 cari ile: yaşlandırma raporu **80 ms** (`Seq Scan` + `HashAggregate`),
 tek carinin açık faturaları **2 ms** (`Bitmap Index Scan`).
