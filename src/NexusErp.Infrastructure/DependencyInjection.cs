@@ -65,6 +65,8 @@ public static class DependencyInjection
                 .AddClaimsPrincipalFactory<AppUserClaimsPrincipalFactory>()
                 .AddDefaultTokenProviders();
 
+        services.AddScoped<UserAdminService>();
+
         services.ConfigureApplicationCookie(opt =>
         {
             opt.LoginPath = "/giris";

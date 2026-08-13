@@ -16,7 +16,11 @@ namespace NexusErp.Infrastructure.Migrations
                 table: "plans",
                 type: "integer",
                 nullable: false,
-                defaultValue: 0);
+                // ⚠️ 1 = BillingModel.Flat. Varsayılan 0 BIRAKILAMAZ: enum'da 0'a
+                // karşılık gelen üye yok, mevcut planlar ne Flat ne Metered sayılır
+                // ve faturalandırma onlara HİÇ satır üretmez — abonelikler sessizce
+                // faturalanmayı bırakır. Şema değişikliğinin en sinsi hata türü.
+                defaultValue: 1);
 
             migrationBuilder.AddColumn<decimal>(
                 name: "included_units",
@@ -42,6 +46,10 @@ namespace NexusErp.Infrastructure.Migrations
                 type: "character varying(30)",
                 maxLength: 30,
                 nullable: true);
+
+            // Mevcut satırların geri doldurulması. defaultValue yalnızca YENİ satırlara
+            // uygulanır; kolon eklenirken var olan satırlar 0 ile dolar.
+            migrationBuilder.Sql("UPDATE plans SET billing_model = 1 WHERE billing_model = 0;");
 
             migrationBuilder.CreateTable(
                 name: "usage_records",
