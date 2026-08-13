@@ -5,20 +5,21 @@
 
 <PageTitle>Giriş · NexusERP</PageTitle>
 
-<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;
-            background:linear-gradient(135deg,#0F172A 0%,#1E3A8A 100%);padding:16px">
-    <MudPaper Elevation="8" Class="pa-8" Style="max-width:420px;width:100%;border-radius:12px">
-        <MudStack AlignItems="AlignItems.Center" Class="mb-6">
-            <MudAvatar Color="Color.Primary" Size="Size.Large" Class="mb-3">
-                <MudIcon Icon="@Icons.Material.Filled.Receipt" />
-            </MudAvatar>
-            <MudText Typo="Typo.h5">NexusERP</MudText>
-            <MudText Typo="Typo.caption">Ön Muhasebe &amp; Abonelik Yönetimi</MudText>
-        </MudStack>
+@*
+    Tasarım sistemine uygun giriş ekranı: köşesiz, blueprint çerçeve, tek aksan.
+    Ham hex yok — her değer theme.css'teki değişkenden okunuyor, böylece koyu
+    tema burada da çalışıyor.
+*@
+<div class="nx-login">
+    <div class="nx-login-brand">
+        <span class="nx-login-mark">NEXUSERP</span>
+        <span class="nx-login-tagline">Ön Muhasebe &amp; Abonelik Yönetimi</span>
+    </div>
 
+    <Blueprint Class="bp-pad" Style="width:100%;max-width:380px;background:var(--color-bg)">
         @if (!string.IsNullOrEmpty(Error))
         {
-            <MudAlert Severity="Severity.Error" Dense Class="mb-4">@Error</MudAlert>
+            <div class="nx-login-error" role="alert">@Error</div>
         }
 
         @* ⚠️ Düz HTML form + POST. Blazor'ın interaktif devresinde HttpContext yok;
@@ -27,44 +28,40 @@
             <AntiforgeryToken />
             <input type="hidden" name="returnUrl" value="@ReturnUrl" />
 
-            <div class="mb-4">
-                <label for="email" style="font-size:.8rem;display:block;margin-bottom:4px">
-                    E-posta
-                </label>
+            <div class="field" style="margin-bottom:12px">
+                <label for="email">E-posta</label>
                 <input id="email" name="email" type="email" required autofocus
-                       class="mud-input-root"
-                       style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px"
-                       placeholder="admin@nexusdemo.com.tr" />
+                       class="input" placeholder="admin@nexusdemo.com.tr" />
             </div>
 
-            <div class="mb-4">
-                <label for="password" style="font-size:.8rem;display:block;margin-bottom:4px">
-                    Parola
-                </label>
-                <input id="password" name="password" type="password" required
-                       style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px" />
+            <div class="field" style="margin-bottom:18px">
+                <label for="password">Parola</label>
+                <input id="password" name="password" type="password" required class="input" />
             </div>
 
-            <button type="submit"
-                    style="width:100%;padding:12px;background:#1E5EFF;color:#fff;border:0;
-                           border-radius:6px;font-size:14px;font-weight:600;cursor:pointer">
+            <button type="submit" class="btn btn-primary" style="width:100%">
                 GİRİŞ YAP
             </button>
         </form>
 
-        <MudDivider Class="my-6" />
+        <div class="nx-login-divider"></div>
 
-        <MudText Typo="Typo.caption" Class="mb-2">Demo hesapları (parola: <b>@IdentitySeeder.DemoPassword</b>)</MudText>
-        <MudStack Spacing="1">
-            @foreach (var (email, role) in DemoAccounts)
-            {
-                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                    <MudText Typo="Typo.caption" Style="font-family:Consolas,monospace">@email</MudText>
-                    <MudChip T="string" Size="Size.Small" Color="Color.Default">@role</MudChip>
-                </MudStack>
-            }
-        </MudStack>
-    </MudPaper>
+        <div class="kpi-kicker" style="margin-bottom:8px">
+            Demo hesapları · parola <span class="mono">@IdentitySeeder.DemoPassword</span>
+        </div>
+
+        <table class="table">
+            <tbody>
+                @foreach (var (email, role) in DemoAccounts)
+                {
+                    <tr>
+                        <td class="mono" style="font-size:11.5px">@email</td>
+                        <td style="text-align:right"><StatusTag Text="@role" Variant="neutral" /></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </Blueprint>
 </div>
 
 @code {

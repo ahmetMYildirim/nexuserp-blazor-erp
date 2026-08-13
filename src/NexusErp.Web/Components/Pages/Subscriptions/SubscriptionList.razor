@@ -12,6 +12,12 @@
 <MudStack Row AlignItems="AlignItems.Center" Class="mb-4">
     <MudText Typo="Typo.h5">Abonelikler</MudText>
     <MudSpacer />
+    <AuthorizeView Roles="Admin,Muhasebe,Satis">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Add" Href="/abonelikler/yeni">
+            Yeni Abonelik
+        </MudButton>
+    </AuthorizeView>
     @* Demo'nun en güçlü anı: iki kez bas, ikincisi 0 üretsin. *@
     <MudButton Variant="Variant.Filled" Color="Color.Warning" Disabled="@_running"
                StartIcon="@Icons.Material.Filled.PlayArrow" OnClick="RunBillingNow">
@@ -95,6 +101,10 @@
         </TemplateColumn>
         <TemplateColumn Title="" CellClass="d-flex justify-end">
             <CellTemplate>
+                <MudTooltip Text="Detay — dönemler, faturalar, plan değişikliği">
+                    <MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small"
+                                   Href="@($"/abonelikler/{context.Item.Id}")" />
+                </MudTooltip>
                 @if (context.Item.Status != SubscriptionStatus.Cancelled)
                 {
                     <MudTooltip Text="İptal et">

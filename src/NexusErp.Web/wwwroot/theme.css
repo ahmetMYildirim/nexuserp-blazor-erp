@@ -372,6 +372,36 @@ a:hover { color: var(--color-accent-700); }
 }
 .page-desc { font-size: 11.5px; color: color-mix(in srgb, var(--color-text) 55%, transparent); }
 
+/* ═══════════════════ Giriş ekranı ═══════════════════ */
+
+.nx-login {
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 26px;
+  padding: 24px;
+  background: var(--color-bg);
+}
+.nx-login-brand { text-align: center; }
+.nx-login-mark {
+  display: block;
+  font-family: var(--font-heading); font-weight: 600;
+  font-size: 30px; letter-spacing: .18em; color: var(--color-text);
+}
+.nx-login-tagline {
+  display: block; margin-top: 4px;
+  font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+.nx-login-error {
+  margin-bottom: 14px; padding: 8px 10px; font-size: 12px;
+  border-left: 2.5px solid var(--color-accent-700);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+.nx-login-divider {
+  height: 1px; margin: 18px 0 14px;
+  background: var(--color-divider);
+}
+
 /* ═══════════════════ Grafik yardımcıları ═══════════════════ */
 
 .bar-track {
@@ -389,8 +419,10 @@ a:hover { color: var(--color-accent-700); }
   border-radius: 0 !important;
 }
 
-/* Paneller: dolu zemin yerine hairline çerçeve (blueprint dili) */
-.mud-paper {
+/* Paneller: dolu zemin yerine hairline çerçeve (blueprint dili).
+   ⚠️ .mud-dialog HARİÇ — o opak kalmalı, yoksa altındaki sayfa içinden okunur.
+   Aynı sebeple menü/popover da aşağıda ayrıca opaklaştırılıyor. */
+.mud-paper:not(.mud-dialog) {
   background: transparent !important;
   border: 1px solid var(--color-divider);
   box-shadow: none !important;
