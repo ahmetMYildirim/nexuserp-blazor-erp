@@ -1,4 +1,5 @@
 @inherits LayoutComponentBase
+@inject IJSRuntime JS
 
 @* MudBlazor'ın 4 provider'ı — biri eksikse dialog/snackbar/popover çalışmaz *@
 <MudThemeProvider Theme="@_theme" @bind-IsDarkMode="_isDark" />
@@ -6,69 +7,105 @@
 <MudDialogProvider />
 <MudSnackbarProvider />
 
-<MudLayout>
-    <MudAppBar Elevation="1">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit"
-                       Edge="Edge.Start" OnClick="@(() => _drawerOpen = !_drawerOpen)" />
-        <MudText Typo="Typo.h6" Class="ml-2">NexusERP</MudText>
-        <MudSpacer />
-        <MudTooltip Text="@(_isDark ? "Açık tema" : "Koyu tema")">
-            <MudIconButton Color="Color.Inherit"
-                           Icon="@(_isDark ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
-                           OnClick="@(() => _isDark = !_isDark)" />
-        </MudTooltip>
+@*
+    Kabuk: 44px üst bar + 38px modül menüsü + içerik.
+    MudLayout/MudDrawer kaldırıldı — gezinme tamamen üst menüden.
+*@
+<div style="min-height:100vh;background:var(--color-bg)">
 
-        <AuthorizeView>
-            <Authorized>
-                <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
-                         Class="ml-2">
-                    <ActivatorContent>
-                        <MudChip T="string" Color="Color.Primary" Variant="Variant.Filled"
-                                 Icon="@Icons.Material.Filled.Person" Style="cursor:pointer">
-                            @FullNameOf(context)
-                        </MudChip>
-                    </ActivatorContent>
-                    <ChildContent>
-                        <MudMenuItem Disabled>
-                            <MudStack Spacing="0">
-                                <MudText Typo="Typo.body2">@context.User.Identity?.Name</MudText>
-                                <MudText Typo="Typo.caption">Rol: @RoleOf(context)</MudText>
-                            </MudStack>
-                        </MudMenuItem>
-                        <MudDivider />
-                        <MudMenuItem>
-                            @* Çıkış da POST olmalı — cookie silmek HttpContext gerektiriyor *@
-                            <form method="post" action="/hesap/cikis" style="margin:0">
-                                <AntiforgeryToken />
-                                <button type="submit"
-                                        style="background:none;border:0;cursor:pointer;
-                                               display:flex;align-items:center;gap:8px;
-                                               font-size:14px;color:inherit;padding:0">
-                                    <MudIcon Icon="@Icons.Material.Filled.Logout" Size="Size.Small" />
-                                    Çıkış Yap
-                                </button>
-                            </form>
-                        </MudMenuItem>
-                    </ChildContent>
-                </MudMenu>
-            </Authorized>
-        </AuthorizeView>
-    </MudAppBar>
+    <header class="nx-topbar">
+        <span class="nx-topbar-brand">NEXUSERP</span>
+        <span class="nx-topbar-sep"></span>
+        <span class="nx-topbar-tenant">@TenantName</span>
 
-    <MudDrawer @bind-Open="_drawerOpen" Elevation="1" ClipMode="DrawerClipMode.Always">
-        <NavMenu />
-    </MudDrawer>
+        <input class="nx-search" type="search" placeholder="Ara…  Ctrl+K"
+               aria-label="Global arama" />
 
-    <MudMainContent Class="pt-16 px-4">
-        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="my-4">
-            @Body
-        </MudContainer>
-    </MudMainContent>
-</MudLayout>
+        <span style="margin-left:auto;display:flex;align-items:center;gap:10px">
+            <span class="nx-topbar-tenant">@PeriodLabel</span>
+
+            <button type="button" class="nx-topbar-btn" @onclick="ToggleThemeAsync"
+                    title="@(_isDark ? "Açık temaya geç" : "Koyu temaya geç")">
+                @if (_isDark)
+                {
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="1.5">
+                        <circle cx="12" cy="12" r="4"></circle>
+                        <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
+                    </svg>
+                    <span>Açık</span>
+                }
+                else
+                {
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="1.5">
+                        <path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"></path>
+                    </svg>
+                    <span>Koyu</span>
+                }
+            </button>
+
+            <AuthorizeView>
+                <Authorized>
+                    <span class="nx-user">
+                        <span class="nx-user-initials">@Initials(FullNameOf(context))</span>
+                        <span style="display:flex;flex-direction:column;line-height:1.25">
+                            <span style="font-size:11.5px">@FullNameOf(context)</span>
+                            <span style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;opacity:.6">
+                                @RoleOf(context)
+                            </span>
+                        </span>
+                        @* Çıkış POST olmalı — cookie silmek HttpContext gerektiriyor *@
+                        <form method="post" action="/hesap/cikis" style="margin:0;display:flex">
+                            <AntiforgeryToken />
+                            <button type="submit" title="Çıkış yap"
+                                    style="background:none;border:0;cursor:pointer;color:inherit;padding:0 0 0 6px;display:flex">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                     stroke="currentColor" stroke-width="1.5">
+                                    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"></path>
+                                </svg>
+                            </button>
+                        </form>
+                    </span>
+                </Authorized>
+            </AuthorizeView>
+        </span>
+    </header>
+
+    <ModuleNav />
+
+    <main class="nx-content">
+        @Body
+    </main>
+</div>
 
 @code {
-    private bool _drawerOpen = true;
     private bool _isDark;
+    private bool _themeLoaded;
+
+    private const string TenantName = "Nexus Demo Yazılım A.Ş.";
+
+    private static string PeriodLabel => $"DÖNEM {DateTime.Today.Year}";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _themeLoaded) return;
+
+        // Tercih localStorage'da; sayfa açılışında js/theme.js zaten uyguladı,
+        // burada MudBlazor'ın kendi durumunu da eşitliyoruz.
+        _themeLoaded = true;
+        var mode = await JS.InvokeAsync<string>("nexusTheme.get");
+        _isDark = mode == "dark";
+        StateHasChanged();
+    }
+
+    private async Task ToggleThemeAsync()
+    {
+        _isDark = !_isDark;
+        // MudThemeProvider bileşen renklerini, data-theme özniteliği CSS
+        // değişkenlerini döndürür — ikisi birlikte set edilmek zorunda.
+        await JS.InvokeVoidAsync("nexusTheme.set", _isDark ? "dark" : "light");
+    }
 
     private static string FullNameOf(AuthenticationState state) =>
         state.User.FindFirst("full_name")?.Value
@@ -78,25 +115,54 @@
     private static string RoleOf(AuthenticationState state) =>
         state.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "—";
 
+    private static string Initials(string name)
+    {
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0) return "?";
+        if (parts.Length == 1) return parts[0][..1].ToUpper(System.Globalization.CultureInfo.GetCultureInfo("tr-TR"));
+        return string.Concat(parts[0][..1], parts[^1][..1])
+                     .ToUpper(System.Globalization.CultureInfo.GetCultureInfo("tr-TR"));
+    }
+
+    /* Tasarım tokenlarıyla eşleşen MudTheme. Bileşen içi renkler buradan,
+       sayfa düzeni CSS değişkenlerinden okunur (koyu tema tek yerden dönsün). */
     private readonly MudTheme _theme = new()
     {
         PaletteLight = new PaletteLight
         {
-            Primary = "#1E5EFF",
-            Secondary = "#00B894",
-            AppbarBackground = "#0F172A",
-            Background = "#F8FAFC",
+            Primary = "#5980a6",
+            Secondary = "#5980a6",
+            Background = "#f2f2f3",
+            Surface = "#f2f2f3",
+            AppbarBackground = "#1d2d3d",
+            TextPrimary = "#1d1f20",
+            Divider = "#1d1f2029",
+            DrawerBackground = "#f2f2f3"
         },
         PaletteDark = new PaletteDark
         {
-            Primary = "#5B8DEF",
-            Secondary = "#00B894",
+            Primary = "#94bce3",
+            Secondary = "#94bce3",
+            Background = "#1b1e21",
+            Surface = "#25292d",
+            AppbarBackground = "#1d2d3d",
+            TextPrimary = "#e9eaeb"
         },
+        LayoutProperties = new LayoutProperties { DefaultBorderRadius = "0" },
         Typography = new Typography
         {
             Default = new DefaultTypography
             {
-                FontFamily = ["Roboto", "Segoe UI", "Helvetica", "Arial", "sans-serif"]
+                FontFamily = ["Barlow", "Segoe UI", "sans-serif"],
+                FontSize = "13px"
+            },
+            H5 = new H5Typography { FontFamily = ["Barlow Condensed", "sans-serif"], FontWeight = "600" },
+            H6 = new H6Typography { FontFamily = ["Barlow Condensed", "sans-serif"], FontWeight = "600" },
+            Button = new ButtonTypography
+            {
+                FontFamily = ["Barlow Condensed", "sans-serif"],
+                FontWeight = "600",
+                TextTransform = "none"
             }
         }
     };

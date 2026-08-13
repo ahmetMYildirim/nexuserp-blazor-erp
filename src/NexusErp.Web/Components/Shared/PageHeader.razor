@@ -1,0 +1,31 @@
+@*
+    Sayfa başlığı kalıbı: kicker → h3 → tek satır açıklama. Sağda aksiyonlar.
+    Yetkiye bağlı aksiyonlar çağıran tarafta AuthorizeView ile sarılır.
+*@
+<div style="display:flex;align-items:flex-end;gap:16px;margin-bottom:18px">
+    <div style="min-width:0">
+        @if (!string.IsNullOrWhiteSpace(Kicker))
+        {
+            <div class="page-kicker">@Kicker</div>
+        }
+        <h3>@Title</h3>
+        @if (!string.IsNullOrWhiteSpace(Description))
+        {
+            <div class="page-desc" style="margin-top:3px">@Description</div>
+        }
+    </div>
+
+    @if (Actions is not null)
+    {
+        <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+            @Actions
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = default!;
+    [Parameter] public string? Kicker { get; set; }
+    [Parameter] public string? Description { get; set; }
+    [Parameter] public RenderFragment? Actions { get; set; }
+}

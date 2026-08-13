@@ -41,13 +41,13 @@
         <TemplateColumn Title="Yöntem">
             <CellTemplate>@MethodText(context.Item.Method)</CellTemplate>
         </TemplateColumn>
-        <TemplateColumn Title="Tutar" CellClass="text-right">
+        <TemplateColumn Title="Tutar" HeaderClass="justify-end" CellClass="text-right">
             <CellTemplate>@context.Item.Amount.ToMoney() @context.Item.Currency</CellTemplate>
         </TemplateColumn>
-        <TemplateColumn Title="Eşleşen" CellClass="text-right">
+        <TemplateColumn Title="Eşleşen" HeaderClass="justify-end" CellClass="text-right">
             <CellTemplate>@context.Item.AllocatedAmount.ToMoney()</CellTemplate>
         </TemplateColumn>
-        <TemplateColumn Title="Avans" CellClass="text-right">
+        <TemplateColumn Title="Avans" HeaderClass="justify-end" CellClass="text-right">
             <CellTemplate>
                 @if (context.Item.UnallocatedAmount > 0)
                 {
