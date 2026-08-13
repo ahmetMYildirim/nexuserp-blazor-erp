@@ -12,6 +12,7 @@ e-Fatura (UBL-TR 1.2) ve rol bazlı kullanıcı yönetimi.
 
 ## İçindekiler
 
+- [Ekran görüntüleri](#ekran-görüntüleri)
 - [Kurulum](#kurulum)
 - [Demo hesapları](#demo-hesapları)
 - [Fonksiyonları doğrulama](#fonksiyonları-doğrulama)
@@ -22,6 +23,73 @@ e-Fatura (UBL-TR 1.2) ve rol bazlı kullanıcı yönetimi.
 - [REST API](#rest-api)
 - [Performans](#performans)
 - [Kapsam dışı](#kapsam-dışı)
+
+---
+
+## Ekran görüntüleri
+
+### Genel Bakış
+
+Açık alacak, vadesi geçen, MRR ve aylık ciro; 12 aylık ciro/tahsilat trendi ve
+yaşlandırma dağılımı. **Tedarikçi Borcu** ve **Net Pozisyon** ayrı gösterilir —
+alış faturası bir alacak değil borçtur, "açık alacak" kartına karışmaz.
+
+![Genel Bakış](docs/screenshots/02-genel-bakis.png)
+
+### Canlı sistem testi
+
+37 kontrolün tamamı gerçek veri tabanı üzerinde çalıştırıldı. Her satırda sonuç,
+**somut çıktı** ve kuralın neden var olduğu görünür.
+
+![Sistem testi — özet ve altyapı](docs/screenshots/12-sistem-testi.png)
+
+Abonelik ve kullanım bazlı faturalandırma kuralları, gerçek fatura numaraları ve
+tutarlarla:
+
+![Sistem testi — abonelik ve kullanım](docs/screenshots/13-sistem-testi-abonelik.png)
+
+Bu iki kare tek başına şunları kanıtlıyor: çapa günü `31 Oca → 28 Şub → 31 Mar`
+kaymıyor · proration `499,00 × 17/31 = 273,65` · aynı dönem ikinci kez
+faturalanmıyor (`fatura sayısı 1 → 1`) · kota aşımı ayrı satır
+(`sabit 500,00 + kullanım 200 × 2,00 = matrah 900,00`) · faturalanan kullanımın
+tamamı damgalanıyor · geç gelen kayıt kaybolmuyor.
+
+### Alış faturası
+
+Tip "Alış" seçilince cari kutusu **tedarikçi** arar ve **Tedarikçi Fatura No**
+alanı zorunlu olur. Numara bizim serimizden verilmez — tedarikçinin belgesinden
+gelir, `Sequence` ilerlemez.
+
+![Alış faturası](docs/screenshots/05-alis-faturasi.png)
+
+### Abonelik planları
+
+Sabit ücretli, **sabit + kullanım** (hibrit) ve **saf kullanım** planları bir arada.
+Saf kullanım planının MRR katkısı `0,00 ₺` — taahhüt edilmiş yinelenen gelir yoktur,
+tutar her ay kullanımla değişir.
+
+![Planlar](docs/screenshots/08-planlar.png)
+
+### Kullanıcı ve yetki yönetimi
+
+Rol ataması, hesap durumu, son giriş ve parola sıfırlama. Kullanıcılar silinmez,
+pasifleştirilir: denetim kayıtları ve belgelerdeki "oluşturan / değiştiren" bilgisi
+onlara atıfta bulunur.
+
+![Kullanıcılar](docs/screenshots/09-kullanicilar.png)
+
+### Diğer ekranlar
+
+| | |
+|---|---|
+| ![Faturalar](docs/screenshots/03-faturalar.png) | ![Fatura editörü](docs/screenshots/04-fatura-editoru.png) |
+| **Fatura listesi** — durum, tip ve vade filtreleri | **Fatura editörü** — canlı KDV/tevkifat önizlemesi |
+| ![Abonelikler](docs/screenshots/07-abonelikler.png) | ![Cari ekstre](docs/screenshots/06-cari-ekstre.png) |
+| **Abonelikler** — MRR, yenileme takvimi, toplu faturalandırma | **Cari ekstre** — yürüyen bakiyeli hareket dökümü |
+| ![Yaşlandırma](docs/screenshots/11-yaslandirma.png) | ![Denetim kaydı](docs/screenshots/10-denetim.png) |
+| **Yaşlandırma raporu** — 30/60/90 gün kovaları | **Denetim kaydı** — kim, ne zaman, hangi alanı neyden neye |
+| ![Giriş](docs/screenshots/01-giris.png) | |
+| **Giriş** — demo hesapları ekranda listeli | |
 
 ---
 
@@ -144,9 +212,10 @@ sunucuda da uygulanıyor.
 
 `admin@` ile girin → **Sistem → Sistem Testi** → *Testleri Çalıştır*.
 
-Yaklaşık 30 kontrol **gerçek servisler ve gerçek veri tabanı** üzerinde çalışır ve her
-biri için üç şey gösterilir: sonuç, **somut çıktı** (gerçek numaralar, tutarlar) ve
-o kuralın neden var olduğu.
+**37 kontrol** gerçek servisler ve gerçek veri tabanı üzerinde çalışır ve her biri için
+üç şey gösterilir: sonuç, **somut çıktı** (gerçek numaralar, tutarlar) ve o kuralın
+neden var olduğu. Referans kurulumda tur **7,9 saniye** sürüyor ve 37/37 geçiyor
+([ekran görüntüsü](#canlı-sistem-testi)).
 
 > Kontroller **ayrı bir firmada (tenant)** koşar ve tur sonunda silinir. Sebebi:
 > fatura kesmek numara tüketir; demo firmasında koşsaydı her tur GİB'e bildirilecek
