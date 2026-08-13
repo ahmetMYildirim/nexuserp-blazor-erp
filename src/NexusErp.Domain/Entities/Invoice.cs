@@ -58,6 +58,15 @@ public sealed class Invoice : AuditableEntity, ITenantScoped
     public DateOnly? PeriodStart { get; set; }
     public DateOnly? PeriodEnd { get; set; }
 
+    /// <summary>
+    /// Alış faturasının TEDARİKÇİDEN gelen numarası.
+    /// ⚠️ Alışta numara ÜRETİLMEZ, dış veriden gelir ve doğrulanır. Kendi
+    /// serimizden numara verirsek GİB'e bildireceğimiz seride boşluk açarız.
+    /// (tenant, party, supplier_invoice_no) unique index'i aynı faturanın iki kez
+    /// girilmesini engeller.
+    /// </summary>
+    public string? SupplierInvoiceNo { get; set; }
+
     public List<InvoiceLine> Lines { get; set; } = [];
 
     // ------------------------------------------------------------------
@@ -66,6 +75,9 @@ public sealed class Invoice : AuditableEntity, ITenantScoped
 
     public decimal RemainingAmount => GrandTotal - PaidAmount;
     public bool IsEditable => Status == InvoiceStatus.Draft;
+
+    /// <summary>Alış tarafı mı? Numara üretimi ve cari hareket yönü buna bağlı.</summary>
+    public bool IsPurchase => Type == InvoiceType.Purchase;
 
     /// <summary>Proforma cari bakiyeye işlemez — bağlayıcı olmayan tekliftir.</summary>
     public bool AffectsBalance =>
@@ -81,18 +93,56 @@ public sealed class Invoice : AuditableEntity, ITenantScoped
 
     public void MarkIssued(string number, long sequence, DateTimeOffset now)
     {
-        if (Status != InvoiceStatus.Draft)
-            throw new DomainException("Yalnızca taslak faturalar kesilebilir.");
-        if (Lines.Count == 0)
-            throw new DomainException("Satırı olmayan fatura kesilemez.");
-        if (GrandTotal <= 0 && Type != InvoiceType.SalesReturn)
-            throw new DomainException("Fatura tutarı sıfır veya negatif olamaz.");
+        EnsureIssuable();
 
         Number = number;
         Sequence = sequence;
         Status = InvoiceStatus.Issued;
         IssuedAt = now;
     }
+
+    /// <summary>
+    /// Alış faturasını kaydeder. Numara ÜRETİLMEZ — tedarikçinin numarası kullanılır
+    /// ve <see cref="Sequence"/> 0 kalır; bu fatura bizim serimize ait değildir.
+    /// </summary>
+    public void MarkPurchaseRecorded(DateTimeOffset now)
+    {
+        if (!IsPurchase)
+            throw new DomainException("Bu metot yalnızca alış faturaları içindir.");
+        if (string.IsNullOrWhiteSpace(SupplierInvoiceNo))
+            throw new DomainException("Tedarikçi fatura numarası zorunludur.");
+
+        EnsureIssuable();
+
+        Number = SupplierInvoiceNo.Trim();
+        Status = InvoiceStatus.Issued;
+        IssuedAt = now;
+    }
+
+    private void EnsureIssuable()
+    {
+        if (Status != InvoiceStatus.Draft)
+            throw new DomainException("Yalnızca taslak faturalar kesilebilir.");
+        if (Lines.Count == 0)
+            throw new DomainException("Satırı olmayan fatura kesilemez.");
+        if (GrandTotal <= 0 && Type != InvoiceType.SalesReturn)
+            throw new DomainException("Fatura tutarı sıfır veya negatif olamaz.");
+    }
+
+    /// <summary>
+    /// Cari hareket yönü. Satışta müşteri bize borçlanır (borç), alışta biz
+    /// tedarikçiye borçlanırız (alacak). Yön karışırsa bakiye ters çıkar.
+    /// </summary>
+    public LedgerEntryType LedgerType => Type switch
+    {
+        InvoiceType.Sales => LedgerEntryType.Invoice,
+        InvoiceType.SalesReturn => LedgerEntryType.InvoiceReturn,
+        InvoiceType.Purchase => LedgerEntryType.PurchaseInvoice,
+        _ => LedgerEntryType.Adjustment
+    };
+
+    /// <summary>Bu fatura cariyi BORÇLANDIRIYOR mu? Alışta tam tersi.</summary>
+    public bool IsDebit => Type == InvoiceType.Sales;
 
     /// <summary>Kesilmiş fatura SİLİNMEZ — vergi mevzuatı gereği iptal edilir.</summary>
     public void Cancel()

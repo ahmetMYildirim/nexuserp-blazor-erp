@@ -41,7 +41,7 @@ else
             </MudButton>
             <MudButton Variant="Variant.Filled" Color="Color.Success" Disabled="@_busy"
                        StartIcon="@Icons.Material.Filled.CheckCircle" OnClick="IssueAsync">
-                Faturayı Kes
+                @(IsPurchase ? "Alış Faturasını Kaydet" : "Faturayı Kes")
             </MudButton>
         }
     </MudStack>
@@ -50,18 +50,19 @@ else
     <MudPaper Elevation="1" Class="pa-4 mb-4">
         <MudGrid Spacing="2">
             <MudItem xs="12" md="5">
-                <MudAutocomplete T="PartyLookupItem" Label="Cari *" Value="_selectedParty"
+                <MudAutocomplete T="PartyLookupItem" Label="@PartyLabel" Value="_selectedParty"
                                  SearchFunc="SearchParties" ToStringFunc="@(p => p?.ToString() ?? "")"
                                  ValueChanged="OnPartyChanged" Variant="Variant.Outlined"
                                  Margin="Margin.Dense" Disabled="@(!_editable)"
                                  ResetValueOnEmptyText CoerceText />
             </MudItem>
             <MudItem xs="6" md="2">
-                <MudSelect T="InvoiceType" @bind-Value="_form.Type" Label="Tip"
+                <MudSelect T="InvoiceType" Value="_form.Type" ValueChanged="OnTypeChanged" Label="Tip"
                            Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@(!_editable)">
                     <MudSelectItem Value="@InvoiceType.Sales">Satış</MudSelectItem>
                     <MudSelectItem Value="@InvoiceType.SalesReturn">İade</MudSelectItem>
                     <MudSelectItem Value="@InvoiceType.Proforma">Proforma</MudSelectItem>
+                    <MudSelectItem Value="@InvoiceType.Purchase">Alış</MudSelectItem>
                 </MudSelect>
             </MudItem>
             <MudItem xs="6" md="2">
@@ -74,6 +75,18 @@ else
                                Variant="Variant.Outlined" Margin="Margin.Dense"
                                DateFormat="dd.MM.yyyy" Disabled="@(!_editable)" />
             </MudItem>
+            @if (IsPurchase)
+            {
+                @* ⚠️ Alışta numarayı BİZ üretmiyoruz; tedarikçinin belgesindeki numara
+                   girilir. Aynı tedarikçiden aynı numara ikinci kez kaydedilemez. *@
+                <MudItem xs="12" md="4">
+                    <MudTextField @bind-Value="_form.SupplierInvoiceNo"
+                                  Label="Tedarikçi Fatura No *"
+                                  HelperText="Tedarikçinin belgesindeki numara"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  Disabled="@(!_editable)" MaxLength="50" />
+                </MudItem>
+            }
             <MudItem xs="6" md="1">
                 <MudSelect T="string" @bind-Value="_form.Currency" Label="Döviz"
                            Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@(!_editable)">
@@ -297,7 +310,15 @@ else
     {
         if (Id is null)
         {
-            _form = new InvoiceForm();
+            // Listeden "Alış Faturası Gir" ile gelinirse tip hazır seçili olsun —
+            // kullanıcı cari kutusuna müşteri yazıp sonra tipi değiştirmek zorunda kalmasın.
+            var tip = QueryValue("tip");
+            _form = new InvoiceForm
+            {
+                Type = string.Equals(tip, "alis", StringComparison.OrdinalIgnoreCase)
+                    ? InvoiceType.Purchase
+                    : InvoiceType.Sales
+            };
             _editable = true;
         }
         else
@@ -390,9 +411,32 @@ else
     private Task<IEnumerable<ProductLookupItem>> SearchProducts(string term, CancellationToken ct)
         => ProductService.LookupAsync(term, ct).ContinueWith(t => t.Result.AsEnumerable(), ct);
 
+    // ⚠️ Alışta MÜŞTERİ değil TEDARİKÇİ aranır. Aynı kutuya farklı liste:
+    // tip değiştiğinde seçili cari de temizlenmeli, yoksa müşteriye alış faturası kesilir.
+    private bool IsPurchase => _form?.Type == InvoiceType.Purchase;
+
+    private string PartyLabel => IsPurchase ? "Tedarikçi *" : "Cari *";
+
     private Task<IEnumerable<PartyLookupItem>> SearchParties(string term, CancellationToken ct)
-        => PartyService.LookupAsync(term, PartyType.Customer, ct)
+        => PartyService.LookupAsync(term, IsPurchase ? PartyType.Supplier : PartyType.Customer, ct)
                        .ContinueWith(t => t.Result.AsEnumerable(), ct);
+
+    private void OnTypeChanged(InvoiceType type)
+    {
+        if (_form is null) return;
+
+        var sideChanged = (type == InvoiceType.Purchase) != IsPurchase;
+        _form.Type = type;
+
+        if (sideChanged)
+        {
+            _selectedParty = null;
+            _form.PartyId = Guid.Empty;
+        }
+
+        if (type != InvoiceType.Purchase)
+            _form.SupplierInvoiceNo = null;
+    }
 
     private void OnPartyChanged(PartyLookupItem? p)
     {
@@ -403,6 +447,13 @@ else
         _form.Currency = p.Currency;
         // Vade carinin ödeme vadesinden otomatik hesaplanır
         _dueDate = _form.IssueDate.AddDays(p.PaymentTermDays).ToDateTime(TimeOnly.MinValue);
+    }
+
+    private string? QueryValue(string key)
+    {
+        var query = new Uri(Nav.Uri).Query;
+        return Microsoft.AspNetCore.WebUtilities.QueryHelpers
+            .ParseQuery(query).TryGetValue(key, out var v) ? v.ToString() : null;
     }
 
     private void OnIssueDateChanged(DateTime? date)
@@ -451,6 +502,12 @@ else
             return false;
         }
 
+        if (IsPurchase && string.IsNullOrWhiteSpace(_form.SupplierInvoiceNo))
+        {
+            Snackbar.Add("Tedarikçi fatura numarası zorunludur.", Severity.Warning);
+            return false;
+        }
+
         _form.IssueDate = DateOnly.FromDateTime(_issueDate ?? DateTime.Today);
         _form.DueDate = _dueDate is null ? null : DateOnly.FromDateTime(_dueDate.Value);
         return true;
@@ -474,10 +531,16 @@ else
     {
         if (!Prepare()) return;
 
-        var confirmed = await DialogService.ShowMessageBox(
-            "Faturayı Kes",
-            "Fatura kesildikten sonra DEĞİŞTİRİLEMEZ ve SİLİNEMEZ. Devam edilsin mi?",
-            yesText: "Faturayı Kes", cancelText: "Vazgeç");
+        var confirmed = IsPurchase
+            ? await DialogService.ShowMessageBox(
+                "Alış Faturasını Kaydet",
+                "Kayıt sonrası fatura DEĞİŞTİRİLEMEZ ve tedarikçi cari hesabına işlenir. " +
+                "Devam edilsin mi?",
+                yesText: "Kaydet", cancelText: "Vazgeç")
+            : await DialogService.ShowMessageBox(
+                "Faturayı Kes",
+                "Fatura kesildikten sonra DEĞİŞTİRİLEMEZ ve SİLİNEMEZ. Devam edilsin mi?",
+                yesText: "Faturayı Kes", cancelText: "Vazgeç");
 
         if (confirmed != true) return;
 
@@ -492,7 +555,8 @@ else
 
         if (ok)
         {
-            Snackbar.Add($"Fatura kesildi: {number}", Severity.Success);
+            Snackbar.Add(IsPurchase ? $"Alış faturası kaydedildi: {number}"
+                                    : $"Fatura kesildi: {number}", Severity.Success);
             Nav.NavigateTo("/faturalar");
         }
     }

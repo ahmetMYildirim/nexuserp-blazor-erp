@@ -48,6 +48,8 @@ public sealed record DashboardSummary(
     decimal OpenReceivables,
     decimal OverdueReceivables,
     int OverdueInvoiceCount,
+    decimal OpenPayables,
+    decimal OverduePayables,
     decimal Mrr,
     decimal Arr,
     int ActiveSubscriptions,
@@ -72,6 +74,9 @@ public sealed record DashboardSummary(
     IReadOnlyList<UnallocatedPayment> UnallocatedPayments,
     ChurnAnalysis Churn)
 {
+    /// <summary>Alacak eksi borç. Nakit değil, TAHAKKUK pozisyonu.</summary>
+    public decimal NetPosition => OpenReceivables - OpenPayables;
+
     public decimal RevenueChangePercent => PreviousMonthRevenue == 0
         ? 0m
         : Math.Round((MonthRevenue - PreviousMonthRevenue) / PreviousMonthRevenue * 100m, 1);
@@ -91,9 +96,18 @@ public sealed class DashboardService(IAppDbContextFactory factory)
         var monthStart = new DateOnly(today.Year, today.Month, 1);
         var trendStart = monthStart.AddMonths(-11);
 
+        // ⚠️ ALIŞ faturası bir ALACAK değil BORÇtur. Buraya karışırsa "açık alacak"
+        // kartı olduğundan büyük görünür ve en çok alacaklı cari listesine kendi
+        // tedarikçilerimiz düşer. Proforma da bağlayıcı olmadığı için dışarıda.
         var openInvoices = db.Invoices.Where(i =>
             (i.Status == InvoiceStatus.Issued || i.Status == InvoiceStatus.PartiallyPaid)
-            && i.Type != InvoiceType.Proforma);
+            && i.Type != InvoiceType.Proforma
+            && i.Type != InvoiceType.Purchase);
+
+        // Borçlar: aynı ölçüt, alış tarafı.
+        var openPurchases = db.Invoices.Where(i =>
+            (i.Status == InvoiceStatus.Issued || i.Status == InvoiceStatus.PartiallyPaid)
+            && i.Type == InvoiceType.Purchase);
 
         // --- Alacaklar: üç ölçüt, TEK sorgu (GroupBy(_ => 1) numarası) ---
         var receivables = await openInvoices
@@ -103,6 +117,15 @@ public sealed class DashboardService(IAppDbContextFactory factory)
                 Open = g.Sum(i => i.GrandTotal - i.PaidAmount),
                 Overdue = g.Sum(i => i.DueDate < today ? i.GrandTotal - i.PaidAmount : 0m),
                 OverdueCount = g.Count(i => i.DueDate < today)
+            })
+            .FirstOrDefaultAsync(ct);
+
+        var payables = await openPurchases
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Open = g.Sum(i => i.GrandTotal - i.PaidAmount),
+                Overdue = g.Sum(i => i.DueDate < today ? i.GrandTotal - i.PaidAmount : 0m)
             })
             .FirstOrDefaultAsync(ct);
 
@@ -164,13 +187,14 @@ public sealed class DashboardService(IAppDbContextFactory factory)
 
         // --- Durum dağılımı ---
         var breakdown = await db.Invoices
-            .Where(i => i.Type != InvoiceType.Proforma)
+            .Where(i => i.Type != InvoiceType.Proforma && i.Type != InvoiceType.Purchase)
             .GroupBy(i => i.Status)
             .Select(g => new StatusBreakdown(g.Key, g.Count(), g.Sum(i => i.GrandTotal)))
             .ToListAsync(ct);
 
         // --- Sayaçlar ---
         var counters = await db.Invoices
+            .Where(i => i.Type != InvoiceType.Purchase)
             .GroupBy(_ => 1)
             .Select(g => new
             {
@@ -352,6 +376,8 @@ public sealed class DashboardService(IAppDbContextFactory factory)
             OpenReceivables: receivables?.Open ?? 0m,
             OverdueReceivables: receivables?.Overdue ?? 0m,
             OverdueInvoiceCount: receivables?.OverdueCount ?? 0,
+            OpenPayables: payables?.Open ?? 0m,
+            OverduePayables: payables?.Overdue ?? 0m,
             Mrr: mrr,
             Arr: Math.Round(mrr * 12m, 2, MidpointRounding.AwayFromZero),
             ActiveSubscriptions: subs.Count,

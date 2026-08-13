@@ -11,7 +11,8 @@ public sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         b.ToTable("invoices");
         b.HasKey(x => x.Id);
 
-        b.Property(x => x.Number).HasMaxLength(20);
+        b.Property(x => x.Number).HasMaxLength(50);
+        b.Property(x => x.SupplierInvoiceNo).HasMaxLength(50);
         b.Property(x => x.Series).HasMaxLength(3).IsRequired();
         b.Property(x => x.Type).HasConversion<int>();
         b.Property(x => x.Status).HasConversion<int>();
@@ -57,10 +58,20 @@ public sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
          .ValueGeneratedOnAddOrUpdate()
          .IsConcurrencyToken();
 
-        // Fatura numarası tenant içinde benzersiz — son savunma hattı
+        // Fatura numarası tenant içinde benzersiz — son savunma hattı.
+        // ⚠️ type <> 4 (Alış) HARİÇ: alış faturasının numarası TEDARİKÇİNİN numarasıdır.
+        // İki farklı tedarikçi pekâlâ aynı numarayı kullanabilir; bu index'in kapsamına
+        // alsaydık ikinci tedarikçinin faturası kaydedilemezdi.
         b.HasIndex(x => new { x.TenantId, x.Number })
          .IsUnique()
-         .HasFilter("number IS NOT NULL AND is_deleted = false");
+         .HasFilter("number IS NOT NULL AND is_deleted = false AND type <> 4");
+
+        // ⚠️ Alış tarafının idempotency garantisi: AYNI tedarikçiden AYNI numara
+        // iki kez girilemez. Mükerrer alış faturası hem cariyi hem gideri şişirir;
+        // el ile veri girişinde en sık yapılan hata budur.
+        b.HasIndex(x => new { x.TenantId, x.PartyId, x.SupplierInvoiceNo })
+         .IsUnique()
+         .HasFilter("supplier_invoice_no IS NOT NULL AND is_deleted = false");
 
         // ⚠️ IDEMPOTENCY (Bölüm 09): aynı abonelik + aynı dönem için İKİNCİ fatura
         // üretilemez. Garanti iş mantığında değil, VERİ TABANINDA.

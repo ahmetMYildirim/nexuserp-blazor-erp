@@ -92,6 +92,7 @@ public sealed class InvoiceService(
             DocumentDiscountType = inv.DocumentDiscountType,
             DocumentDiscountValue = inv.DocumentDiscountValue,
             Notes = inv.Notes,
+            SupplierInvoiceNo = inv.SupplierInvoiceNo,
             SubscriptionId = inv.SubscriptionId,
             PeriodStart = inv.PeriodStart,
             PeriodEnd = inv.PeriodEnd,
@@ -128,6 +129,8 @@ public sealed class InvoiceService(
 
         if (form.Type is InvoiceType.Sales or InvoiceType.Proforma)
             party.EnsureCanBeInvoiced();
+        else if (form.Type == InvoiceType.Purchase)
+            party.EnsureCanBePurchasedFrom();
 
         // --- Hesaplama: TEK kaynak. UI'daki hesap sadece önizleme (Bölüm 08). ---
         var inputs = form.Lines
@@ -172,6 +175,8 @@ public sealed class InvoiceService(
         invoice.DocumentDiscountValue = form.DocumentDiscountValue;
         invoice.Notes = form.Notes;
         invoice.SubscriptionId = form.SubscriptionId;
+        invoice.SupplierInvoiceNo = string.IsNullOrWhiteSpace(form.SupplierInvoiceNo)
+            ? null : form.SupplierInvoiceNo.Trim();
         invoice.PeriodStart = form.PeriodStart;
         invoice.PeriodEnd = form.PeriodEnd;
 
@@ -235,28 +240,43 @@ public sealed class InvoiceService(
                           .FirstOrDefaultAsync(i => i.Id == invoiceId, ct)
                       ?? throw new DomainException("Fatura bulunamadı.");
 
-        // ⚠️ numbers.NextAsync KENDİ context'inde, ham SQL ile çalışıyor ve anında
-        // commit ediyor — bu SaveChanges'e bağlı değil. Aşağısı patlarsa numara
-        // tüketilmiş olur ve seride boşluk kalır. (Fabrika öncesinde de böyleydi.)
-        // Numara SADECE burada veriliyor, taslakta değil: taslak silinebilir ve
-        // silinen taslağın numarası boşluk bırakır. Mevzuat boşluksuz seri ister.
-        var (number, sequence) = await numbers.NextAsync(invoice.Series, invoice.Year, ct);
+        string number;
 
-        invoice.MarkIssued(number, sequence, clock.GetUtcNow());
+        if (invoice.IsPurchase)
+        {
+            // ⚠️ ALIŞTA NUMARA ÜRETİLMEZ. Numara tedarikçiden gelir; kendi
+            // serimizden numara verirsek GİB'e bildireceğimiz satış serisinde
+            // boşluk açarız. Aynı faturanın iki kez girilmesini
+            // (tenant, party, supplier_invoice_no) unique index'i engelliyor.
+            invoice.MarkPurchaseRecorded(clock.GetUtcNow());
+            number = invoice.Number!;
+        }
+        else
+        {
+            // ⚠️ numbers.NextAsync KENDİ context'inde, ham SQL ile çalışıyor ve anında
+            // commit ediyor — bu SaveChanges'e bağlı değil. Aşağısı patlarsa numara
+            // tüketilmiş olur ve seride boşluk kalır. (Fabrika öncesinde de böyleydi.)
+            // Numara SADECE burada veriliyor, taslakta değil: taslak silinebilir ve
+            // silinen taslağın numarası boşluk bırakır. Mevzuat boşluksuz seri ister.
+            var (generated, sequence) = await numbers.NextAsync(invoice.Series, invoice.Year, ct);
+            invoice.MarkIssued(generated, sequence, clock.GetUtcNow());
+            number = generated;
+        }
 
-        // Cari hareket — proforma cariye İŞLEMEZ (bağlayıcı olmayan teklif)
+        // Cari hareket — proforma cariye İŞLEMEZ (bağlayıcı olmayan teklif).
+        // Yön faturaya göre: satışta müşteri bize borçlanır, ALIŞTA biz
+        // tedarikçiye borçlanırız (alacak).
         if (invoice.AffectsBalance)
         {
-            var isReturn = invoice.Type == InvoiceType.SalesReturn;
             db.PartyLedgerEntries.Add(new PartyLedgerEntry
             {
                 PartyId = invoice.PartyId,
                 EntryDate = invoice.IssueDate,
-                Type = isReturn ? LedgerEntryType.InvoiceReturn : LedgerEntryType.Invoice,
-                Debit = isReturn ? 0m : invoice.GrandTotal,
-                Credit = isReturn ? invoice.GrandTotal : 0m,
+                Type = invoice.LedgerType,
+                Debit = invoice.IsDebit ? invoice.GrandTotal : 0m,
+                Credit = invoice.IsDebit ? 0m : invoice.GrandTotal,
                 Currency = invoice.Currency,
-                Description = isReturn ? "İade faturası" : "Satış faturası",
+                Description = invoice.TypeText + " faturası",
                 InvoiceId = invoice.Id,
                 DocumentNumber = number
             });
@@ -267,9 +287,18 @@ public sealed class InvoiceService(
         // muhasebe fişi keser. AffectsBalance ile aynı koşula bağlı.
         if (invoice.AffectsBalance)
         {
-            db.AddEvent(new InvoiceIssued(
-                invoice.Id, number, invoice.PartyId, invoice.PartyTitle,
-                invoice.GrandTotal, invoice.Currency, invoice.IssueDate), clock.GetUtcNow());
+            if (invoice.IsPurchase)
+            {
+                db.AddEvent(new PurchaseInvoiceRecorded(
+                    invoice.Id, number, invoice.PartyId, invoice.PartyTitle,
+                    invoice.GrandTotal, invoice.Currency, invoice.IssueDate), clock.GetUtcNow());
+            }
+            else
+            {
+                db.AddEvent(new InvoiceIssued(
+                    invoice.Id, number, invoice.PartyId, invoice.PartyTitle,
+                    invoice.GrandTotal, invoice.Currency, invoice.IssueDate), clock.GetUtcNow());
+            }
         }
 
         // Fatura + cari hareket + outbox = TEK transaction.

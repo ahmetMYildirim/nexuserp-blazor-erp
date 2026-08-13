@@ -66,6 +66,12 @@
                     <MiniStat Label="Bu Ay Kesilen" Value="@_data.IssuedThisMonth.ToString()" />
                     <MiniStat Label="Taslak" Value="@_data.DraftInvoiceCount.ToString()" />
                     <MiniStat Label="Aktif Cari" Value="@_data.PartyCount.ToString()" />
+                    @* ⚠️ Borç ALACAK kartına karışmıyor: alış faturaları ayrı hesaplanır.
+                       Net pozisyon nakit değil TAHAKKUK — henüz tahsil/ödeme yapılmamış olabilir. *@
+                    <MiniStat Label="Tedarikçi Borcu" Value="@($"{_data.OpenPayables.ToMoney()} ₺")"
+                              Hint="@(_data.OverduePayables > 0 ? $"{_data.OverduePayables.ToMoney()} ₺ vadesi geçti" : "vadesi geçen yok")" />
+                    <MiniStat Label="Net Pozisyon" Value="@($"{_data.NetPosition.ToMoney()} ₺")"
+                              Hint="alacak − borç" />
                 </div>
 
                 @* ─────────── 3. TREND + YAŞLANDIRMA ─────────── *@

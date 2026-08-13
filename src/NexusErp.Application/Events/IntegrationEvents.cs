@@ -1,6 +1,15 @@
 namespace NexusErp.Application.Events
 {
     public sealed record InvoiceIssued(Guid InvoiceId, string Number, Guid PartyId, string PartyTitle, decimal GrandTotal, string Currency, DateOnly IssueDate);
+    /// <summary>
+    /// Alış faturası kaydedildi. InvoiceIssued'dan AYRI bir olay: tüketiciler
+    /// InvoiceIssued'ı müşteriye e-posta göndermek için dinliyor — alış faturasında
+    /// karşı taraf tedarikçidir, ona "faturanız hazır" yazmak saçma olur.
+    /// </summary>
+    public sealed record PurchaseInvoiceRecorded(
+        Guid InvoiceId, string SupplierInvoiceNo, Guid PartyId, string PartyTitle,
+        decimal GrandTotal, string Currency, DateOnly IssueDate);
+
     public sealed record PaymentReceived(Guid PaymentId, string Number, Guid PartyId, decimal Amount, string Currency, DateOnly PaymentDate);
     public sealed record SubscriptionCancelled(Guid SubscriptionId, Guid PartyId, DateOnly CancelledOn, bool Immediately);
 
