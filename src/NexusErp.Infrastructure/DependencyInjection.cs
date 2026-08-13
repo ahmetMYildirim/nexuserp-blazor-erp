@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NexusErp.Application.Abstractions;
 using Microsoft.AspNetCore.Identity;
+using NexusErp.Infrastructure.Diagnostics;
 using NexusErp.Infrastructure.Documents;
 using NexusErp.Infrastructure.EInvoice;
 using NexusErp.Infrastructure.Identity;
@@ -66,6 +67,7 @@ public static class DependencyInjection
                 .AddDefaultTokenProviders();
 
         services.AddScoped<UserAdminService>();
+        services.AddScoped<SelfTestService>();
 
         services.ConfigureApplicationCookie(opt =>
         {
