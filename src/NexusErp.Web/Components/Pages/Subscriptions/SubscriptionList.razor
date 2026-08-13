@@ -120,10 +120,74 @@
     </NoRecordsContent>
 </MudDataGrid>
 
+@* ─────────── FATURALANDIRMA ÖNİZLEMESİ ─────────── *@
+@if (_showPreview && _preview is not null)
+{
+    <MudDialog Visible="true" Options="@(new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true })">
+        <TitleContent>Faturalandırma Önizlemesi</TitleContent>
+        <DialogContent>
+            <div class="kpi-hint" style="margin-bottom:10px">@_preview.Summary</div>
+
+            <div class="scroll-x">
+                <table class="table" style="min-width:520px">
+                    <thead>
+                        <tr>
+                            <th>Cari</th><th>Plan</th><th>Dönem</th>
+                            <th class="num">Tutar</th><th>Durum</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in _preview.Rows)
+                        {
+                            <tr>
+                                <td>@r.PartyTitle</td>
+                                <td>@r.PlanName</td>
+                                <td>@PreviewPeriod(r)</td>
+                                <td class="num">@r.Amount.ToMoney() @r.Currency</td>
+                                <td>
+                                    @if (r.AlreadyBilled)
+                                    {
+                                        <StatusTag Text="Zaten faturalanmış" Variant="neutral" />
+                                    }
+                                    else
+                                    {
+                                        <StatusTag Text="Kesilecek" Variant="accent" />
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3">Toplam (@_preview.BillableCount fatura)</td>
+                            <td class="num">@_preview.Total.ToMoney() @_preview.Currency</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <div class="kpi-hint" style="margin-top:10px">
+                Zaten faturalanmış dönemler atlanır — aynı dönem için ikinci fatura
+                üretilemez, bunu veri tabanındaki unique index garanti eder.
+            </div>
+        </DialogContent>
+        <DialogActions>
+            <button class="btn btn-secondary btn-sm" @onclick="CancelPreview">Vazgeç</button>
+            <button class="btn btn-primary btn-sm" disabled="@_running"
+                    @onclick="ConfirmBillingAsync">
+                @ConfirmButtonText
+            </button>
+        </DialogActions>
+    </MudDialog>
+}
+
 @code {
     private IReadOnlyList<SubscriptionListItem> _items = [];
     private SubscriptionStats? _stats;
     private BillingRunResult? _lastRun;
+    private BillingRunPreview? _preview;
+    private bool _showPreview;
     private bool _running;
 
     private static DateOnly Today => DateOnly.FromDateTime(DateTime.Today);
@@ -137,16 +201,52 @@
         _stats = await SubscriptionService.GetStatsAsync(Today);
     }
 
+    /// <summary>
+    /// ⚠️ Önce ÖNİZLEME, sonra onay, sonra kesim. Muhasebeci körlemesine buton
+    /// basmak istemez — hangi cariye, hangi dönem için, ne kadar kesileceğini
+    /// görmeden onay vermemeli. Önizleme hiçbir şey kaydetmez.
+    /// </summary>
     private async Task RunBillingNow()
     {
         _running = true;
+        _preview = await BillingService.PreviewRunAsync(Today);
+        _running = false;
+
+        if (_preview.BillableCount == 0)
+        {
+            Snackbar.Add(_preview.Summary, Severity.Info);
+            _preview = null;
+            return;
+        }
+
+        _showPreview = true;
+    }
+
+    private async Task ConfirmBillingAsync()
+    {
+        _showPreview = false;
+        _running = true;
         _lastRun = await BillingService.RunAsync(Today);
         _running = false;
+        _preview = null;
 
         Snackbar.Add(_lastRun.Summary,
                      _lastRun.Created > 0 ? Severity.Success : Severity.Info);
         await LoadAsync();
     }
+
+    private void CancelPreview()
+    {
+        _showPreview = false;
+        _preview = null;
+    }
+
+    // Markup'ta karmaşık ifade bırakmıyoruz (Razor brace/tırnak tuzakları)
+    private string ConfirmButtonText =>
+        $"{_preview!.BillableCount} Faturayı Kes";
+
+    private static string PreviewPeriod(BillingPreviewRow r) =>
+        $"{r.PeriodStart:dd.MM} – {r.PeriodEnd:dd.MM.yyyy}";
 
     private async Task CancelAsync(SubscriptionListItem item)
     {

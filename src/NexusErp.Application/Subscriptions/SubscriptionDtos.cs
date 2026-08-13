@@ -134,6 +134,38 @@ public sealed record SubscriptionStats(
     int RenewingThisMonth,
     int PastDueCount);
 
+/// <summary>Faturalandırma turunda kesilecek tek bir fatura.</summary>
+public sealed record BillingPreviewRow(
+    Guid SubscriptionId, string PartyTitle, string PlanName,
+    DateOnly PeriodStart, DateOnly PeriodEnd,
+    decimal Amount, string Currency, bool AlreadyBilled);
+
+/// <summary>
+/// Faturalandırma turunun ÖNİZLEMESİ — hiçbir şey kaydetmez.
+/// Muhasebeci körlemesine buton basmak istemez; ne kesileceğini önce görmeli.
+/// </summary>
+public sealed record BillingRunPreview(
+    DateOnly AsOf, IReadOnlyList<BillingPreviewRow> Rows)
+{
+    /// <summary>Gerçekten fatura üretecek satırlar (zaten faturalanmışlar hariç).</summary>
+    public IReadOnlyList<BillingPreviewRow> Billable =>
+        [.. Rows.Where(r => !r.AlreadyBilled)];
+
+    public int BillableCount => Billable.Count;
+    public int SkipCount => Rows.Count - BillableCount;
+    public decimal Total => Billable.Sum(r => r.Amount);
+    public string Currency => Rows.Count == 0 ? "TRY" : Rows[0].Currency;
+
+    public string Summary => (BillableCount, SkipCount) switch
+    {
+        (0, 0) => "Vadesi gelen abonelik yok.",
+        (0, > 0) => $"{SkipCount} abonelik bu dönem için zaten faturalanmış — yeni fatura üretilmeyecek.",
+        (_, 0) => $"{BillableCount} fatura kesilecek, toplam {Total:N2} {Currency}.",
+        _ => $"{BillableCount} fatura kesilecek ({Total:N2} {Currency}), " +
+             $"{SkipCount} abonelik zaten faturalanmış olduğu için atlanacak."
+    };
+}
+
 /// <summary>Faturalandırma turunun sonucu.</summary>
 public sealed record BillingRunResult(int Created, int Skipped, int Failed)
 {
