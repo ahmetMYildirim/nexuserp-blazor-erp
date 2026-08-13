@@ -83,6 +83,17 @@ services:
         timeout: 10s
         retries: 5
 
+  mailhog:
+      image: mailhog/mailhog:latest
+      container_name: nexuserp-mail
+      restart: unless-stopped
+      # Sahte SMTP sunucusu. Gerçekten e-posta GÖNDERMEZ; gelenleri web
+      # arayüzünde gösterir. Demo ve geliştirmede gerçek adreslere yanlışlıkla
+      # e-posta gitmesini de engeller.
+      ports:
+        - "1025:1025"     # SMTP
+        - "8025:8025"     # Web arayüzü
+
 volumes:
   nexuserp-data:
   nexuserp-mq-data:

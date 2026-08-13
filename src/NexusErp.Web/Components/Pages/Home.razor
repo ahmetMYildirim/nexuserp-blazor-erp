@@ -1,6 +1,7 @@
 @page "/"
 @attribute [Authorize]
 @using NexusErp.Application.Dashboard
+@using NexusErp.Application.Subscriptions
 @using NexusErp.Domain.Enums
 @inject DashboardService Dashboard
 
@@ -202,6 +203,40 @@
                                 </tr>
                             </tfoot>
                         </table>
+
+                        @* Churn ORANI değil, SEBEBİ — fiyat sorunu ile ürün sorunu
+                           bambaşka aksiyon gerektirir. *@
+                        <div class="kpi-kicker" style="margin-top:12px">
+                            NEDEN KAYBEDİLDİ · SON 90 GÜN
+                        </div>
+                        @if (_data.Churn.CancelledCount == 0)
+                        {
+                            <div class="text-muted" style="margin-top:4px">
+                                Bu dönemde iptal yok.
+                            </div>
+                        }
+                        else
+                        {
+                            <table class="table" style="margin-top:4px">
+                                <tbody>
+                                    @foreach (var r in _data.Churn.Reasons)
+                                    {
+                                        <tr>
+                                            <td>@r.Label</td>
+                                            <td class="num">@r.Count</td>
+                                            <td class="num">@Fmt(r.LostMrr)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td>Kayıp MRR</td>
+                                        <td class="num">@_data.Churn.CancelledCount</td>
+                                        <td class="num">@Fmt(_data.Churn.LostMrr)</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        }
                     </Blueprint>
                 </div>
 

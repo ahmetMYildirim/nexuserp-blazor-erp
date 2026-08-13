@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NexusErp.Application.Abstractions;
+using NexusErp.Application.Subscriptions;
 using NexusErp.Domain.Enums;
 
 namespace NexusErp.Application.Dashboard;
@@ -68,7 +69,8 @@ public sealed record DashboardSummary(
     SubscriptionMovement SubscriptionMovement,
     decimal DaysSalesOutstanding,
     int IssuedThisMonth,
-    IReadOnlyList<UnallocatedPayment> UnallocatedPayments)
+    IReadOnlyList<UnallocatedPayment> UnallocatedPayments,
+    ChurnAnalysis Churn)
 {
     public decimal RevenueChangePercent => PreviousMonthRevenue == 0
         ? 0m
@@ -295,6 +297,40 @@ public sealed class DashboardService(IAppDbContextFactory factory)
                           && i.Status != InvoiceStatus.Cancelled
                           && i.IssueDate >= monthStart, ct);
 
+        // --- Churn: neden kaybettik ---
+        // Son 90 gün; tek ay örneklem olarak çok küçük kalıyor, sebep dağılımı
+        // anlamsız görünüyor.
+        var churnFrom = today.AddDays(-90);
+
+        var churnRows = await db.Subscriptions
+            .Where(s => s.Status == SubscriptionStatus.Cancelled
+                     && s.CancelledOn != null
+                     && s.CancelledOn >= churnFrom && s.CancelledOn <= today)
+            .Select(s => new
+            {
+                s.CancellationReason,
+                s.Quantity,
+                Price = s.CustomPrice ?? s.Plan.Price,
+                Months = (int)s.Plan.Cycle
+            })
+            .ToListAsync(ct);
+
+        var churn = new ChurnAnalysis(
+            From: churnFrom,
+            To: today,
+            CancelledCount: churnRows.Count,
+            LostMrr: Math.Round(churnRows.Sum(r => r.Price * r.Quantity / r.Months),
+                                2, MidpointRounding.AwayFromZero),
+            Reasons: [.. churnRows
+                .GroupBy(r => r.CancellationReason)
+                .Select(g => new ChurnReasonRow(
+                    g.Key,
+                    ChurnReasonRow.TextOf(g.Key),
+                    g.Count(),
+                    Math.Round(g.Sum(x => x.Price * x.Quantity / x.Months),
+                               2, MidpointRounding.AwayFromZero)))
+                .OrderByDescending(r => r.Count)]);
+
         // --- Eşleşmemiş (avans) tahsilatlar ---
         var unallocated = await db.Payments
             .Where(p => !p.IsCancelled && p.AllocatedAmount < p.Amount)
@@ -341,7 +377,8 @@ public sealed class DashboardService(IAppDbContextFactory factory)
             SubscriptionMovement: movement,
             DaysSalesOutstanding: dso,
             IssuedThisMonth: issuedThisMonth,
-            UnallocatedPayments: unallocated);
+            UnallocatedPayments: unallocated,
+            Churn: churn);
     }
 
     private static List<MonthlyRevenue> FillMonths(List<MonthlyRevenue> source, DateOnly start) =>

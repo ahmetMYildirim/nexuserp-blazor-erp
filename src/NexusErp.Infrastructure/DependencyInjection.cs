@@ -78,6 +78,9 @@ public static class DependencyInjection
         services.Configure<RabbitMqOptions>(config.GetSection(RabbitMqOptions.SectionName));
         services.AddSingleton<IEventPublisher, RabbitMqEventPublisher>();
 
+        services.Configure<SmtpOptions>(config.GetSection(SmtpOptions.SectionName));
+        services.AddScoped<IEmailSender, SmtpEmailSender>();
+
         services.AddScoped<IInvoicePdfGenerator, InvoicePdfGenerator>();
         services.AddSingleton<IExcelExporter, ExcelExporter>();
         services.AddScoped<IUblInvoiceBuilder, UblInvoiceBuilder>();

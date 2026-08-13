@@ -43,6 +43,7 @@ builder.Services.AddHostedService<OutboxPublisherWorker>();
 builder.Services.AddHostedService<InvoiceIssuedConsumer>();
 builder.Services.AddHostedService<OutboxCleanupWorker>();
 builder.Services.AddHostedService<DunningWorker>();
+builder.Services.AddHostedService<NotificationConsumer>();
 
 var app = builder.Build();
 
