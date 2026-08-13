@@ -133,6 +133,7 @@
                     <thead>
                         <tr>
                             <th>Cari</th><th>Plan</th><th>Dönem</th>
+                            <th class="num">Kullanım</th>
                             <th class="num">Tutar</th><th>Durum</th>
                         </tr>
                     </thead>
@@ -142,7 +143,10 @@
                             <tr>
                                 <td>@r.PartyTitle</td>
                                 <td>@r.PlanName</td>
+                                @* Kullanım bazlı planda tutarın nereden geldiğini
+                                   göstermezsek muhasebeci rakama güvenmez. *@
                                 <td>@PreviewPeriod(r)</td>
+                                <td class="num">@r.UsageText</td>
                                 <td class="num">@r.Amount.ToMoney() @r.Currency</td>
                                 <td>
                                     @if (r.AlreadyBilled)
@@ -159,7 +163,7 @@
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="3">Toplam (@_preview.BillableCount fatura)</td>
+                            <td colspan="4">Toplam (@_preview.BillableCount fatura)</td>
                             <td class="num">@_preview.Total.ToMoney() @_preview.Currency</td>
                             <td></td>
                         </tr>

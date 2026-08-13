@@ -32,10 +32,31 @@
 
                     <MudText Typo="Typo.subtitle1">@p.Name</MudText>
 
-                    <MudText Typo="Typo.h5" Class="mt-2">
-                        @p.Price.ToMoney() <span style="font-size:.5em">@p.Currency</span>
-                    </MudText>
-                    <MudText Typo="Typo.caption">/ @CycleText(p.Cycle)</MudText>
+                    @if (p.HasFlatFee)
+                    {
+                        <MudText Typo="Typo.h5" Class="mt-2">
+                            @p.Price.ToMoney() <span style="font-size:.5em">@p.Currency</span>
+                        </MudText>
+                        <MudText Typo="Typo.caption">/ @CycleText(p.Cycle)</MudText>
+                    }
+                    else
+                    {
+                        @* Saf kullanım planında sabit ücret YOK — fiyat göstermek
+                           müşteriye her ay o tutarı ödeyeceğini düşündürür. *@
+                        <MudText Typo="Typo.h5" Class="mt-2">
+                            @p.OveragePrice.ToMoney() <span style="font-size:.5em">@p.Currency</span>
+                        </MudText>
+                        <MudText Typo="Typo.caption">/ @(p.UsageUnitName ?? "birim")</MudText>
+                    }
+
+                    @if (p.IsMetered)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Secondary"
+                                 Variant="Variant.Outlined" Class="mt-1">
+                            @p.BillingModelText
+                        </MudChip>
+                        <MudText Typo="Typo.caption">@p.UsageText</MudText>
+                    }
 
                     <MudDivider Class="my-2" />
 

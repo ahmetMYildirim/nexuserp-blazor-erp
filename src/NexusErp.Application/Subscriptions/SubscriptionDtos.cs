@@ -5,7 +5,34 @@ namespace NexusErp.Application.Subscriptions;
 public sealed record PlanListItem(
     Guid Id, string Code, string Name, decimal Price, string Currency,
     BillingCycle Cycle, int TrialDays, bool IsActive,
-    int ActiveSubscriptions, decimal MonthlyValue);
+    int ActiveSubscriptions, decimal MonthlyValue,
+    BillingModel BillingModel = BillingModel.Flat, string? UsageUnitName = null,
+    decimal IncludedUnits = 0m, decimal OveragePrice = 0m)
+{
+    public bool IsMetered => BillingModel is BillingModel.Metered or BillingModel.Hybrid;
+    public bool HasFlatFee => BillingModel is BillingModel.Flat or BillingModel.Hybrid;
+
+    public string BillingModelText => BillingModel switch
+    {
+        BillingModel.Flat => "Sabit ücret",
+        BillingModel.Metered => "Kullanım bazlı",
+        BillingModel.Hybrid => "Sabit + kullanım",
+        _ => "?"
+    };
+
+    /// <summary>"100 SMS dahil, sonrası 2,00 ₺" gibi tek satırlık özet.</summary>
+    public string UsageText
+    {
+        get
+        {
+            if (!IsMetered) return string.Empty;
+            var unit = UsageUnitName ?? "birim";
+            return IncludedUnits > 0
+                ? $"{IncludedUnits:N0} {unit} dahil, sonrası {OveragePrice:N2} {Currency}"
+                : $"{unit} başına {OveragePrice:N2} {Currency}";
+        }
+    }
+}
 
 public sealed record SubscriptionListItem(
     Guid Id,
@@ -174,7 +201,18 @@ public sealed record SubscriptionStats(
 public sealed record BillingPreviewRow(
     Guid SubscriptionId, string PartyTitle, string PlanName,
     DateOnly PeriodStart, DateOnly PeriodEnd,
-    decimal Amount, string Currency, bool AlreadyBilled);
+    decimal Amount, string Currency, bool AlreadyBilled,
+    decimal UsageQuantity = 0m, decimal UsageAmount = 0m, string? UsageUnitName = null)
+{
+    public bool HasUsage => UsageAmount != 0m;
+
+    /// <summary>Sabit ucret kismi — kullanim disindaki tutar.</summary>
+    public decimal FlatAmount => Amount - UsageAmount;
+
+    public string UsageText => HasUsage
+        ? $"{UsageQuantity:N2} {UsageUnitName ?? "birim"} = {UsageAmount:N2}"
+        : "-";
+}
 
 /// <summary>
 /// Faturalandırma turunun ÖNİZLEMESİ — hiçbir şey kaydetmez.

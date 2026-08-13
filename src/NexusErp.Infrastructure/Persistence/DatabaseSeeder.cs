@@ -155,6 +155,12 @@ public static class DatabaseSeeder
             NewPlan("PRO-AY", "Pro Paket — Aylık", 4_500m, BillingCycle.Monthly, bakim.Id, trialDays: 14),
             NewPlan("PRO-YIL", "Pro Paket — Yıllık", 45_000m, BillingCycle.Yearly, bakim.Id),
             NewPlan("DNS-3AY", "Danışmanlık Paketi — 3 Aylık", 12_000m, BillingCycle.Quarterly, danismanlik.Id),
+            // Hibrit: taban ücret + kotayı aşan kullanım
+            NewPlan("SMS-AY", "SMS Paketi — Aylık", 750m, BillingCycle.Monthly, bakim.Id,
+                    model: BillingModel.Hybrid, unit: "SMS", included: 1_000m, overage: 0.45m),
+            // Saf kullanım: sabit ücret YOK, kullanım yoksa fatura da yok
+            NewPlan("API-AY", "API Kullanımı — Aylık", 0m, BillingCycle.Monthly, danismanlik.Id,
+                    model: BillingModel.Metered, unit: "çağrı", included: 0m, overage: 0.02m),
         };
         db.Plans.AddRange(plans);
 
@@ -176,7 +182,32 @@ public static class DatabaseSeeder
             NewSub(customers[2].Id, plans[3].Id, new DateOnly(today.Year, 1, 31),
                    anchor31Next, anchorDay: 31),
             // Vadesi GELMEMİŞ
-            NewSub(customers[3].Id, plans[2].Id, today.AddMonths(-1), today.AddMonths(11))
+            NewSub(customers[3].Id, plans[2].Id, today.AddMonths(-1), today.AddMonths(11)),
+            // Kullanım bazlı senaryolar — vadesi gelmiş, kullanım kayıtları aşağıda
+            NewSub(customers[0].Id, plans[4].Id, today.AddMonths(-2), today.AddDays(-1)),
+            NewSub(customers[1].Id, plans[5].Id, today.AddMonths(-2), today.AddDays(-1))
+        );
+
+        await db.SaveChangesAsync(ct);
+
+        // --- Kullanım kayıtları ---
+        // ⚠️ Tarihler GEÇMİŞTE: kullanım ücreti geriye dönük faturalandığı için
+        // bugün kaydedilen kullanım bir sonraki dönemde tahsil edilir. Demo verisini
+        // bugüne yazsaydık "Faturalandır" butonu boş fatura üretirdi.
+        var hybridSub = await db.Subscriptions.IgnoreQueryFilters()
+            .Where(x => x.PlanId == plans[4].Id).FirstAsync(ct);
+        var meteredSub = await db.Subscriptions.IgnoreQueryFilters()
+            .Where(x => x.PlanId == plans[5].Id).FirstAsync(ct);
+
+        db.UsageRecords.AddRange(
+            // Hibrit: 1.000 kota, 1.340 kullanım → 340 birim ücretlendirilir
+            NewUsage(hybridSub.Id, today.AddDays(-25), 620m, "Toplu SMS gönderimi"),
+            NewUsage(hybridSub.Id, today.AddDays(-18), 480m, "Kampanya SMS"),
+            NewUsage(hybridSub.Id, today.AddDays(-6), 240m, "Bildirim SMS"),
+            // Saf kullanım: kota yok, hepsi ücretlendirilir
+            NewUsage(meteredSub.Id, today.AddDays(-20), 18_400m, "API çağrıları (hafta 1)"),
+            NewUsage(meteredSub.Id, today.AddDays(-13), 21_150m, "API çağrıları (hafta 2)"),
+            NewUsage(meteredSub.Id, today.AddDays(-4), 9_800m, "API çağrıları (hafta 3)")
         );
 
         await db.SaveChangesAsync(ct);
@@ -184,7 +215,9 @@ public static class DatabaseSeeder
         // --- yerel yardımcılar ---
 
         Plan NewPlan(string code, string name, decimal price, BillingCycle cycle,
-                     Guid productId, int trialDays = 0) => new()
+                     Guid productId, int trialDays = 0,
+                     BillingModel model = BillingModel.Flat, string? unit = null,
+                     decimal included = 0m, decimal overage = 0m) => new()
         {
             TenantId = DemoTenantId,
             Code = code,
@@ -193,6 +226,22 @@ public static class DatabaseSeeder
             Cycle = cycle,
             TrialDays = trialDays,
             ProductId = productId,
+            BillingModel = model,
+            UsageUnitName = unit,
+            IncludedUnits = included,
+            OveragePrice = overage,
+            CreatedAt = now,
+            CreatedBy = "seed"
+        };
+
+        UsageRecord NewUsage(Guid subscriptionId, DateOnly on, decimal quantity,
+                             string description) => new()
+        {
+            TenantId = DemoTenantId,
+            SubscriptionId = subscriptionId,
+            OccurredOn = on,
+            Quantity = quantity,
+            Description = description,
             CreatedAt = now,
             CreatedBy = "seed"
         };

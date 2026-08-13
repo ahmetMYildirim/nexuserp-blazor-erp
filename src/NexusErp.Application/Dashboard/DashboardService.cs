@@ -148,8 +148,12 @@ public sealed class DashboardService(IAppDbContextFactory factory)
             .ToListAsync(ct);
 
         // --- Abonelikler (MRR) ---
+        // ⚠️ Saf KULLANIM planları MRR'a girmez: taahhüt edilmiş yinelenen gelir yok,
+        // tutar her ay kullanımla değişir. MRR "tahmin edilebilir gelir" demek;
+        // değişken kullanımı buraya karıştırmak metriği anlamsızlaştırır.
         var subs = await db.Subscriptions
-            .Where(s => s.Status == SubscriptionStatus.Active)
+            .Where(s => s.Status == SubscriptionStatus.Active
+                     && s.Plan.BillingModel != BillingModel.Metered)
             .Select(s => new
             {
                 s.Quantity,
@@ -269,7 +273,10 @@ public sealed class DashboardService(IAppDbContextFactory factory)
                 s.CancelledOn,
                 s.NextBillingDate,
                 s.Quantity,
-                Price = s.CustomPrice ?? s.Plan.Price,
+                // ⚠️ Saf kullanım planında Plan.Price sabit ücret DEĞİL, sıfır kabul
+                // edilmeli — yoksa MRR deltası olmayan bir gelir gösterir.
+                Price = s.Plan.BillingModel == BillingModel.Metered
+                    ? 0m : s.CustomPrice ?? s.Plan.Price,
                 Months = (int)s.Plan.Cycle
             })
             .ToListAsync(ct);
@@ -334,7 +341,8 @@ public sealed class DashboardService(IAppDbContextFactory factory)
             {
                 s.CancellationReason,
                 s.Quantity,
-                Price = s.CustomPrice ?? s.Plan.Price,
+                Price = s.Plan.BillingModel == BillingModel.Metered
+                    ? 0m : s.CustomPrice ?? s.Plan.Price,
                 Months = (int)s.Plan.Cycle
             })
             .ToListAsync(ct);

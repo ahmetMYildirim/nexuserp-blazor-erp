@@ -3,6 +3,7 @@
 @using NexusErp.Application.Subscriptions
 @using NexusErp.Domain.Enums
 @inject SubscriptionService SubscriptionService
+@inject UsageService UsageService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
@@ -167,6 +168,104 @@
             </Blueprint>
         }
 
+        @* ─────────── KULLANIM (yalnızca kullanım bazlı planlarda) ─────────── *@
+        @if (IsMetered)
+        {
+            <Blueprint Class="bp-pad">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+                    <h5 style="margin:0">Kullanım</h5>
+                    <StatusTag Text="@UsagePeriodText" Variant="neutral" />
+                    <span style="margin-left:auto" class="kpi-hint">@UsageBillingNote</span>
+                </div>
+
+                @if (_usage is not null)
+                {
+                    <div class="grid-mini" style="margin-bottom:14px">
+                        <MiniStat Label="@UsagePeriodLabel" Value="@UsagePeriodQuantityText" />
+                        <MiniStat Label="Ücretsiz kota" Value="@UsageAllowanceText"
+                                  Hint="@UsageAllowanceHint" />
+                        <MiniStat Label="Ücretlendirilecek" Value="@UsageBillableText" />
+                        <MiniStat Label="Tahmini tutar" Value="@UsageEstimateText"
+                                  Hint="KDV hariç" />
+                        <MiniStat Label="Faturalanmamış toplam" Value="@UsageUnbilledText"
+                                  Hint="geç gelen kayıtlar dahil" />
+                    </div>
+
+                    @if (UsageOverQuota)
+                    {
+                        <div class="kpi-hint" style="margin-bottom:10px">
+                            ⚠️ Kota aşıldı. Aşan miktar bir sonraki faturaya ayrı satır
+                            olarak eklenecek.
+                        </div>
+                    }
+                }
+
+                <AuthorizeView Roles="Admin,Muhasebe" Context="usageAuth">
+                    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;
+                                margin-bottom:14px">
+                        <div class="field" style="width:150px">
+                            <label>Tarih</label>
+                            <input class="input" type="date" @bind="_usageDate" />
+                        </div>
+                        <div class="field" style="width:140px">
+                            <label>@UsageQuantityLabel</label>
+                            <input class="input" type="number" step="0.01" @bind="_usageQuantity" />
+                        </div>
+                        <div class="field" style="min-width:220px;flex:1">
+                            <label>Açıklama</label>
+                            <input class="input" @bind="_usageNote"
+                                   placeholder="Kaynak / referans" />
+                        </div>
+                        <button class="btn btn-primary" disabled="@_busy" @onclick="AddUsageAsync">
+                            Kullanım Ekle
+                        </button>
+                    </div>
+                </AuthorizeView>
+
+                @if (HasNoUsage)
+                {
+                    <div class="text-muted">Bu abonelik için henüz kullanım kaydı yok.</div>
+                }
+                @if (HasUsage)
+                {
+                    <div class="scroll-x">
+                        <table class="table" style="min-width:560px">
+                            <thead>
+                                <tr>
+                                    <th>Tarih</th><th class="num">Miktar</th>
+                                    <th>Açıklama</th><th>Kaynak No</th><th>Durum</th><th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var u in _usageRows)
+                                {
+                                    <tr>
+                                        <td>@UsageDateText(u)</td>
+                                        <td class="num">@u.Quantity.ToMoney()</td>
+                                        <td>@u.Description</td>
+                                        <td>@u.ExternalId</td>
+                                        <td>
+                                            <StatusTag Text="@UsageStatusText(u)"
+                                                       Variant="@UsageStatusVariant(u)" />
+                                        </td>
+                                        <td class="num">
+                                            @if (!u.IsBilled)
+                                            {
+                                                <button class="btn btn-ghost btn-sm" disabled="@_busy"
+                                                        @onclick="@(() => DeleteUsageAsync(u.Id))">
+                                                    Sil
+                                                </button>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </Blueprint>
+        }
+
         <div class="grid-2">
             <Blueprint Class="bp-pad">
                 <h5 style="margin-bottom:10px">Faturalar</h5>
@@ -274,6 +373,13 @@
     private string? _cancelNote;
     private bool _busy;
 
+    // Kullanım paneli
+    private UsageSummary? _usage;
+    private IReadOnlyList<UsageListItem> _usageRows = [];
+    private DateTime? _usageDate = DateTime.Today;
+    private decimal _usageQuantity;
+    private string? _usageNote;
+
     private static DateOnly Today => DateOnly.FromDateTime(DateTime.Today);
 
     protected override async Task OnParametersSetAsync() => await LoadAsync();
@@ -285,6 +391,100 @@
 
         if (_plans.Count == 0)
             _plans = await SubscriptionService.GetPlansAsync();
+
+        // ⚠️ Kullanım verisi yalnızca kullanım bazlı planda okunuyor — sabit ücretli
+        // aboneliklerin çoğunluk olduğu bir kurulumda her açılışta iki gereksiz sorgu
+        // atmanın anlamı yok.
+        if (IsMetered)
+        {
+            _usage = await UsageService.GetSummaryAsync(Id);
+            _usageRows = await UsageService.ListAsync(Id);
+        }
+    }
+
+    // ---------------- Kullanım ----------------
+
+    private PlanListItem? CurrentPlan => _plans.FirstOrDefault(p => p.Id == _data!.PlanId);
+
+    private bool IsMetered => CurrentPlan?.IsMetered == true;
+
+    private string UsageUnit => CurrentPlan?.UsageUnitName ?? "birim";
+
+    private bool HasUsage => _usageRows.Count > 0;
+    private bool HasNoUsage => _usageRows.Count == 0;
+
+    private bool UsageOverQuota => _usage is not null && _usage.Billable > 0m;
+
+    private string UsagePeriodLabel => "Bu dönem";
+    private string UsageQuantityLabel => $"Miktar ({UsageUnit})";
+
+    private string UsagePeriodText => _usage is null
+        ? "—"
+        : _usage.PeriodStart.ToString("dd.MM.yyyy") + " – " + _usage.PeriodEnd.ToString("dd.MM.yyyy");
+
+    private string UsageBillingNote =>
+        "Kullanım ücreti geçmişe dönük, sabit ücret peşin faturalanır.";
+
+    private string UsagePeriodQuantityText =>
+        _usage is null ? "—" : _usage.PeriodQuantity.ToMoney() + " " + UsageUnit;
+
+    private string UsageAllowanceText =>
+        _usage is null ? "—" : _usage.Allowance.ToMoney() + " " + UsageUnit;
+
+    private string UsageAllowanceHint =>
+        _usage is null ? "" : _usage.AllowanceRemaining.ToMoney() + " " + UsageUnit + " kaldı";
+
+    private string UsageBillableText =>
+        _usage is null ? "—" : _usage.Billable.ToMoney() + " " + UsageUnit;
+
+    private string UsageEstimateText =>
+        _usage is null ? "—" : _usage.EstimatedAmount.ToMoney() + " " + _usage.Currency;
+
+    private string UsageUnbilledText =>
+        _usage is null ? "—" : _usage.UnbilledQuantity.ToMoney() + " " + UsageUnit;
+
+    private static string UsageDateText(UsageListItem u) => u.OccurredOn.ToString("dd.MM.yyyy");
+
+    private static string UsageStatusText(UsageListItem u) =>
+        u.IsBilled ? "Faturalandı " + (u.InvoiceNumber ?? "") : "Bekliyor";
+
+    // Tema yalnızca accent / accent-2 / neutral / outline tanımlıyor; olmayan bir
+    // varyant adı sessizce stilsiz etiket üretir.
+    private static string UsageStatusVariant(UsageListItem u) =>
+        u.IsBilled ? "accent-2" : "outline";
+
+    private async Task AddUsageAsync()
+    {
+        if (_usageQuantity == 0m)
+        {
+            Snackbar.Add("Miktar sıfır olamaz.", Severity.Warning);
+            return;
+        }
+
+        _busy = true;
+        var on = DateOnly.FromDateTime(_usageDate ?? DateTime.Today);
+
+        var ok = await Snackbar.RunAsync(
+            () => UsageService.RecordAsync(new UsageEntry(Id, _usageQuantity, on, _usageNote)),
+            "Kullanım kaydedildi.");
+        _busy = false;
+
+        if (ok)
+        {
+            _usageQuantity = 0m;
+            _usageNote = null;
+            await LoadAsync();
+        }
+    }
+
+    private async Task DeleteUsageAsync(Guid usageId)
+    {
+        _busy = true;
+        var ok = await Snackbar.RunAsync(
+            () => UsageService.DeleteAsync(usageId), "Kullanım kaydı silindi.");
+        _busy = false;
+
+        if (ok) await LoadAsync();
     }
 
     // ---------------- Görünüm yardımcıları ----------------

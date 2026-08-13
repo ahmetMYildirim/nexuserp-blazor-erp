@@ -20,7 +20,10 @@ public sealed class SubscriptionService(IAppDbContextFactory factory)
                 p.Id, p.Code, p.Name, p.Price, p.Currency, p.Cycle, p.TrialDays, p.IsActive,
                 db.Subscriptions.Count(s => s.PlanId == p.Id
                                          && s.Status == SubscriptionStatus.Active),
-                p.Price / (int)p.Cycle))
+                // ⚠️ Saf kullanım planı MRR'a katkı vermez: tutar her ay değişir,
+                // taahhüt edilmiş yinelenen gelir yoktur.
+                p.BillingModel == BillingModel.Metered ? 0m : p.Price / (int)p.Cycle,
+                p.BillingModel, p.UsageUnitName, p.IncludedUnits, p.OveragePrice))
             .ToListAsync(ct);
     }
 
