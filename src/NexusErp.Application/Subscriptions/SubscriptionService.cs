@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NexusErp.Application.Abstractions;
 using NexusErp.Application.Parties;
+using NexusErp.Application.Events;
 using NexusErp.Domain.Common;
 using NexusErp.Domain.Enums;
 
@@ -85,6 +86,10 @@ public sealed class SubscriptionService(IAppDbContextFactory factory)
                   ?? throw new DomainException("Abonelik bulunamadı.");
 
         sub.Cancel(on, immediately);
+
+        db.AddEvent(new SubscriptionCancelled(sub.Id, sub.PartyId, on, immediately),
+                    DateTimeOffset.UtcNow);
+
         await db.SaveChangesAsync(ct);
     }
 }

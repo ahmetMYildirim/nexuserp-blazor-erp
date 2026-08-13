@@ -65,13 +65,16 @@ services:
   rabbitmq:
       image: rabbitmq:4-management-alpine
       container_name: nexuserp-mq
-      restart: usnless-stopped
+      restart: unless-stopped
       environment:
         RABBITMQ_DEFAULT_USER: nexus
         RABBITMQ_DEFAULT_PASS: nexus_dev_2026
       ports:
-        - "5672:5672"
-        - "15672:15672"
+        # ⚠️ 5672 ve 15672 standart portlar ama makinede yerel kurulu bir
+        # RabbitMQ varsa onlar dolu olur ve uygulama YANLIŞ broker'a baglanip
+        # "ACCESS_REFUSED" alir. Postgres'i 5433'e almamizla ayni gerekce.
+        - "5673:5672"     # AMQP
+        - "15673:15672"   # Yonetim arayuzu
       volumes:
         - nexuserp-mq-data:/var/lib/rabbitmq
       healthcheck:
@@ -82,3 +85,4 @@ services:
 
 volumes:
   nexuserp-data:
+  nexuserp-mq-data:

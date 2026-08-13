@@ -7,6 +7,7 @@ using NexusErp.Infrastructure.Documents;
 using NexusErp.Infrastructure.EInvoice;
 using NexusErp.Infrastructure.Identity;
 using NexusErp.Infrastructure.Invoicing;
+using NexusErp.Infrastructure.Messaging;
 using NexusErp.Infrastructure.Persistence;
 using NexusErp.Infrastructure.Tenancy;
 
@@ -73,6 +74,10 @@ public static class DependencyInjection
             opt.SlidingExpiration = true;
             opt.Cookie.Name = "NexusErp.Auth";
         });
+        // Mesajlaşma. Publisher SINGLETON — bağlantı pahalı, her mesajda açılmaz.
+        services.Configure<RabbitMqOptions>(config.GetSection(RabbitMqOptions.SectionName));
+        services.AddSingleton<IEventPublisher, RabbitMqEventPublisher>();
+
         services.AddScoped<IInvoicePdfGenerator, InvoicePdfGenerator>();
         services.AddSingleton<IExcelExporter, ExcelExporter>();
         services.AddScoped<IUblInvoiceBuilder, UblInvoiceBuilder>();

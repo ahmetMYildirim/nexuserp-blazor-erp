@@ -5,6 +5,7 @@ using NexusErp.Application.Parties;
 using NexusErp.Domain.Common;
 using NexusErp.Domain.Entities;
 using NexusErp.Domain.Enums;
+using NexusErp.Application.Events;
 using NexusErp.Domain.Invoicing;
 
 namespace NexusErp.Application.Invoicing;
@@ -261,6 +262,18 @@ public sealed class InvoiceService(
             });
         }
 
+        // ⚠️ Proforma bağlayıcı olmayan bir tekliftir; cariyi borçlandırmadığı gibi
+        // olay da yayınlamaz — yoksa tüketiciler teklif için e-posta gönderir,
+        // muhasebe fişi keser. AffectsBalance ile aynı koşula bağlı.
+        if (invoice.AffectsBalance)
+        {
+            db.AddEvent(new InvoiceIssued(
+                invoice.Id, number, invoice.PartyId, invoice.PartyTitle,
+                invoice.GrandTotal, invoice.Currency, invoice.IssueDate), clock.GetUtcNow());
+        }
+
+        // Fatura + cari hareket + outbox = TEK transaction.
+        // Mesajın kaybolamamasının tek sebebi bu satır.
         await db.SaveChangesAsync(ct);
         return number;
     }

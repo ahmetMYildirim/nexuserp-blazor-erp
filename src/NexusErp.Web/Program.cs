@@ -35,6 +35,12 @@ builder.Services.AddAuthorization();
 // bunu engeller ama boşuna iş yapılır. Tek sahibi olsun.
 builder.Services.AddHostedService<SubscriptionBillingWorker>();
 
+// Outbox yayıncısı ve tüketici.
+// ⚠️ Abonelik işçisinin aksine outbox işçisi birden fazla instance'ta güvenle
+// çalışır — FOR UPDATE SKIP LOCKED aynı satırı iki kez vermez.
+builder.Services.AddHostedService<OutboxPublisherWorker>();
+builder.Services.AddHostedService<InvoiceIssuedConsumer>();
+
 var app = builder.Build();
 
 // Migration + tohum verisi (geliştirme ortamı)
