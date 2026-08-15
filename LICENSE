@@ -1,0 +1,236 @@
+NexusERP Yazılım Lisans Sözleşmesi
+====================================
+
+Telif Hakkı (c) 2026 Ahmet Yıldırım. Tüm hakları saklıdır.
+Copyright (c) 2026 Ahmet Yıldırım. All rights reserved.
+
+Son güncelleme: 15 Ağustos 2026
+
+
+1. TANIMLAR
+
+   "Yazılım" terimi, bu depo (repository) içinde yer alan NexusERP uygulamasının
+   kaynak kodu, nesne kodu, veri tabanı şemaları, göç (migration) dosyaları,
+   yapılandırma dosyaları, kullanıcı arayüzü bileşenleri, görseller, belgeler,
+   test dosyaları, betikler (scripts) ve bunlarla ilişkili tüm materyalleri
+   kapsar.
+
+   "Hak Sahibi" terimi, Yazılımın münhasır telif hakkı sahibi olan Ahmet Yıldırım'ı
+   ifade eder.
+
+   "Kullanıcı" terimi, bu depoya erişen, Yazılımı görüntüleyen, inceleyen veya
+   herhangi bir şekilde etkileşimde bulunan her gerçek veya tüzel kişiyi ifade
+   eder.
+
+   "Türev Eser" terimi, Yazılımın tamamının veya herhangi bir bölümünün
+   değiştirilmesi, uyarlanması, genişletilmesi, yeniden düzenlenmesi (refactoring),
+   tersine mühendislik ile elde edilen çıktılar veya Yazılımdan esinlenerek
+   oluşturulan herhangi bir eser anlamına gelir.
+
+   "Ticari Kullanım" terimi, doğrudan veya dolaylı olarak gelir elde etme, maliyet
+   düşürme, rekabet avantajı sağlama veya herhangi bir ticari faaliyette kullanma
+   amacını ifade eder.
+
+
+2. LİSANS VERİLMESİ VE KAPSAMI
+
+   2.1. Bu lisans yalnızca GÖRÜNTÜLEME ve İNCELEME hakkı tanır. Kullanıcı,
+        Yazılımın kaynak kodunu çevrimiçi depo arayüzü üzerinden okuyabilir,
+        yazılımın mimarisini ve teknik yaklaşımını değerlendirme amacıyla
+        inceleyebilir.
+
+   2.2. Bu lisans kapsamında Kullanıcıya başka hiçbir hak — örtülü veya açık —
+        verilmemektedir. Burada açıkça belirtilmeyen her hak münhasıran Hak
+        Sahibine aittir.
+
+   2.3. Bu lisans, Kullanıcıya Yazılım üzerinde herhangi bir mülkiyet hakkı,
+        ortaklık hakkı veya fikri mülkiyet hakkı devretmez.
+
+
+3. KISITLAMALAR
+
+   Hak Sahibinden önceden yazılı izin alınmadıkça aşağıdaki eylemler kesinlikle
+   yasaktır:
+
+   3.1.  KOPYALAMA: Yazılımın tamamının veya herhangi bir bölümünün kopyalanması,
+         çoğaltılması veya yedeklenmesi.
+
+   3.2.  DEĞİŞTİRME: Yazılımın kaynak kodunun, veri tabanı yapısının, kullanıcı
+         arayüzünün veya herhangi bir bileşeninin değiştirilmesi, uyarlanması
+         veya dönüştürülmesi.
+
+   3.3.  DAĞITIM: Yazılımın tamamının veya herhangi bir bölümünün üçüncü şahıslara
+         dağıtılması, paylaşılması, iletilmesi, yayınlanması veya başka bir
+         şekilde erişilebilir kılınması.
+
+   3.4.  ALT LİSANSLAMA: Yazılım üzerinde alt lisans verilmesi, kiralanması,
+         ödünç verilmesi veya herhangi bir kullanım hakkı tanınması.
+
+   3.5.  TİCARİ KULLANIM: Yazılımın doğrudan veya dolaylı olarak herhangi bir
+         ticari amaçla kullanılması, çalıştırılması, barındırılması (hosting)
+         veya hizmete sunulması (SaaS dahil).
+
+   3.6.  TERSİNE MÜHENDİSLİK: Yazılımın tersine mühendislik, kaynak koddan
+         derleme (decompilation), parçalara ayırma (disassembly) veya başka
+         yöntemlerle çözümlenmesi.
+
+   3.7.  TÜREV ESER: Yazılımın tamamından veya herhangi bir bölümünden türev
+         eser oluşturulması. Bu kısıtlama; kod yapısının, algoritmaların, iş
+         mantığının, veri tabanı şemalarının, API tasarımının veya kullanıcı
+         arayüzü düzeninin taklit edilmesini de kapsar.
+
+   3.8.  MARKA KULLANIMI: "NexusERP" adının, logosunun veya ilişkili marka
+         unsurlarının Hak Sahibinin yazılı izni olmaksızın herhangi bir ürün,
+         hizmet veya tanıtım materyalinde kullanılması.
+
+   3.9.  YAPAY ZEKA EĞİTİMİ: Yazılımın kaynak kodunun, belgelerinin veya
+         herhangi bir bileşeninin makine öğrenimi modeli eğitimi, ince ayarı
+         (fine-tuning), veri madenciliği veya benzeri otomatik veri işleme
+         faaliyetlerinde girdi olarak kullanılması.
+
+   3.10. DOLAYLI İHLAL: Yukarıdaki kısıtlamalardan herhangi birini üçüncü bir
+         şahıs aracılığıyla, otomatik araçlarla veya dolaylı yollarla
+         gerçekleştirme girişimi.
+
+
+4. FİKRİ MÜLKİYET
+
+   4.1. Yazılımın tamamı — kaynak kodu, mimarisi, algoritmaları, veri tabanı
+        tasarımı, kullanıcı arayüzü, belgeleri ve ilişkili tüm materyaller —
+        5846 sayılı Fikir ve Sanat Eserleri Kanunu ve uluslararası telif hakkı
+        anlaşmaları kapsamında korunmaktadır.
+
+   4.2. Bu deponun herkese açık (public) olması, Yazılım üzerindeki telif hakkı
+        korumasını ortadan kaldırmaz veya zayıflatmaz. Erişilebilirlik, lisans
+        verilmesi anlamına gelmez.
+
+   4.3. Hak Sahibi, bu lisansı ihlal eden herhangi bir kullanıma karşı yasal
+        haklarını saklı tutar ve gerekli gördüğü tüm hukuki yollara
+        başvurabilir.
+
+
+5. GARANTİ REDDİ
+
+   5.1. Yazılım "OLDUĞU GİBİ" ("AS IS") ve "MEVCUT HALİYLE" ("AS AVAILABLE")
+        sunulmaktadır. Hak Sahibi, Yazılımın belirli bir amaca uygunluğu, ticari
+        elverişliliği, kesintisiz veya hatasız çalışacağı, güvenlik açığı
+        içermediği veya üçüncü şahıs haklarını ihlal etmediği konusunda açık
+        veya örtülü hiçbir garanti vermez.
+
+   5.2. Yazılımın incelenmesi veya değerlendirilmesi sonucunda elde edilen
+        bilgiler yalnızca bilgilendirme amaçlıdır ve profesyonel tavsiye
+        niteliği taşımaz.
+
+
+6. SORUMLULUK SINIRLAMASI
+
+   6.1. Hak Sahibi, Yazılımın kullanılması, kullanılamaması, incelenmesi veya
+        bu Yazılımla herhangi bir şekilde ilişkili olarak ortaya çıkan doğrudan,
+        dolaylı, arızi, özel, cezai veya sonuç olarak doğan hiçbir zarardan
+        (gelir kaybı, veri kaybı, iş kesintisi, itibar kaybı dahil ancak bunlarla
+        sınırlı olmaksızın) sorumlu tutulamaz.
+
+   6.2. Bu sorumluluk sınırlaması, zarar olasılığının önceden bildirilmiş olması
+        durumunda dahi geçerlidir.
+
+   6.3. Bu sınırlamalar, yürürlükteki hukukun izin verdiği azami ölçüde
+        uygulanır.
+
+
+7. GİZLİLİK
+
+   7.1. Yazılımın kaynak kodunun herkese açık olması, içerdiği iş mantığının,
+        algoritmaların, mimari kararların veya teknik yaklaşımların ticari sır
+        niteliğini ortadan kaldırmaz.
+
+   7.2. Kullanıcı, Yazılımı inceleyerek edindiği teknik bilgileri üçüncü
+        şahıslarla paylaşmama ve rakip ürün geliştirme amacıyla kullanmama
+        yükümlülüğünü kabul eder.
+
+
+8. FESİH
+
+   8.1. Bu lisans, Kullanıcının lisans koşullarından herhangi birini ihlal
+        etmesi halinde önceden bildirim yapılmaksızın otomatik olarak sona erer.
+
+   8.2. Hak Sahibi, herhangi bir zamanda, herhangi bir nedenle veya nedensiz
+        olarak bu lisansı tek taraflı feshetme hakkını saklı tutar.
+
+   8.3. Lisansın sona ermesi halinde Kullanıcı, elinde bulundurduğu Yazılımın
+        tüm kopyalarını derhal imha etmekle yükümlüdür.
+
+   8.4. Lisansın sona ermesi, Hak Sahibinin ihlal öncesinde veya ihlal
+        nedeniyle doğan haklarını ortadan kaldırmaz.
+
+
+9. KATKI VE GERİ BİLDİRİM
+
+   9.1. Hak Sahibinin açık yazılı daveti olmaksızın bu depoya katkı (pull
+        request, issue, yama vb.) gönderilemez.
+
+   9.2. Hak Sahibinin daveti üzerine kabul edilen her katkı, katkıda bulunan
+        tarafından Hak Sahibine münhasıran, geri alınamaz şekilde ve telif
+        hakkı dahil tüm fikri mülkiyet haklarıyla birlikte devredilmiş sayılır.
+
+   9.3. Katkıda bulunan, katkının özgün olduğunu ve üçüncü şahıs haklarını
+        ihlal etmediğini beyan ve taahhüt eder.
+
+
+10. UYGULANACAK HUKUK VE UYUŞMAZLIK ÇÖZÜMÜ
+
+   10.1. Bu lisans, Türkiye Cumhuriyeti hukukuna tabi olup Türkiye Cumhuriyeti
+         hukukuna göre yorumlanacaktır.
+
+   10.2. Bu lisanstan doğan veya bu lisansla ilişkili her türlü uyuşmazlık,
+         İstanbul Mahkemeleri ve İcra Daireleri tarafından çözümlenecektir.
+
+   10.3. Bu lisansın herhangi bir hükmünün geçersiz veya uygulanamaz bulunması,
+         diğer hükümlerin geçerliliğini etkilemez; geçersiz hüküm, tarafların
+         niyetine en yakın geçerli hükümle değiştirilmiş sayılır.
+
+
+11. BÖLÜNEBİLİRLİK
+
+   Bu lisansın herhangi bir maddesinin yetkili bir mahkeme tarafından geçersiz,
+   yasadışı veya uygulanamaz bulunması halinde, söz konusu madde yalnızca
+   geçersizliğin gerektirdiği ölçüde sınırlandırılmış veya çıkarılmış sayılır.
+   Kalan maddeler tam olarak yürürlükte kalmaya devam eder.
+
+
+12. TAM SÖZLEŞME
+
+   Bu lisans, Yazılımın kullanımına ilişkin taraflar arasındaki tam mutabakatı
+   oluşturur ve bu konudaki önceki tüm yazılı veya sözlü anlaşmaların,
+   taahhütlerin ve beyanların yerine geçer. Bu lisansta yapılacak değişiklikler
+   ancak Hak Sahibinin yazılı onayıyla geçerli olur.
+
+
+13. İLETİŞİM
+
+   Lisanslama, ticari kullanım izni veya iş birliği talepleri için:
+
+   GitHub:  https://github.com/ahmetMYildirim
+   Proje:   https://github.com/ahmetMYildirim/nexuserp-blazor-erp
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ENGLISH SUMMARY (for international readers; the Turkish text above is binding)
+
+This software is proprietary. All rights are reserved by the copyright holder,
+Ahmet Yıldırım. No license — express or implied — is granted to copy, modify,
+distribute, sublicense, sell, use commercially, create derivative works from,
+reverse-engineer, or use this software for machine learning training purposes.
+
+Viewing and reviewing the source code in this public repository is permitted
+solely for evaluation purposes. Public availability does not constitute a
+waiver of copyright or any intellectual property rights.
+
+Any unauthorized use, reproduction, or distribution may result in civil and
+criminal penalties under the Turkish Intellectual Property Law (Law No. 5846)
+and applicable international copyright treaties including the Berne Convention.
+
+For licensing inquiries, commercial use permissions, or partnership proposals,
+contact the copyright holder via the GitHub profile linked above.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

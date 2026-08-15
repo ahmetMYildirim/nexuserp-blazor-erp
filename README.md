@@ -23,6 +23,7 @@ e-Fatura (UBL-TR 1.2) ve rol bazlı kullanıcı yönetimi.
 - [REST API](#rest-api)
 - [Performans](#performans)
 - [Kapsam dışı](#kapsam-dışı)
+- [Lisans](#lisans)
 
 ---
 
@@ -467,3 +468,17 @@ plan düzenleme ekranı (planlar tohum verisiyle gelir).
 
 Amaç genişlik değil derinlikti: faturalandırma ve abonelik motoru üretim kalitesinde
 yazıldı.
+
+---
+
+## Lisans
+
+Bu yazılım **tescilli ve tüm hakları saklıdır**. Kaynak kodun herkese açık olması
+herhangi bir kullanım hakkı tanımaz.
+
+Kopyalama, değiştirme, dağıtım, ticari kullanım, alt lisanslama, tersine mühendislik
+ve yapay zeka eğitim verisi olarak kullanım **açıkça yasaklanmıştır**.
+
+Ayrıntılar için [LICENSE](LICENSE) dosyasına bakınız.
+
+© 2026 Ahmet Yıldırım. Tüm hakları saklıdır.
