@@ -1,0 +1,314 @@
+﻿@page "/fisler/yeni"
+@page "/fisler/{Id:guid}"
+@attribute [Authorize(Roles = "Admin,Muhasebe")]
+@using NexusErp.Application.Accounting
+@inject JournalService Journals
+@inject ChartOfAccountsService Accounts
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+@*
+    Manuel muhasebe fişi.
+
+    Ekranın tek işi denge: borç ve alacak toplamı canlı gösteriliyor ve fark
+    sıfır olmadan "Kesinleştir" açılmıyor. Sunucu tarafı aynı kuralı yeniden
+    uyguluyor — buradaki kontrol kolaylık, garanti değil.
+*@
+
+<PageTitle>@(_detail?.Number ?? "Yeni Fiş") · NexusERP</PageTitle>
+
+<PageHeader Kicker="MUHASEBE"
+            Title="@(_detail?.Number ?? "Yeni Muhasebe Fişi")"
+            Description="@(_readOnly
+                ? "Kesinleşmiş fiş — değiştirilemez, düzeltme ters kayıtla yapılır"
+                : "Borç ve alacak toplamı eşitlenmeden fiş kesinleştirilemez")">
+    <Actions>
+        <a class="btn btn-secondary btn-sm" href="/fisler">Listeye Dön</a>
+    </Actions>
+</PageHeader>
+
+<div class="stack">
+
+@if (_readOnly && _detail is not null)
+{
+    <Blueprint Class="bp-pad">
+        <div style="display:flex;gap:32px;flex-wrap:wrap">
+            <div>
+                <div class="mini-kicker">TARİH</div>
+                <div>@_detail.EntryDate.ToString("dd.MM.yyyy")</div>
+            </div>
+            <div>
+                <div class="mini-kicker">AÇIKLAMA</div>
+                <div>@_detail.Description</div>
+            </div>
+            <div>
+                <div class="mini-kicker">KAYNAK</div>
+                <div>
+                    @_detail.SourceText
+                    @if (_detail.SourceDocumentNumber is { Length: > 0 } doc)
+                    {
+                        <text> · @doc</text>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @if (_detail.SourceType != Domain.Enums.JournalSourceType.Manual)
+        {
+            <div class="kpi-hint" style="margin-top:10px">
+                Bu fiş bir belgeden <b>otomatik</b> üretildi ve belgeyle aynı anda
+                kaydedildi. Aynı belgeden ikinci fiş üretilmesi veri tabanı seviyesinde
+                engellidir.
+            </div>
+        }
+    </Blueprint>
+
+    <Blueprint Class="bp-table-pad" Scroll="true">
+        <table class="table" style="min-width:760px">
+            <thead>
+                <tr>
+                    <th style="width:90px">Sıra</th>
+                    <th>Hesap</th>
+                    <th>Açıklama</th>
+                    <th class="num" style="width:140px">Borç</th>
+                    <th class="num" style="width:140px">Alacak</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var line in _detail.Lines)
+                {
+                    <tr>
+                        <td>@line.LineNumber</td>
+                        <td>
+                            <b style="font-variant-numeric:tabular-nums">@line.AccountCode</b>
+                            — @line.AccountName
+                        </td>
+                        <td><span class="kpi-hint">@line.Description</span></td>
+                        <td class="num">@Money(line.Debit)</td>
+                        <td class="num">@Money(line.Credit)</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3"><b>TOPLAM</b></td>
+                    <td class="num"><b>@_detail.DebitTotal.ToString("N2")</b></td>
+                    <td class="num"><b>@_detail.CreditTotal.ToString("N2")</b></td>
+                </tr>
+            </tfoot>
+        </table>
+    </Blueprint>
+}
+else
+{
+
+    <Blueprint Class="bp-pad">
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+            <div class="field" style="width:180px">
+                <label>Fiş Tarihi</label>
+                <input class="input" type="date" @bind="_date" />
+            </div>
+            <div class="field" style="min-width:320px;flex:1">
+                <label>Açıklama</label>
+                <input class="input" @bind="_form.Description"
+                       placeholder="Kira gideri · banka masrafı · düzeltme kaydı" />
+            </div>
+        </div>
+    </Blueprint>
+
+    <Blueprint Class="bp-table-pad" Scroll="true">
+        <table class="table" style="min-width:900px">
+            <thead>
+                <tr>
+                    <th style="width:36%">Hesap</th>
+                    <th>Açıklama</th>
+                    <th class="num" style="width:150px">Borç</th>
+                    <th class="num" style="width:150px">Alacak</th>
+                    <th style="width:50px"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var line in _form.Lines)
+                {
+                    <tr>
+                        <td>
+                            <select class="input" value="@line.AccountId"
+                                    @onchange="@(e => SetAccount(line, e))">
+                                <option value="">— hesap seçin —</option>
+                                @foreach (var a in _accounts)
+                                {
+                                    <option value="@a.Id">@a.Display</option>
+                                }
+                            </select>
+                        </td>
+                        <td>
+                            <input class="input" @bind="line.Description"
+                                   placeholder="isteğe bağlı" />
+                        </td>
+                        <td>
+                            <input class="input num" type="number" step="0.01" min="0"
+                                   value="@Input(line.Debit)"
+                                   @onchange="@(e => SetDebit(line, e))" />
+                        </td>
+                        <td>
+                            <input class="input num" type="number" step="0.01" min="0"
+                                   value="@Input(line.Credit)"
+                                   @onchange="@(e => SetCredit(line, e))" />
+                        </td>
+                        <td>
+                            <button class="btn btn-ghost btn-sm"
+                                    disabled="@(_form.Lines.Count <= 2)"
+                                    @onclick="@(() => _form.Lines.Remove(line))">Sil</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="2"><b>TOPLAM</b></td>
+                    <td class="num"><b>@_form.DebitTotal.ToString("N2")</b></td>
+                    <td class="num"><b>@_form.CreditTotal.ToString("N2")</b></td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </Blueprint>
+
+    <Blueprint Class="bp-pad">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <button class="btn btn-secondary btn-sm"
+                    @onclick="@(() => _form.Lines.Add(new JournalLineForm()))">
+                + Satır Ekle
+            </button>
+
+            <div style="margin-left:auto;display:flex;align-items:center;gap:12px">
+                @* ⚠️ Boş form "DENGESİZ" göstermemeli: fark sıfır ama kullanıcı
+                   henüz bir şey girmemiştir; hata gibi okunuyor. *@
+                @if (_form.DebitTotal == 0m && _form.CreditTotal == 0m)
+                {
+                    <span class="kpi-hint">
+                        Hesapları seçip tutarları girin — borç ve alacak toplamı
+                        eşitlenince fiş kesinleştirilebilir.
+                    </span>
+                }
+                else if (_form.IsBalanced)
+                {
+                    <StatusTag Text="FİŞ DENGELİ" Variant="accent-2" />
+                }
+                else
+                {
+                    <StatusTag Text="DENGESİZ" Variant="outline" />
+                    <span class="kpi-hint">
+                        Fark @Math.Abs(_form.Difference).ToString("N2") ₺ —
+                        eşitlenmeden kesinleştirilemez
+                    </span>
+                }
+
+                <button class="btn btn-secondary" disabled="@_busy" @onclick="SaveDraftAsync">
+                    Taslak Kaydet
+                </button>
+                <button class="btn btn-primary"
+                        disabled="@(_busy || !_form.IsBalanced)" @onclick="PostAsync">
+                    Kesinleştir
+                </button>
+            </div>
+        </div>
+    </Blueprint>
+}
+
+</div>
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    private readonly JournalEntryForm _form = new();
+    private JournalEntryDetail? _detail;
+    private IReadOnlyList<AccountOption> _accounts = [];
+    private DateTime _date = DateTime.Today;
+    private bool _busy;
+    private bool _readOnly;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _accounts = await Accounts.PostableAsync();
+
+        if (Id is not null)
+        {
+            _detail = await Journals.GetAsync(Id.Value);
+            if (_detail is null) { Nav.NavigateTo("/fisler"); return; }
+
+            _readOnly = _detail.IsPosted;
+            if (!_readOnly)
+            {
+                _form.Id = _detail.Id;
+                _form.Description = _detail.Description;
+                _date = _detail.EntryDate.ToDateTime(TimeOnly.MinValue);
+                foreach (var l in _detail.Lines)
+                    _form.Lines.Add(new JournalLineForm
+                    {
+                        Debit = l.Debit, Credit = l.Credit, Description = l.Description
+                    });
+            }
+        }
+
+        // Yeni fiş iki boş satırla açılır: çift taraflı kaydın en küçük hali.
+        while (_form.Lines.Count < 2) _form.Lines.Add(new JournalLineForm());
+    }
+
+    private static string Money(decimal value) => value == 0m ? "—" : value.ToString("N2");
+
+    /// <summary>Sıfır yerine boş göster — "0" dolu alan izlenimi veriyor.</summary>
+    private static string Input(decimal value) =>
+        value == 0m ? string.Empty : value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    private static void SetAccount(JournalLineForm line, ChangeEventArgs e)
+        => line.AccountId = Guid.TryParse(e.Value?.ToString(), out var id) ? id : null;
+
+    // Bir satır TEK taraflıdır: borç girilince alacak sıfırlanır ve tersi.
+    private static void SetDebit(JournalLineForm line, ChangeEventArgs e)
+    {
+        line.Debit = Parse(e);
+        if (line.Debit > 0) line.Credit = 0m;
+    }
+
+    private static void SetCredit(JournalLineForm line, ChangeEventArgs e)
+    {
+        line.Credit = Parse(e);
+        if (line.Credit > 0) line.Debit = 0m;
+    }
+
+    private static decimal Parse(ChangeEventArgs e)
+        => decimal.TryParse(e.Value?.ToString(),
+                            System.Globalization.NumberStyles.Any,
+                            System.Globalization.CultureInfo.InvariantCulture,
+                            out var value) && value > 0 ? value : 0m;
+
+    private void SyncDate() => _form.EntryDate = DateOnly.FromDateTime(_date);
+
+    private async Task SaveDraftAsync()
+    {
+        SyncDate();
+        _busy = true;
+        Guid? saved = null;
+        var ok = await Snackbar.RunAsync(
+            async () => saved = await Journals.SaveDraftAsync(_form), "Taslak kaydedildi.");
+        _busy = false;
+
+        if (ok && saved is not null) _form.Id = saved;
+    }
+
+    private async Task PostAsync()
+    {
+        SyncDate();
+        _busy = true;
+
+        var ok = await Snackbar.RunAsync(async () =>
+        {
+            _form.Id ??= await Journals.SaveDraftAsync(_form);
+            await Journals.PostAsync(_form.Id.Value);
+        }, "Fiş kesinleştirildi.");
+
+        _busy = false;
+        if (ok) Nav.NavigateTo("/fisler");
+    }
+}

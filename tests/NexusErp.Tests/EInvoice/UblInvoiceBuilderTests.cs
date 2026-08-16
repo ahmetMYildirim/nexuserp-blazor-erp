@@ -1,5 +1,6 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Xml.Linq;
+using NexusErp.Application.Accounting;
 using NexusErp.Application.Abstractions;
 using NexusErp.Application.Invoicing;
 using NexusErp.Domain.Common;
@@ -26,10 +27,13 @@ public sealed class UblInvoiceBuilderTests(DatabaseFixture fixture)
 
     private Ctx Setup(Guid tenant)
     {
+        fixture.SeedChartOfAccounts(tenant);
+
         var db = fixture.CreateContext(tenant);
         var generator = new InvoiceNumberGenerator(db, fixture.CreateTenantContext(tenant));
         var invoices = new InvoiceService(
-            fixture.CreateFactory(tenant), generator, TimeProvider.System);
+            fixture.CreateFactory(tenant), generator, TimeProvider.System,
+            new AutoPostingService(generator));
 
         db.Tenants.Add(new Tenant
         {

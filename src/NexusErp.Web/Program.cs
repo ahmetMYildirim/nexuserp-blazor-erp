@@ -1,6 +1,7 @@
 using System.Globalization;
 using MudBlazor.Services;
 using NexusErp.Application;
+using NexusErp.Application.Accounting;
 using NexusErp.Application.Messaging;
 using NexusErp.Infrastructure;
 using NexusErp.Infrastructure.BackgroundJobs;
@@ -59,6 +60,11 @@ using (var scope = app.Services.CreateScope())
 
     // Demo fatura/tahsilat verisi — gerçek servisler üzerinden üretilir
     await scope.ServiceProvider.GetRequiredService<DemoDataSeeder>().SeedAsync();
+
+    // ⚠️ Otomatik muhasebe fişi bu sürümle geldi; ondan ÖNCE kesilmiş faturaların
+    // ve tahsilatların fişi yok. Geri doldurulmazsa mizan ve bilanço yalnızca yeni
+    // hareketleri gösterir ve kullanıcı raporları "bozuk" sanır. Idempotent.
+    await scope.ServiceProvider.GetRequiredService<AccountingBackfillService>().RunAsync();
 }
 
 if (!app.Environment.IsDevelopment())

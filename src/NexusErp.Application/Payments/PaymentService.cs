@@ -3,13 +3,17 @@ using Microsoft.EntityFrameworkCore;
 using NexusErp.Application.Abstractions;
 using NexusErp.Application.Parties;
 using NexusErp.Application.Events;
+using NexusErp.Application.Accounting;
 using NexusErp.Domain.Common;
 using NexusErp.Domain.Entities;
 using NexusErp.Domain.Enums;
 
 namespace NexusErp.Application.Payments;
 
-public sealed class PaymentService(IAppDbContextFactory factory, IInvoiceNumberGenerator numbers)
+public sealed class PaymentService(
+    IAppDbContextFactory factory,
+    IInvoiceNumberGenerator numbers,
+    AutoPostingService posting)
 {
     private static readonly CultureInfo Tr = CultureInfo.GetCultureInfo("tr-TR");
 
@@ -99,8 +103,10 @@ public sealed class PaymentService(IAppDbContextFactory factory, IInvoiceNumberG
             payment.Id, number, party.Id,
             payment.Amount, payment.Currency, payment.PaymentDate), DateTimeOffset.UtcNow);
 
+        await posting.BuildForPaymentAsync(db, payment, party.Title, ct);
+
         // Detach yamasına gerek kalmadı: context bu metoda ait, hata olursa onunla kapanıyor.
-        // Tahsilat + eşleştirme + cari hareket + outbox = TEK transaction.
+        // Tahsilat + eşleştirme + cari hareket + muhasebe fişi + outbox = TEK transaction.
         await db.SaveChangesAsync(ct);
 
         return payment.Id;
@@ -181,6 +187,7 @@ public sealed class PaymentService(IAppDbContextFactory factory, IInvoiceNumberG
         await using var db = factory.Create();
         var payment = await db.Payments
             .Include(p => p.Allocations).ThenInclude(a => a.Invoice)
+            .Include(p => p.Party)
             .FirstOrDefaultAsync(p => p.Id == paymentId, ct)
             ?? throw new DomainException("Tahsilat bulunamadı.");
 
@@ -208,6 +215,10 @@ public sealed class PaymentService(IAppDbContextFactory factory, IInvoiceNumberG
             PaymentId = payment.Id,
             DocumentNumber = payment.Number
         });
+
+        // Muhasebede kayıt silinmez, ters kayıtla düzeltilir: orijinal tahsilat
+        // fişi yerinde kalır, iptal ayrı bir fiş olarak yazılır.
+        await posting.BuildForPaymentReversalAsync(db, payment, payment.Party.Title, ct);
 
         await db.SaveChangesAsync(ct);
     }

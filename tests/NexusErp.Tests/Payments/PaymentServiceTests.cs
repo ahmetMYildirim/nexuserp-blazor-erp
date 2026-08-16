@@ -1,4 +1,5 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using NexusErp.Application.Accounting;
 using NexusErp.Application.Invoicing;
 using NexusErp.Application.Payments;
 using NexusErp.Domain.Common;
@@ -26,8 +27,10 @@ public sealed class PaymentServiceTests(DatabaseFixture fixture)
         var db = fixture.CreateContext(tenant);
         var factory = fixture.CreateFactory(tenant);
         var generator = new InvoiceNumberGenerator(db, fixture.CreateTenantContext(tenant));
-        var invoices = new InvoiceService(factory, generator, TimeProvider.System);
-        var payments = new PaymentService(factory, generator);
+        fixture.SeedChartOfAccounts(tenant);
+        var posting = new AutoPostingService(generator);
+        var invoices = new InvoiceService(factory, generator, TimeProvider.System, posting);
+        var payments = new PaymentService(factory, generator, posting);
         var balance = new PartyBalanceService(factory);
 
         var party = new Party

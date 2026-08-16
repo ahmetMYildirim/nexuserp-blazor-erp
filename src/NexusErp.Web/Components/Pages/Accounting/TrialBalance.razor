@@ -1,0 +1,143 @@
+﻿@page "/mizan"
+@attribute [Authorize(Roles = "Admin,Muhasebe")]
+@using NexusErp.Application.Accounting
+@using NexusErp.Domain.Enums
+@inject AccountingReportService Reports
+
+@*
+    Mizan.
+
+    ⚠️ Önceki sürümde MudDataGrid + FixedHeader + sabit yükseklik kullanılıyordu;
+    az satırda ekranın yarısı boş gri alan olarak kalıyordu. Uygulamanın geri
+    kalanı gibi düz .table kullanıyoruz: tablo içeriği kadar yer kaplıyor.
+*@
+
+<PageTitle>Mizan · NexusERP</PageTitle>
+
+<PageHeader Kicker="MUHASEBE" Title="Mizan"
+            Description="Her hesabın dönem içi borç / alacak toplamı ve bakiyesi">
+    <Actions>
+        <div class="field" style="width:150px">
+            <label>Başlangıç</label>
+            <input class="input" type="date" @bind="_from" />
+        </div>
+        <div class="field" style="width:150px">
+            <label>Bitiş</label>
+            <input class="input" type="date" @bind="_to" />
+        </div>
+        <button class="btn btn-primary btn-sm" @onclick="LoadAsync">Getir</button>
+    </Actions>
+</PageHeader>
+
+<div class="stack">
+
+
+    @if (_report is null)
+    {
+        <Blueprint Class="bp-pad"><div class="text-muted">Yükleniyor…</div></Blueprint>
+    }
+    else if (_report.Rows.Count == 0)
+    {
+        <Blueprint Class="bp-pad">
+            <div class="text-muted">
+                Bu tarih aralığında <b>kesinleşmiş</b> fiş yok.
+                Taslak fişler mizana girmez — çünkü taslak dengesiz olabilir.
+            </div>
+        </Blueprint>
+    }
+    else
+    {
+        <Blueprint Class="bp-pad">
+            <div class="grid-mini">
+                <MiniStat Label="Hesap sayısı" Value="@_report.Rows.Count.ToString()"
+                          Hint="hareket gören" />
+                <MiniStat Label="Borç toplamı" Value="@Money(_report.TotalDebit)" />
+                <MiniStat Label="Alacak toplamı" Value="@Money(_report.TotalCredit)" />
+                <MiniStat Label="Fark"
+                          Value="@Money(Math.Abs(_report.TotalDebit - _report.TotalCredit))"
+                          Hint="sıfır olmalı" />
+            </div>
+
+            <div style="margin-top:12px;display:flex;align-items:center;gap:12px">
+                <StatusTag Text="@(_report.IsBalanced ? "MİZAN DENK" : "DENK DEĞİL")"
+                           Variant="@(_report.IsBalanced ? "accent-2" : "outline")" />
+                <span class="kpi-hint">
+                    @if (_report.IsBalanced)
+                    {
+                        <text>
+                            Borç ve alacak toplamı birbirine eşit — kayıtlar tutarlı.
+                        </text>
+                    }
+                    else
+                    {
+                        <text>
+                            <b>Dikkat:</b> toplamlar eşit değil. Tek taraflı bir kayıt
+                            oluşmuş olabilir; fiş listesini kontrol edin.
+                        </text>
+                    }
+                </span>
+            </div>
+        </Blueprint>
+
+        @* ⚠️ Tablo genişliği SINIRLI (max-width). Geniş ekranda %100'e yayılınca
+           tüm boşluk "Hesap Adı" sütununa gidiyor ve satırın solundaki ad ile
+           sağdaki rakam arasında kocaman bir boşluk kalıyordu; göz satırı takip
+           edemiyordu. "Tür" sütunu da koddan hemen sonraya alındı ki ad ile
+           rakamlar yan yana kalsın. *@
+        <Blueprint Class="bp-table-pad" Scroll="true">
+            <table class="table" style="min-width:820px">
+                <thead>
+                    <tr>
+                        <th style="width:80px">Kod</th>
+                        <th style="width:130px">Tür</th>
+                        <th>Hesap Adı</th>
+                        <th class="num" style="width:120px">Borç</th>
+                        <th class="num" style="width:120px">Alacak</th>
+                        <th class="num" style="width:130px">Borç Bakiye</th>
+                        <th class="num" style="width:130px">Alacak Bakiye</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in _report.Rows)
+                    {
+                        <tr>
+                            <td style="font-variant-numeric:tabular-nums">@row.Code</td>
+                            <td><span class="kpi-hint">@row.Type.Text()</span></td>
+                            <td>@row.Name</td>
+                            <td class="num">@Money(row.Debit)</td>
+                            <td class="num">@Money(row.Credit)</td>
+                            <td class="num">@Money(row.DebitBalance)</td>
+                            <td class="num">@Money(row.CreditBalance)</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3"><b>TOPLAM</b></td>
+                        <td class="num"><b>@Money(_report.TotalDebit)</b></td>
+                        <td class="num"><b>@Money(_report.TotalCredit)</b></td>
+                        <td class="num"><b>@Money(_report.TotalDebitBalance)</b></td>
+                        <td class="num"><b>@Money(_report.TotalCreditBalance)</b></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </Blueprint>
+    }
+</div>
+
+@code {
+    private Application.Accounting.TrialBalance? _report;
+    private DateTime _from = new(DateTime.Today.Year, 1, 1);
+    private DateTime _to = new(DateTime.Today.Year, 12, 31);
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _report = null;
+        _report = await Reports.GetTrialBalanceAsync(
+            DateOnly.FromDateTime(_from), DateOnly.FromDateTime(_to));
+    }
+
+    private static string Money(decimal value) => value == 0m ? "—" : value.ToString("N2");
+}

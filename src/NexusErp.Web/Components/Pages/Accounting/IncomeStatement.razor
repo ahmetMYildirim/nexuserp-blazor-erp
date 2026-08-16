@@ -1,0 +1,181 @@
+﻿@page "/gelir-tablosu"
+@attribute [Authorize(Roles = "Admin,Muhasebe")]
+@using NexusErp.Application.Accounting
+@inject AccountingReportService Reports
+
+<PageTitle>Gelir Tablosu · NexusERP</PageTitle>
+
+<PageHeader Kicker="MUHASEBE" Title="Gelir Tablosu"
+            Description="Dönem içinde ne kazandınız, ne harcadınız, kâr ettiniz mi">
+    <Actions>
+        <div class="field" style="width:150px">
+            <label>Başlangıç</label>
+            <input class="input" type="date" @bind="_from" />
+        </div>
+        <div class="field" style="width:150px">
+            <label>Bitiş</label>
+            <input class="input" type="date" @bind="_to" />
+        </div>
+        <button class="btn btn-primary btn-sm" @onclick="LoadAsync">Getir</button>
+    </Actions>
+</PageHeader>
+
+<div class="stack">
+
+
+    @if (_report is null)
+    {
+        <Blueprint Class="bp-pad"><div class="text-muted">Yükleniyor…</div></Blueprint>
+    }
+    else
+    {
+        <Blueprint Class="bp-pad">
+            <div class="grid-mini">
+                <MiniStat Label="Toplam gelir" Value="@Money(_report.TotalRevenue)"
+                          Hint="kesilen faturalar" />
+                <MiniStat Label="Toplam gider" Value="@Money(_report.TotalExpense)"
+                          Hint="dönem giderleri" />
+                <MiniStat Label="@(_report.IsProfit ? "Dönem net kârı" : "Dönem net zararı")"
+                          Value="@Money(Math.Abs(_report.NetResult))"
+                          Hint="gelir − gider" />
+                <MiniStat Label="Kâr marjı" Value="@MarginText"
+                          Hint="kârın ciroya oranı" />
+            </div>
+
+            <div style="margin-top:12px;display:flex;align-items:center;gap:12px">
+                <StatusTag Text="@(_report.IsProfit ? "KÂRDA" : "ZARARDA")"
+                           Variant="@(_report.IsProfit ? "accent-2" : "outline")" />
+                <span class="kpi-hint">
+                    Bu tutar bilançodaki <b>dönem net kârı</b> satırıyla birebir aynı
+                    olmalıdır; farklıysa bir hesap yanlış türde tanımlanmış demektir.
+                </span>
+            </div>
+        </Blueprint>
+
+        <div style="display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(380px,1fr))">
+            <Blueprint Class="bp-pad">
+                <h5 style="margin:0 0 4px">GELİRLER</h5>
+                <div class="kpi-hint" style="margin-bottom:10px">
+                    Kestiğiniz faturaların KDV hariç tutarı
+                </div>
+
+                @if (_report.Revenues.Lines.Count == 0)
+                {
+                    <div class="text-muted">Bu dönemde gelir kaydı yok.</div>
+                }
+                else
+                {
+                    <table class="table">
+                        <tbody>
+                            @foreach (var line in _report.Revenues.Lines)
+                            {
+                                <tr>
+                                    <td style="width:80px;font-variant-numeric:tabular-nums">
+                                        @line.Code
+                                    </td>
+                                    <td>@line.Name</td>
+                                    <td class="num">@line.Amount.ToString("N2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="2"><b>TOPLAM</b></td>
+                                <td class="num"><b>@Money(_report.TotalRevenue)</b></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                }
+            </Blueprint>
+
+            <Blueprint Class="bp-pad">
+                <h5 style="margin:0 0 4px">GİDERLER</h5>
+                <div class="kpi-hint" style="margin-bottom:10px">
+                    Kira, maaş, hizmet alımı gibi dönem harcamaları
+                </div>
+
+                @if (_report.Expenses.Lines.Count == 0)
+                {
+                    <div class="text-muted">
+                        Bu dönemde gider kaydı yok. Gider girmek için
+                        <b>Muhasebe → Yeni Fiş</b> ekranından
+                        <i>770 Genel Yönetim Giderleri</i> hesabına borç,
+                        <i>100 Kasa</i> veya <i>102 Bankalar</i> hesabına alacak yazın.
+                    </div>
+                }
+                else
+                {
+                    <table class="table">
+                        <tbody>
+                            @foreach (var line in _report.Expenses.Lines)
+                            {
+                                <tr>
+                                    <td style="width:80px;font-variant-numeric:tabular-nums">
+                                        @line.Code
+                                    </td>
+                                    <td>@line.Name</td>
+                                    <td class="num">@line.Amount.ToString("N2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="2"><b>TOPLAM</b></td>
+                                <td class="num"><b>@Money(_report.TotalExpense)</b></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                }
+            </Blueprint>
+        </div>
+
+        <Blueprint Class="bp-pad">
+            <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+                <div>
+                    <div class="mini-kicker">
+                        DÖNEM NET @(_report.IsProfit ? "KÂRI" : "ZARARI")
+                    </div>
+                    <div style="font-size:26px;font-weight:600;margin-top:2px">
+                        @Money(_report.NetResult)
+                    </div>
+                </div>
+                <div class="kpi-hint" style="max-width:520px">
+                    @Money(_report.TotalRevenue) gelir −
+                    @Money(_report.TotalExpense) gider =
+                    <b>@Money(_report.NetResult)</b>
+                </div>
+            </div>
+        </Blueprint>
+    }
+</div>
+
+@code {
+    private Application.Accounting.IncomeStatement? _report;
+    private IReadOnlyList<MonthlyResult> _monthly = [];
+    private DateTime _from = new(DateTime.Today.Year, 1, 1);
+    private DateTime _to = new(DateTime.Today.Year, 12, 31);
+
+    private static readonly System.Globalization.CultureInfo Inv =
+        System.Globalization.CultureInfo.InvariantCulture;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _report = null;
+        _report = await Reports.GetIncomeStatementAsync(
+            DateOnly.FromDateTime(_from), DateOnly.FromDateTime(_to));
+        _monthly = await Reports.GetMonthlyResultsAsync(_from.Year);
+    }
+
+    private string MarginText
+    {
+        get
+        {
+            if (_report is null || _report.TotalRevenue == 0m) return "—";
+            return (_report.NetResult / _report.TotalRevenue).ToString("P1");
+        }
+    }
+
+    private static string Money(decimal value) => value.ToString("N2") + " ₺";
+}

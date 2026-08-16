@@ -114,7 +114,11 @@
                 }
             </CellTemplate>
         </TemplateColumn>
-        <TemplateColumn Title="" Sortable="false" CellClass="d-flex justify-end">
+        @* ⚠️ CellClass'ta d-flex KULLANILMAZ: display:flex hücreyi table-cell
+           olmaktan çıkarıyor, hücre içeriği kadar daralıyor ve ikonlar bir
+           önceki sütundaki durum rozetinin ÜSTÜNE taşıyor. Sağa yaslama
+           text-right ile yapılır. *@
+        <TemplateColumn Title="" Sortable="false" CellClass="text-right">
             <CellTemplate>
                 @if (context.Item.Number is not null)
                 {

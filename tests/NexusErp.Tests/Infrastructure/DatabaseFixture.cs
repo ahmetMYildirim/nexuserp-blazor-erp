@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NexusErp.Application.Abstractions;
 using NexusErp.Infrastructure.Persistence;
+using NexusErp.Infrastructure.Persistence.Seed;
 using Testcontainers.PostgreSql;
 
 namespace NexusErp.Tests.Infrastructure;
@@ -26,14 +27,18 @@ public sealed class DatabaseFixture : IAsyncLifetime
     {
         await _container.StartAsync();
 
-        // Şemayı bir kez kur; testler farklı tenant'larla aynı şemayı paylaşır
-        await using var db = CreateContext(Guid.CreateVersion7());
+        // Şemayı bir kez kur; testler farklı tenant'larla aynı şemayı paylaşır.
+        // ⚠️ Provizyonsuz context: hesap planı tohumu tablolar HENÜZ YOKKEN
+        // çalışamaz ("relation accounts does not exist").
+        await using var db = NewContext(Guid.CreateVersion7());
         await db.Database.MigrateAsync();
     }
 
     public async Task DisposeAsync() => await _container.DisposeAsync();
 
-    public AppDbContext CreateContext(Guid tenantId)
+    public AppDbContext CreateContext(Guid tenantId) => NewContext(tenantId);
+
+    private AppDbContext NewContext(Guid tenantId)
     {
         var builder = new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql(ConnectionString)
@@ -44,10 +49,29 @@ public sealed class DatabaseFixture : IAsyncLifetime
                           Microsoft.Extensions.Logging.LogLevel.Information)
                    .EnableSensitiveDataLogging();
 
-        var options = builder.Options;
-
-        return new AppDbContext(options, new FakeTenant(tenantId), new FakeUser());
+        return new AppDbContext(builder.Options, new FakeTenant(tenantId), new FakeUser());
     }
+
+    /// <summary>
+    /// Tenant'ın hesap planını kurar. Fatura kesen / tahsilat işleyen testler
+    /// bunu ÇAĞIRMAK ZORUNDA: o akışlar artık otomatik muhasebe fişi üretiyor
+    /// ve fiş, hesap planı yoksa üretilemiyor (bilerek öyle — sessizce fiş
+    /// atlamak defterin eksik kalması demektir ve kimse fark etmez).
+    ///
+    /// ⚠️ CreateContext içinden OTOMATİK çağrılmıyor. Denenmişti: 92 hesaplık
+    /// tohum her tenant'a 92 denetim kaydı ekliyor ve denetim testlerinin
+    /// saydığı satırları bozuyor. Gizli global yan etki yerine ihtiyacı olan
+    /// testin açıkça istemesi tercih edildi.
+    /// </summary>
+    public async Task SeedChartOfAccountsAsync(Guid tenantId)
+    {
+        await using var db = NewContext(tenantId);
+        await ChartOfAccountsSeeder.EnsureAsync(db, tenantId);
+    }
+
+    /// <summary>Senkron kurulum metotları için.</summary>
+    public void SeedChartOfAccounts(Guid tenantId)
+        => SeedChartOfAccountsAsync(tenantId).GetAwaiter().GetResult();
 
     /// <summary>InvoiceNumberGenerator gibi ITenantContext isteyen servisler için.</summary>
     public ITenantContext CreateTenantContext(Guid tenantId) => new FakeTenant(tenantId);

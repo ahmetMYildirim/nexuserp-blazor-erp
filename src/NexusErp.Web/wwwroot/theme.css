@@ -59,6 +59,43 @@
 /* ---------- Koyu tema ---------- */
 /* Rampa TERS ÇEVRİLİR: 700–900 vurgu taşıdığı için koyu zeminde açık olmalı.
    Aksi hâlde en büyük rakamlar (vadesi geçen tutar, 90+ kolonu) zemine karışır. */
+/* ⚠️ color-scheme olmadan tarayıcının KENDİ çizdiği kontroller (select açılır
+   listesi, <input type="date"> takvim simgesi ve paneli, kaydırma çubukları)
+   koyu temada beyaz kalıyor. CSS değişkenleri bunlara ulaşmıyor; tek çözüm bu. */
+:root { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+
+/* ⚠️ Rozetlere min-width / margin VERİLMEZ: durum rozeti ile işlem ikonları
+   AYNI hücrede duruyor, rozet genişleyince ikonların üstüne biniyor.
+   Denendi ve geri alındı. Hizayı düzeltmenin doğru yolu rozeti ve ikonları
+   ayrı sütunlara almak (InvoiceList.razor), CSS'le üstünden geçmek değil.
+   Yapılan tek şey ikonlara nefes payı vermek: */
+.mud-table-root .mud-table-cell .mud-icon-button { margin: 0 4px; }
+
+/* ⚠️ MudDataGrid tablosu içeriği kadar genişliyor; kapsayıcıdan dar kalınca
+   satır alt çizgisi tablonun bittiği yerde KESİLİYOR ve satırlar ortadan
+   bölünmüş görünüyor. Tabloyu kapsayıcıya yaymak çizgiyi uçtan uca taşır. */
+.mud-table-root { width: 100%; }
+.mud-table-container { width: 100%; overflow-x: auto; }
+
+/* Son sütun (işlem ikonları) sağa yaslanıp kalan boşluğu kapatsın —
+   aksi halde ikonlar ile satır sonu arasında çizgisiz boşluk kalıyor. */
+.mud-table-root .mud-table-cell:last-child,
+.mud-table-root .mud-table-head .mud-table-cell:last-child { width: 1%; white-space: nowrap; }
+
+/* ⚠️ MudBlazor'ın DOLU rozetleri kendi semantik paletinden geliyor (Success =
+   parlak yeşil, Error = parlak kırmızı) ve koyu temada tasarım diliyle
+   çakışıyor — sayfanın geri kalanı soluk mavi tonlarken rozet floresan
+   duruyor. Tonlar kendi accent paletimize çekiliyor. */
+:root[data-theme="dark"] .mud-chip.mud-chip-filled {
+  background: color-mix(in srgb, var(--color-accent) 32%, transparent) !important;
+  color: var(--color-text) !important;
+}
+:root[data-theme="dark"] .mud-chip.mud-chip-filled.mud-chip-color-error,
+:root[data-theme="dark"] .mud-chip.mud-chip-filled.mud-chip-color-warning {
+  background: color-mix(in srgb, #c96a4a 34%, transparent) !important;
+}
+
 :root[data-theme="dark"] {
   --color-bg:      #1b1e21;
   --color-surface: #25292d;

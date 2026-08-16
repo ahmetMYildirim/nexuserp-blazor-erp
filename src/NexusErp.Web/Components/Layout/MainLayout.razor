@@ -1,5 +1,6 @@
-@inherits LayoutComponentBase
+﻿@inherits LayoutComponentBase
 @inject IJSRuntime JS
+@inject NavigationManager Nav
 
 @* MudBlazor'ın 4 provider'ı — biri eksikse dialog/snackbar/popover çalışmaz *@
 <MudThemeProvider Theme="@_theme" @bind-IsDarkMode="_isDark" />
@@ -13,13 +14,41 @@
 *@
 <div style="min-height:100vh;background:var(--color-bg)">
 
-    <header class="nx-topbar">
-        <span class="nx-topbar-brand">NEXUSERP</span>
+    @* z-index: arama listesi modül menüsünün üstünde kalsın. Liste bu barın
+       ÇOCUĞU olduğu için barın kendi stacking context'i menüden yüksek olmalı;
+       yalnızca listeye z-index vermek yetmiyor. *@
+    <header class="nx-topbar" style="z-index:500">
+        <a class="nx-topbar-brand" href="/" style="color:inherit;text-decoration:none"
+           title="Genel Bakış">NEXUSERP</a>
         <span class="nx-topbar-sep"></span>
         <span class="nx-topbar-tenant">@TenantName</span>
 
-        <input class="nx-search" type="search" placeholder="Ara…  Ctrl+K"
-               aria-label="Global arama" />
+        @* Arama: sayfa/modül bulucu. Ctrl+K odaklar, ok tuşları gezinir,
+           Enter açar. Veri araması değil — cari/fatura araması ilgili
+           listelerin kendi filtresinde. *@
+        @* Sayfa bulucu: yaz, Enter'a bas, en iyi eşleşen sayfa açılır.
+           Açılır liste denendi ve kaldırıldı — Razor markup'ında dinamik liste
+           + tuple lambda + iç içe tırnak kombinasyonu derleyiciyi ilgisiz
+           hatalara sürüklüyordu; kazanç riske değmedi. *@
+        <span style="position:relative;display:flex">
+            <input class="nx-search" type="search" placeholder="Ara…  Ctrl+K"
+                   aria-label="Sayfa ara" id="nx-global-search"
+                   title="Sayfa adı yazıp Enter'a basın (Ctrl+K)"
+                   value="@_query" @oninput="OnSearchInput" @onkeydown="OnSearchKeyDown" />
+
+            @if (Matches.Count > 0)
+            {
+                <div class="blueprint" style="@DropdownStyle">
+                    @foreach (var item in Matches)
+                    {
+                        <a href="@item.Href" class="nx-dropdown-item">
+                            <strong>@item.Title</strong>
+                            <span class="text-muted">@item.Group</span>
+                        </a>
+                    }
+                </div>
+            }
+        </span>
 
         <span style="margin-left:auto;display:flex;align-items:center;gap:10px">
             <span class="nx-topbar-tenant">@PeriodLabel</span>
@@ -83,9 +112,104 @@
     private bool _isDark;
     private bool _themeLoaded;
 
+    // ---------------- Arama ----------------
+
+    private sealed record SearchItem(string Title, string Href, string Group);
+
+    private static readonly SearchItem[] Pages =
+    [
+        new("Genel Bakış", "/", "Ana ekran"),
+        new("Cari Kartlar", "/cariler", "Cari"),
+        new("Cari Ekstre", "/cari-ekstre", "Cari"),
+        new("Faturalar", "/faturalar", "Satış"),
+        new("Yeni Fatura", "/faturalar/yeni", "Satış"),
+        new("Alış Faturası Gir", "/faturalar/yeni?tip=alis", "Satış"),
+        new("Ürün / Hizmet", "/urunler", "Satış"),
+        new("Tahsilatlar", "/tahsilatlar", "Finans"),
+        new("Yaşlandırma Raporu", "/yaslandirma", "Finans"),
+        new("Planlar", "/planlar", "Abonelik"),
+        new("Abonelikler", "/abonelikler", "Abonelik"),
+        new("Hesap Planı", "/hesap-plani", "Muhasebe"),
+        new("Muhasebe Fişleri", "/fisler", "Muhasebe"),
+        new("Yeni Fiş", "/fisler/yeni", "Muhasebe"),
+        new("Mizan", "/mizan", "Muhasebe"),
+        new("Bilanço", "/bilanco", "Muhasebe"),
+        new("Gelir Tablosu", "/gelir-tablosu", "Muhasebe"),
+        new("Denetim Kaydı", "/denetim", "Sistem"),
+        new("Kullanıcılar", "/kullanicilar", "Sistem"),
+        new("Sistem Testi", "/sistem-testi", "Sistem")
+    ];
+
+    private string _query = string.Empty;
+
+    // ⚠️ Stil MARKUP'A yazılmaz: Razor ifadesi içindeki çift tırnaklar
+    // attribute'ü erken kapatıp derleyiciyi ilgisiz hatalara sürüklüyor.
+    // ⚠️ Üst bar KOYU zeminli; açılır liste oradan renk devraldığı için metin
+    // okunmuyordu. Renkler açıkça sayfa gövdesinin tokenlarına sabitleniyor.
+    // z-index modül menüsünün üstünde olmalı, yoksa menü listeyi kesiyor.
+    private const string DropdownStyle =
+        "position:absolute;top:34px;left:0;width:320px;z-index:9999;padding:4px;" +
+        "background:var(--color-surface);color:var(--color-text);" +
+        "box-shadow:0 8px 24px rgba(0,0,0,.28)";
+
+    /// <summary>
+    /// ⚠️ Türkçe karşılaştırma: "İ" ve "ı" harfleri InvariantCulture'da yanlış
+    /// eşleşiyor ("İSTANBUL".Contains("ist") false döner). tr-TR ile ToUpper.
+    /// </summary>
+    private List<SearchItem> Matches
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(_query)) return [];
+            var tr = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
+            var q = _query.Trim().ToUpper(tr);
+            return [.. Pages
+                .Where(p => p.Title.ToUpper(tr).Contains(q) || p.Group.ToUpper(tr).Contains(q))
+                .Take(7)];
+        }
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        _query = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private void OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") { _query = string.Empty; return; }
+        if (e.Key != "Enter") return;
+
+        var items = Matches;
+        if (items.Count > 0) Go(items[0].Href);
+    }
+
+    private const string HotkeyScript =
+        "if(!window.__nxSearchHotkey){window.__nxSearchHotkey=true;" +
+        "document.addEventListener('keydown',function(e){" +
+        "if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();" +
+        "var el=document.getElementById('nx-global-search');if(el)el.focus();}});}";
+
+    private void Go(string href)
+    {
+        _query = string.Empty;
+        Nav.NavigateTo(href);
+    }
+
     private const string TenantName = "Nexus Demo Yazılım A.Ş.";
 
     private static string PeriodLabel => $"DÖNEM {DateTime.Today.Year}";
+
+    /// <summary>
+    /// Sayfa değişince arama kutusu temizlenir. Aksi halde sonuca tıklayıp
+    /// gidildikten sonra metin kutuda kalıyor ve açılır liste açık görünüyor.
+    /// </summary>
+    protected override void OnInitialized() =>
+        Nav.LocationChanged += (_, _) =>
+        {
+            if (_query.Length == 0) return;
+            _query = string.Empty;
+            InvokeAsync(StateHasChanged);
+        };
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -96,6 +220,12 @@
         _themeLoaded = true;
         var mode = await JS.InvokeAsync<string>("nexusTheme.get");
         _isDark = mode == "dark";
+
+        // Ctrl+K arama kutusunu odaklasın.
+        // ⚠️ Raw string literal (üç tırnak) KULLANILMAZ: Razor bunu @code
+        // içinde ayrıştıramıyor ve dosyanın tamamı derlenemez hale geliyor.
+        await JS.InvokeVoidAsync("eval", HotkeyScript);
+
         StateHasChanged();
     }
 

@@ -1,4 +1,5 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using NexusErp.Application.Accounting;
 using NexusErp.Application.Abstractions;
 using NexusErp.Application.Events;
 using NexusErp.Application.Invoicing;
@@ -50,8 +51,11 @@ public sealed class OutboxTests(DatabaseFixture fixture)
         var generator = new InvoiceNumberGenerator(
             fixture.CreateContext(tenant), fixture.CreateTenantContext(tenant));
 
+        fixture.SeedChartOfAccounts(tenant);
+
         return (party.Id, new InvoiceService(
-            fixture.CreateFactory(tenant), generator, TimeProvider.System));
+            fixture.CreateFactory(tenant), generator, TimeProvider.System,
+            new AutoPostingService(generator)));
     }
 
     private static InvoiceForm Form(Guid partyId, decimal amount) => new()
@@ -119,8 +123,11 @@ public sealed class OutboxTests(DatabaseFixture fixture)
 
         var generator = new InvoiceNumberGenerator(
             fixture.CreateContext(tenant), fixture.CreateTenantContext(tenant));
+        fixture.SeedChartOfAccounts(tenant);
+
         var service = new InvoiceService(
-            fixture.CreateFactory(tenant), generator, TimeProvider.System);
+            fixture.CreateFactory(tenant), generator, TimeProvider.System,
+            new AutoPostingService(generator));
 
         var id = await service.SaveDraftAsync(Form(party.Id, 100m));
         await service.IssueAsync(id);

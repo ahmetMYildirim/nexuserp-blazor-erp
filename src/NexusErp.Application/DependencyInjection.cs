@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using NexusErp.Application.Accounting;
 using NexusErp.Application.Auditing;
 using NexusErp.Application.Dashboard;
 using NexusErp.Application.Messaging;
@@ -32,6 +33,15 @@ public static class DependencyInjection
         services.AddScoped<DashboardService>();
         services.AddScoped<AuditService>();
         services.AddScoped<OutboxHealthService>();
+
+        // Muhasebe. AutoPostingService çağıranın context'ini paylaşır; fatura ve
+        // tahsilat servisleri buna bağımlı olduğu için onlardan ÖNCE kayıtlı olması
+        // gerekmez (DI sırası önemsiz) ama aynı ömürde olmalı.
+        services.AddScoped<ChartOfAccountsService>();
+        services.AddScoped<JournalService>();
+        services.AddScoped<AutoPostingService>();
+        services.AddScoped<AccountingReportService>();
+        services.AddScoped<AccountingBackfillService>();
         services.AddScoped<DemoDataSeeder>();
 
         // .NET 8 zaman soyutlaması. Testte FakeTimeProvider ile zamanı ileri sarabiliyoruz —

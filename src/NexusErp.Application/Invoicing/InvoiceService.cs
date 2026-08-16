@@ -6,6 +6,7 @@ using NexusErp.Domain.Common;
 using NexusErp.Domain.Entities;
 using NexusErp.Domain.Enums;
 using NexusErp.Application.Events;
+using NexusErp.Application.Accounting;
 using NexusErp.Domain.Invoicing;
 
 namespace NexusErp.Application.Invoicing;
@@ -13,7 +14,8 @@ namespace NexusErp.Application.Invoicing;
 public sealed class InvoiceService(
     IAppDbContextFactory factory,
     IInvoiceNumberGenerator numbers,
-    TimeProvider clock)
+    TimeProvider clock,
+    AutoPostingService posting)
 {
     private static readonly CultureInfo Tr = CultureInfo.GetCultureInfo("tr-TR");
 
@@ -301,7 +303,13 @@ public sealed class InvoiceService(
             }
         }
 
-        // Fatura + cari hareket + outbox = TEK transaction.
+        // ⚠️ Muhasebe fişi AYNI context, AYNI SaveChanges. Outbox üzerinden
+        // asenkron üretilseydi fatura yazılıp fiş henüz yazılmamış bir aralık
+        // oluşurdu; o aralıkta alınan mizan eksik çıkardı. Tekrar üretimi
+        // (tenant, source_type, source_id) unique index'i engelliyor.
+        await posting.BuildForInvoiceAsync(db, invoice, ct);
+
+        // Fatura + cari hareket + muhasebe fişi + outbox = TEK transaction.
         // Mesajın kaybolamamasının tek sebebi bu satır.
         await db.SaveChangesAsync(ct);
         return number;

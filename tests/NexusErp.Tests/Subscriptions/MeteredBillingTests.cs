@@ -1,5 +1,6 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using NexusErp.Application.Accounting;
 using NexusErp.Application.Invoicing;
 using NexusErp.Application.Subscriptions;
 using NexusErp.Domain.Common;
@@ -83,7 +84,9 @@ public sealed class MeteredBillingTests(DatabaseFixture fixture)
         var factory = fixture.CreateFactory(tenant);
         var generator = new InvoiceNumberGenerator(
             fixture.CreateContext(tenant), fixture.CreateTenantContext(tenant));
-        var invoices = new InvoiceService(factory, generator, TimeProvider.System);
+        fixture.SeedChartOfAccounts(tenant);
+        var invoices = new InvoiceService(factory, generator, TimeProvider.System,
+                                          new AutoPostingService(generator));
 
         return new SubscriptionBillingService(
             factory, invoices, NullLogger<SubscriptionBillingService>.Instance);

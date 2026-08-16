@@ -4,9 +4,10 @@
 
 .NET 9 · Blazor Server · EF Core 9 · PostgreSQL 17 · RabbitMQ · Clean Architecture
 
-Satış ve alış faturası, tahsilat eşleştirme, cari hesap, abonelik/MRR yönetimi,
-kullanım bazlı faturalandırma, ödeme takibi (dunning), outbox ile olay yayını,
-e-Fatura (UBL-TR 1.2) ve rol bazlı kullanıcı yönetimi.
+Satış ve alış faturası, tahsilat eşleştirme, cari hesap, **çift taraflı muhasebe**
+(tek düzen hesap planı, muhasebe fişi, mizan, bilanço, gelir tablosu), abonelik/MRR
+yönetimi, kullanım bazlı faturalandırma, ödeme takibi (dunning), outbox ile olay
+yayını, e-Fatura (UBL-TR 1.2) ve rol bazlı kullanıcı yönetimi.
 
 ---
 
@@ -232,6 +233,7 @@ Kapsanan alanlar:
 | Tahsilat | FIFO dağıtım · fatura durumu · cari bakiye |
 | Abonelik | Çapa günü kaymaz · oransal tutar · faturalandırma önizlemesi · aynı dönem iki kez faturalanmaz · dunning ve normale dönüş |
 | Kullanım bazlı | Kota aşımı · kaynak numarası idempotency · damgalama · geç gelen kayıt |
+| Muhasebe | Hesap planı · fatura ve tahsilattan otomatik fiş · dengesiz fiş reddi · mükerrer fiş engeli · mizan denk mi · bilanço aktif = pasif · gelir tablosu tutarlılığı |
 | Mesajlaşma | Outbox'a yazma ve broker'a yayınlanma |
 | Kullanıcı & yetki | Firma izolasyonu · rol doğrulaması · denetim kaydı |
 
@@ -289,13 +291,28 @@ RabbitMQ'yu durdurup (`docker stop nexuserp-mq`) fatura kesin: fatura **kesilir*
 mesaj outbox'ta bekler, `attempt_count` artar. Broker'ı geri açın: mesaj yayınlanır.
 Hiçbir veri kaybolmaz.
 
-**9 · Kullanıcı ve yetki yönetimi**
+**9 · Çift taraflı muhasebe — fiş, mizan, bilanço**
+`Muhasebe → Muhasebe Fişleri`: kestiğiniz her fatura ve işlediğiniz her tahsilat için
+**otomatik fiş** üretilmiştir. Satış faturasının fişini açın:
+`120 Alıcılar` borç / `600 Yurtiçi Satışlar` + `391 Hesaplanan KDV` alacak.
+Alış faturasının fişinde yön terstir: `153`+`191` borç / `320 Satıcılar` alacak.
+
+`Muhasebe → Yeni Fiş` ile elle fiş girin (örn. `770 Genel Yönetim Gideri` borç /
+`100 Kasa` alacak). Borç ve alacak toplamı eşit değilken **Kesinleştir** butonu açılmaz;
+zorlarsanız sunucu da reddeder — dengesiz fiş veri tabanına yazılamaz (CHECK constraint).
+
+`Muhasebe → Mizan`: borç toplamı = alacak toplamı, en üstte yeşil rozetle doğrulanır.
+`Muhasebe → Bilanço`: aktif = pasif (dönem kâr/zararı pasife dahil).
+`Muhasebe → Gelir Tablosu`: gelir − gider = dönem net sonucu; bilançodaki dönem kârıyla
+birebir aynı çıkar.
+
+**10 · Kullanıcı ve yetki yönetimi**
 `Sistem → Kullanıcılar` (yalnızca Admin). Kullanıcı açın — parola otomatik üretilir ve
 **bir kez** gösterilir. Rol değiştirin, pasifleştirin.
 Kendi hesabınızı pasifleştirmeyi deneyin: engellenir.
 Son yöneticiyi düşürmeyi deneyin: engellenir.
 
-**10 · Denetim kaydı**
+**11 · Denetim kaydı**
 `Sistem → Denetim Kaydı`: yaptığınız her değişiklik kim/ne zaman/hangi alan/eski değer/yeni
 değer olarak listelenir.
 
@@ -310,6 +327,12 @@ Fatura listesinde bir faturanın satır sonundaki menüden **PDF**, **UBL-TR XML
 **Ön muhasebe.** Cari kartlar (müşteri/tedarikçi, VKN-TCKN doğrulamalı), ürün/hizmet
 kataloğu, KDV oranları, satış ve **alış** faturası, iade, proforma, tahsilat ve FIFO
 eşleştirme, cari hesap defteri, 30/60/90 gün yaşlandırma raporu.
+
+**Çift taraflı muhasebe.** Tek Düzen Hesap Planı (hiyerarşik, işletme kendi alt hesabını
+açabilir), muhasebe fişi (taslak/kesinleşmiş, dengesiz fiş kesinleştirilemez), satış ve
+alış faturasından + tahsilattan **otomatik fiş** üretimi (belgeyle aynı transaction'da,
+mükerrer kayıt veri tabanı seviyesinde engelli), tevkifatlı fatura desteği, mizan,
+bilanço ve gelir tablosu.
 
 **Abonelik ve faturalandırma.** Planlar (aylık/3 aylık/6 aylık/yıllık), deneme süresi,
 oransal plan değişikliği, duraklat/sürdür/iptal, iptal sebebi ve churn analizi, MRR/ARR,
@@ -408,7 +431,7 @@ kodları. Entegratör bağlantısı `IEInvoiceGateway` arkasında.
 dotnet test
 ```
 
-**203 test.** Hesaplama motoru saf birim testleriyle (milisaniyeler), servisler
+**233 test.** Hesaplama motoru saf birim testleriyle (milisaniyeler), servisler
 **Testcontainers** üzerinde gerçek PostgreSQL ile. InMemory sağlayıcı kullanılmadı —
 partial index, ICU sıralaması ve precision davranışını taklit edemez; testler geçer,
 üretimde patlar.
@@ -462,9 +485,10 @@ dotnet test --filter FullyQualifiedName~AgingReportBenchmark
 
 ## Kapsam dışı
 
-Stok/depo yönetimi, muhasebe fişi ve tek düzen hesap planı, çoklu döviz ve kur farkı
-hesaplaması, gerçek entegratör bağlantısı (UBL-TR XML üretimi hazır, bağlantı değil),
-plan düzenleme ekranı (planlar tohum verisiyle gelir).
+Stok/depo yönetimi, kasa-banka hesap takibi ve banka ekstresi mutabakatı, çek/senet
+portföyü, duran varlık ve amortisman, çoklu döviz ve kur farkı hesaplaması, KDV
+beyannamesi, dönem sonu kapanış işlemleri, gerçek entegratör bağlantısı (UBL-TR XML
+üretimi hazır, bağlantı değil), plan düzenleme ekranı (planlar tohum verisiyle gelir).
 
 Amaç genişlik değil derinlikti: faturalandırma ve abonelik motoru üretim kalitesinde
 yazıldı.

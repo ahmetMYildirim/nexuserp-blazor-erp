@@ -184,6 +184,100 @@ namespace NexusErp.Infrastructure.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("NexusErp.Domain.Entities.Account", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<bool>("IsPostable")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_postable");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_system");
+
+                    b.Property<int>("Level")
+                        .HasColumnType("integer")
+                        .HasColumnName("level");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid?>("ParentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("parent_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer")
+                        .HasColumnName("type");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_accounts");
+
+                    b.HasIndex("ParentId")
+                        .HasDatabaseName("ix_accounts_parent_id");
+
+                    b.HasIndex("TenantId", "Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_accounts_tenant_id_code")
+                        .HasFilter("is_deleted = false");
+
+                    b.HasIndex("TenantId", "ParentId")
+                        .HasDatabaseName("ix_accounts_tenant_id_parent_id");
+
+                    b.HasIndex("TenantId", "Type")
+                        .HasDatabaseName("ix_accounts_tenant_id_type");
+
+                    b.ToTable("accounts", (string)null);
+                });
+
             modelBuilder.Entity("NexusErp.Domain.Entities.AuditEntry", b =>
                 {
                     b.Property<Guid>("Id")
@@ -676,6 +770,207 @@ namespace NexusErp.Infrastructure.Migrations
                         .HasDatabaseName("ix_invoice_lines_invoice_id_line_number");
 
                     b.ToTable("invoice_lines", (string)null);
+                });
+
+            modelBuilder.Entity("NexusErp.Domain.Entities.JournalEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("created_by");
+
+                    b.Property<decimal>("CreditTotal")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("credit_total");
+
+                    b.Property<decimal>("DebitTotal")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("debit_total");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<DateOnly>("EntryDate")
+                        .HasColumnType("date")
+                        .HasColumnName("entry_date");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<bool>("IsPosted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_posted");
+
+                    b.Property<string>("Number")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("number");
+
+                    b.Property<DateTimeOffset?>("PostedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("posted_at");
+
+                    b.Property<string>("SourceDocumentNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("source_document_number");
+
+                    b.Property<Guid?>("SourceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("source_id");
+
+                    b.Property<int>("SourceType")
+                        .HasColumnType("integer")
+                        .HasColumnName("source_type");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("updated_by");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer")
+                        .HasColumnName("year");
+
+                    b.HasKey("Id")
+                        .HasName("pk_journal_entries");
+
+                    b.HasIndex("TenantId", "Number")
+                        .IsUnique()
+                        .HasDatabaseName("ix_journal_entries_tenant_id_number")
+                        .HasFilter("number IS NOT NULL AND is_deleted = false");
+
+                    b.HasIndex("TenantId", "IsPosted", "EntryDate")
+                        .HasDatabaseName("ix_journal_entries_tenant_id_is_posted_entry_date");
+
+                    b.HasIndex("TenantId", "SourceType", "SourceId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_journal_entries_tenant_id_source_type_source_id")
+                        .HasFilter("source_id IS NOT NULL AND is_deleted = false");
+
+                    b.ToTable("journal_entries", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_journal_entries_posted_balanced", "NOT is_posted OR debit_total = credit_total");
+
+                            t.HasCheckConstraint("ck_journal_entries_totals_non_negative", "debit_total >= 0 AND credit_total >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("NexusErp.Domain.Entities.JournalLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AccountCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("account_code");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("account_id");
+
+                    b.Property<string>("AccountName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("account_name");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("created_by");
+
+                    b.Property<decimal>("Credit")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("credit");
+
+                    b.Property<decimal>("Debit")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("debit");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<Guid>("JournalEntryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("journal_entry_id");
+
+                    b.Property<int>("LineNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("line_number");
+
+                    b.Property<Guid?>("PartyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("party_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_journal_lines");
+
+                    b.HasIndex("AccountId")
+                        .HasDatabaseName("ix_journal_lines_account_id");
+
+                    b.HasIndex("JournalEntryId")
+                        .HasDatabaseName("ix_journal_lines_journal_entry_id");
+
+                    b.HasIndex("TenantId", "AccountId")
+                        .HasDatabaseName("ix_journal_lines_tenant_id_account_id");
+
+                    b.ToTable("journal_lines", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_journal_lines_single_side", "debit >= 0 AND credit >= 0 AND NOT (debit > 0 AND credit > 0) AND (debit > 0 OR credit > 0)");
+                        });
                 });
 
             modelBuilder.Entity("NexusErp.Domain.Entities.OutBoxMessage", b =>
@@ -1917,6 +2212,17 @@ namespace NexusErp.Infrastructure.Migrations
                         .HasConstraintName("fk_asp_net_user_tokens_asp_net_users_user_id");
                 });
 
+            modelBuilder.Entity("NexusErp.Domain.Entities.Account", b =>
+                {
+                    b.HasOne("NexusErp.Domain.Entities.Account", "Parent")
+                        .WithMany()
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_accounts_accounts_parent_id");
+
+                    b.Navigation("Parent");
+                });
+
             modelBuilder.Entity("NexusErp.Domain.Entities.Invoice", b =>
                 {
                     b.HasOne("NexusErp.Domain.Entities.Party", "Party")
@@ -1939,6 +2245,27 @@ namespace NexusErp.Infrastructure.Migrations
                         .HasConstraintName("fk_invoice_lines_invoices_invoice_id");
 
                     b.Navigation("Invoice");
+                });
+
+            modelBuilder.Entity("NexusErp.Domain.Entities.JournalLine", b =>
+                {
+                    b.HasOne("NexusErp.Domain.Entities.Account", "Account")
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_journal_lines_accounts_account_id");
+
+                    b.HasOne("NexusErp.Domain.Entities.JournalEntry", "JournalEntry")
+                        .WithMany("Lines")
+                        .HasForeignKey("JournalEntryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_journal_lines_journal_entries_journal_entry_id");
+
+                    b.Navigation("Account");
+
+                    b.Navigation("JournalEntry");
                 });
 
             modelBuilder.Entity("NexusErp.Domain.Entities.PartyLedgerEntry", b =>
@@ -2044,6 +2371,11 @@ namespace NexusErp.Infrastructure.Migrations
                 });
 
             modelBuilder.Entity("NexusErp.Domain.Entities.Invoice", b =>
+                {
+                    b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("NexusErp.Domain.Entities.JournalEntry", b =>
                 {
                     b.Navigation("Lines");
                 });

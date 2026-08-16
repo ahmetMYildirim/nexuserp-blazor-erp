@@ -1,0 +1,148 @@
+﻿@page "/fisler"
+@attribute [Authorize(Roles = "Admin,Muhasebe")]
+@using NexusErp.Application.Accounting
+@using NexusErp.Domain.Enums
+@inject JournalService Journals
+
+<PageTitle>Muhasebe Fişleri · NexusERP</PageTitle>
+
+<PageHeader Kicker="MUHASEBE" Title="Muhasebe Fişleri"
+            Description="Her para hareketinin çift taraflı kaydı">
+    <Actions>
+        <a class="btn btn-primary btn-sm" href="/fisler/yeni">Yeni Fiş</a>
+    </Actions>
+</PageHeader>
+
+<div class="stack">
+
+
+    <Blueprint Class="bp-pad">
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+            <div class="field" style="min-width:280px;flex:1">
+                <label>Ara</label>
+                <input class="input" @bind="_search" @bind:event="oninput"
+                       @bind:after="LoadAsync"
+                       placeholder="Fiş no, açıklama veya belge no" />
+            </div>
+            <div class="field" style="width:190px">
+                <label>Durum</label>
+                <select class="input" @bind="_status" @bind:after="LoadAsync">
+                    <option value="">Hepsi</option>
+                    <option value="posted">Kesinleşmiş</option>
+                    <option value="draft">Taslak</option>
+                </select>
+            </div>
+            <div class="kpi-hint" style="margin-left:auto">@_items.Count fiş</div>
+        </div>
+    </Blueprint>
+
+    <Blueprint Class="bp-table-pad" Scroll="true">
+        @if (_loading)
+        {
+            <div class="text-muted" style="padding:10px">Yükleniyor…</div>
+        }
+        else if (_items.Count == 0)
+        {
+            <div class="text-muted" style="padding:10px">
+                Kayıt bulunamadı. Fatura kesip tahsilat işlediğinizde fişler burada
+                kendiliğinden görünür.
+            </div>
+        }
+        else
+        {
+            @* ⚠️ max-width VERİLMEZ: tablo çerçeveden dar kalınca Blueprint'in
+               köşe nişanları tablonun dışında kalıyor ve satırlar çerçeveyi
+               taşmış gibi görünüyor. Tablo çerçeveyi tam doldurmalı. *@
+            <table class="table" style="min-width:900px">
+                <thead>
+                    <tr>
+                        <th style="width:150px">Fiş No</th>
+                        <th style="width:100px">Tarih</th>
+                        <th>Açıklama</th>
+                        <th style="width:170px">Kaynak</th>
+                        <th class="num" style="width:130px">Borç</th>
+                        <th class="num" style="width:130px">Alacak</th>
+                        <th style="width:110px">Durum</th>
+                        <th style="width:70px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in _items)
+                    {
+                        <tr>
+                            <td style="font-variant-numeric:tabular-nums">
+                                @(item.Number ?? "—")
+                            </td>
+                            <td>@item.EntryDate.ToString("dd.MM.yyyy")</td>
+                            <td>@item.Description</td>
+                            <td>
+                                <StatusTag Text="@SourceText(item.SourceType)"
+                                           Variant="@SourceVariant(item.SourceType)" />
+                                @if (item.SourceDocumentNumber is { Length: > 0 } doc)
+                                {
+                                    <div class="kpi-hint">@doc</div>
+                                }
+                            </td>
+                            <td class="num">@item.DebitTotal.ToString("N2")</td>
+                            <td class="num">@item.CreditTotal.ToString("N2")</td>
+                            <td>
+                                <StatusTag Text="@(item.IsPosted ? "Kesinleşti" : "Taslak")"
+                                           Variant="@(item.IsPosted ? "accent" : "neutral")" />
+                            </td>
+                            <td>
+                                <a class="btn btn-ghost btn-sm" href="@($"/fisler/{item.Id}")">
+                                    Aç
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </Blueprint>
+</div>
+
+@code {
+    private IReadOnlyList<JournalEntryListItem> _items = [];
+    private bool _loading = true;
+    private string _search = string.Empty;
+    private string _status = string.Empty;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+
+        bool? onlyPosted = _status switch
+        {
+            "posted" => true,
+            "draft" => false,
+            _ => null
+        };
+
+        var result = await Journals.SearchAsync(_search, onlyPosted, pageSize: 200);
+        _items = result.Items;
+        _loading = false;
+    }
+
+    private static string SourceText(JournalSourceType type) => type switch
+    {
+        JournalSourceType.Manual => "Elle girildi",
+        JournalSourceType.SalesInvoice => "Satış faturası",
+        JournalSourceType.PurchaseInvoice => "Alış faturası",
+        JournalSourceType.Payment => "Tahsilat",
+        JournalSourceType.PaymentReversal => "Tahsilat iptali",
+        _ => "?"
+    };
+
+    private static string SourceVariant(JournalSourceType type) => type switch
+    {
+        JournalSourceType.Manual => "neutral",
+        JournalSourceType.SalesInvoice => "accent-2",
+        JournalSourceType.PurchaseInvoice => "accent",
+        JournalSourceType.Payment => "accent-2",
+        JournalSourceType.PaymentReversal => "outline",
+        _ => "neutral"
+    };
+}

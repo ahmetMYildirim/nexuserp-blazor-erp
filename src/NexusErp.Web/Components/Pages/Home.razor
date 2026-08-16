@@ -1,9 +1,12 @@
-@page "/"
+﻿@page "/"
 @attribute [Authorize]
 @using NexusErp.Application.Dashboard
 @using NexusErp.Application.Subscriptions
 @using NexusErp.Domain.Enums
 @inject DashboardService Dashboard
+@inject NexusErp.Application.Accounting.AccountingReportService Accounting
+@inject IJSRuntime JS
+@using NexusErp.Application.Accounting
 
 <PageTitle>Genel Bakış · NexusERP</PageTitle>
 
@@ -56,23 +59,122 @@
                               Sparkline="@_data.RevenueTrend.Select(t => t.Amount).ToList()" />
                 </div>
 
-                @* ─────────── 2. MİNİ İSTATİSTİK BANDI ─────────── *@
-                <div class="grid-mini">
-                    <MiniStat Label="Tahsilat Oranı" Value="@($"%{_data.CollectionRate:N1}")" />
-                    <MiniStat Label="Bu Ay Tahsilat" Value="@($"{_data.MonthCollected.ToMoney()} ₺")" />
-                    <MiniStat Label="Ort. Tahsil Süresi"
-                              Value="@($"{_data.DaysSalesOutstanding:N1} gün")" Hint="DSO" />
-                    <MiniStat Label="Ortalama Fatura" Value="@($"{_data.AverageInvoice.ToMoney()} ₺")" />
-                    <MiniStat Label="Bu Ay Kesilen" Value="@_data.IssuedThisMonth.ToString()" />
-                    <MiniStat Label="Taslak" Value="@_data.DraftInvoiceCount.ToString()" />
-                    <MiniStat Label="Aktif Cari" Value="@_data.PartyCount.ToString()" />
-                    @* ⚠️ Borç ALACAK kartına karışmıyor: alış faturaları ayrı hesaplanır.
-                       Net pozisyon nakit değil TAHAKKUK — henüz tahsil/ödeme yapılmamış olabilir. *@
-                    <MiniStat Label="Tedarikçi Borcu" Value="@($"{_data.OpenPayables.ToMoney()} ₺")"
-                              Hint="@(_data.OverduePayables > 0 ? $"{_data.OverduePayables.ToMoney()} ₺ vadesi geçti" : "vadesi geçen yok")" />
-                    <MiniStat Label="Net Pozisyon" Value="@($"{_data.NetPosition.ToMoney()} ₺")"
-                              Hint="alacak − borç" />
+                @* ─────────── 2. MİNİ İSTATİSTİK BANDI ───────────
+                   Kartlar kullanıcı tercihine göre gösteriliyor. Grid auto-fit
+                   olduğu için kart eklenip çıkarıldığında satır kendini yeniden
+                   diziyor — boşluk kalmıyor, düzen bozulmuyor. *@
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:-6px">
+                    <span class="mini-kicker">ÖZET GÖSTERGELER</span>
+                    <span class="kpi-hint">@VisibleCards.Count / @AllCards.Count kart</span>
+                    <button class="btn btn-ghost btn-sm" style="margin-left:auto"
+                            @onclick="@(() => _editCards = !_editCards)">
+                        @(_editCards ? "Bitti" : "Kartları Düzenle")
+                    </button>
                 </div>
+
+                @if (_editCards)
+                {
+                    <Blueprint Class="bp-pad">
+                        <div class="kpi-hint" style="margin-bottom:10px">
+                            Görmek istediklerinizi seçin — tercihiniz bu tarayıcıda saklanır.
+                        </div>
+                        <div style="display:flex;flex-wrap:wrap;gap:10px 20px">
+                            @foreach (var card in AllCards)
+                            {
+                                <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                                    <input type="checkbox" checked="@_hidden.Contains(card.Key) == false"
+                                           @onchange="@(e => ToggleCard(card.Key, e))" />
+                                    <span>@card.Label</span>
+                                </label>
+                            }
+                        </div>
+                    </Blueprint>
+                }
+
+                <div class="grid-mini">
+                    @foreach (var card in VisibleCards)
+                    {
+                        <MiniStat Label="@card.Label" Value="@card.Value" Hint="@card.Hint" />
+                    }
+                </div>
+
+                @* ─────────── 2b. MUHASEBE DEFTERİ ───────────
+                   Defterin denk olup olmadığı ANA EKRANDA duruyor: dengesizlik ay
+                   sonunda mizan açıldığında değil, oluştuğu gün görülmeli. Dengesiz
+                   defterde ciro, kâr ve bilanço rakamlarının hiçbiri güvenilir değil. *@
+                @{
+                    var acc = _data.Accounting;
+                }
+                <Blueprint Class="bp-pad">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+                        <h5 style="margin:0">Muhasebe Defteri</h5>
+                        <span class="kpi-hint">@DateTime.Today.Year yılı · kesinleşmiş fişler</span>
+                        <span style="margin-left:auto;display:flex;align-items:center;gap:10px">
+                            @if (acc.EntryCount == 0)
+                            {
+                                <StatusTag Text="KAYIT YOK" Variant="neutral" />
+                            }
+                            else if (acc.IsBalanced)
+                            {
+                                <StatusTag Text="DEFTER DENK" Variant="accent-2" />
+                            }
+                            else
+                            {
+                                <StatusTag Text="DEFTER DENK DEĞİL" Variant="outline" />
+                                <span class="kpi-hint">
+                                    Fark @((acc.TotalDebit - acc.TotalCredit).ToMoney()) ₺
+                                </span>
+                            }
+                            <a class="btn btn-ghost btn-sm" href="/mizan">Mizan</a>
+                            <a class="btn btn-ghost btn-sm" href="/bilanco">Bilanço</a>
+                        </span>
+                    </div>
+
+                    <div class="grid-mini">
+                        <MiniStat Label="Muhasebe Fişi" Value="@acc.EntryCount.ToString()"
+                                  Hint="@($"{acc.AutoPostedCount} otomatik · {acc.ManualCount} elle")" />
+                        <MiniStat Label="Defter Borç" Value="@($"{acc.TotalDebit.ToMoney()} ₺")" />
+                        <MiniStat Label="Defter Alacak" Value="@($"{acc.TotalCredit.ToMoney()} ₺")" />
+                        <MiniStat Label="Dönem Geliri" Value="@($"{acc.Revenue.ToMoney()} ₺")"
+                                  Hint="KDV hariç satış" />
+                        <MiniStat Label="Dönem Gideri" Value="@($"{acc.Expense.ToMoney()} ₺")" />
+                        <MiniStat Label="@(acc.IsProfit ? "Dönem Net Kârı" : "Dönem Net Zararı")"
+                                  Value="@($"{Math.Abs(acc.PeriodResult).ToMoney()} ₺")"
+                                  Hint="gelir − gider" />
+                        <MiniStat Label="Bekleyen Taslak" Value="@acc.DraftCount.ToString()"
+                                  Hint="@(acc.DraftCount > 0 ? "rapora girmiyor" : "yok")" />
+                    </div>
+
+                    @* Aylık gelir/gider — yalnızca HAREKET OLAN aylar çizilir.
+                       12 ayın tamamı çizilince dolu 2-3 ay ince çubuklara sıkışıp
+                       grafik okunmaz hale geliyordu. *@
+                    @if (_monthly.Count > 0)
+                    {
+                        <div style="margin-top:16px">
+                            @* Üç grafik YAN YANA: her biri farklı bir soruya cevap
+                               veriyor, bu yüzden birini seçtirmek yerine üçü birden
+                               gösteriliyor. Dar ekranda alt alta iner. *@
+                            @* ⚠️ TEK grafik, TAM GENİŞLİK. Üçü yan yana konunca her
+                               sütun daralıyor ve çubuklar okunmaz hale geliyordu;
+                               kullanıcı hangisini göreceğini seçiyor. *@
+                            <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:10px">
+                                <div>
+                                    <div class="mini-kicker">@ChartTitle</div>
+                                    <div class="kpi-hint" style="margin-top:2px">@ChartHint</div>
+                                </div>
+                                <div style="margin-left:auto;display:flex;gap:6px">
+                                    <button class="btn @BtnClass("aylik")" @onclick="@(() => _chart = "aylik")">Aylık Gelir / Gider</button>
+                                    <button class="btn @BtnClass("kumulatif")" @onclick="@(() => _chart = "kumulatif")">Kümülatif Kâr</button>
+                                    <button class="btn @BtnClass("hesap")" @onclick="@(() => _chart = "hesap")">Hesap Bakiyeleri</button>
+                                </div>
+                            </div>
+
+                            @if (_chart == "aylik") { @MonthlyBars() }
+                            else if (_chart == "kumulatif") { @CumulativeBars() }
+                            else { @AccountBars() }
+                        </div>
+                    }
+                </Blueprint>
 
                 @* ─────────── 3. TREND + YAŞLANDIRMA ─────────── *@
                 <div class="grid-2">
@@ -359,9 +461,196 @@
         System.Globalization.CultureInfo.InvariantCulture;
 
     private DashboardSummary? _data;
+    private IReadOnlyList<MonthlyResult> _monthly = [];
+    private IReadOnlyList<TrialBalanceRow> _balances = [];
+
+    // ---------------- Özelleştirilebilir kartlar ----------------
+
+    private sealed record StatCardDef(string Key, string Label, string Value, string? Hint = null);
+
+    private bool _editCards;
+    private HashSet<string> _hidden = [];
+
+    /// <summary>
+    /// Kart tanımları TEK yerde: hem seçim listesi hem de gösterim buradan
+    /// üretiliyor, böylece biri eklenip diğeri unutulamaz.
+    /// </summary>
+    private List<StatCardDef> AllCards
+    {
+        get
+        {
+            var d = _data!;
+            return
+            [
+                new("tahsilat-orani", "Tahsilat Oranı", $"%{d.CollectionRate:N1}"),
+                new("ay-tahsilat", "Bu Ay Tahsilat", $"{d.MonthCollected.ToMoney()} ₺"),
+                new("dso", "Ort. Tahsil Süresi", $"{d.DaysSalesOutstanding:N1} gün", "DSO"),
+                new("ort-fatura", "Ortalama Fatura", $"{d.AverageInvoice.ToMoney()} ₺"),
+                new("ay-kesilen", "Bu Ay Kesilen", d.IssuedThisMonth.ToString()),
+                new("taslak", "Taslak", d.DraftInvoiceCount.ToString()),
+                new("aktif-cari", "Aktif Cari", d.PartyCount.ToString()),
+                // ⚠️ Borç ALACAK kartına karışmıyor: alış faturaları ayrı hesaplanır.
+                new("tedarikci-borcu", "Tedarikçi Borcu", $"{d.OpenPayables.ToMoney()} ₺",
+                    d.OverduePayables > 0
+                        ? $"{d.OverduePayables.ToMoney()} ₺ vadesi geçti" : "vadesi geçen yok"),
+                // Net pozisyon nakit değil TAHAKKUK — henüz tahsil/ödeme yapılmamış olabilir.
+                new("net-pozisyon", "Net Pozisyon", $"{d.NetPosition.ToMoney()} ₺", "alacak − borç"),
+                new("mrr", "MRR", $"{d.Mrr.ToMoney()} ₺", $"{d.ActiveSubscriptions} abonelik"),
+                new("vadesi-gecen", "Vadesi Geçen", $"{d.OverdueReceivables.ToMoney()} ₺",
+                    $"{d.OverdueInvoiceCount} fatura"),
+                new("fis-sayisi", "Muhasebe Fişi", d.Accounting.EntryCount.ToString(),
+                    d.Accounting.IsBalanced ? "defter denk" : "DEFTER DENK DEĞİL")
+            ];
+        }
+    }
+
+    private List<StatCardDef> VisibleCards =>
+        [.. AllCards.Where(c => !_hidden.Contains(c.Key))];
+
+    private async Task ToggleCard(string key, ChangeEventArgs e)
+    {
+        if (e.Value is bool show && show) _hidden.Remove(key);
+        else _hidden.Add(key);
+
+        await JS.InvokeVoidAsync("localStorage.setItem",
+                                 "nexus.hiddenCards", string.Join(',', _hidden));
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        var saved = await JS.InvokeAsync<string?>("localStorage.getItem", "nexus.hiddenCards");
+        if (!string.IsNullOrWhiteSpace(saved))
+        {
+            _hidden = [.. saved.Split(',', StringSplitOptions.RemoveEmptyEntries)];
+            StateHasChanged();
+        }
+    }
 
     protected override async Task OnInitializedAsync()
-        => _data = await Dashboard.GetAsync(DateOnly.FromDateTime(DateTime.Today));
+    {
+        _data = await Dashboard.GetAsync(DateOnly.FromDateTime(DateTime.Today));
+
+        // Boş ayları at: dolu 2-3 ay 12 slota yayılınca çubuklar iğne gibi
+        // kalıyor ve grafik hiçbir şey anlatmıyor.
+        _monthly = [.. (await Accounting.GetMonthlyResultsAsync(DateTime.Today.Year))
+            .Where(m => m.Revenue != 0m || m.Expense != 0m)];
+
+        var mizan = await Accounting.GetTrialBalanceAsync(
+            new DateOnly(DateTime.Today.Year, 1, 1), new DateOnly(DateTime.Today.Year, 12, 31));
+        _balances = [.. mizan.Rows.Where(r => r.Balance != 0m)
+            .OrderByDescending(r => Math.Abs(r.Balance)).Take(5)];
+    }
+
+    private string _chart = "aylik";
+
+    private string BtnClass(string key) =>
+        _chart == key ? "btn-primary btn-sm" : "btn-ghost btn-sm";
+
+    private string ChartTitle => _chart switch
+    {
+        "kumulatif" => "KÜMÜLATİF NET KÂR",
+        "hesap" => "EN BÜYÜK HESAP BAKİYELERİ",
+        _ => "AYLIK GELİR VE GİDER"
+    };
+
+    private string ChartHint => _chart switch
+    {
+        "kumulatif" => "Yıl başından o aya kadar biriken kâr — genel gidişat",
+        "hesap" => "Paranın ve borcun hangi hesaplarda toplandığı",
+        _ => "Hangi ay ne kadar kazandınız, ne kadar harcadınız (koyu: gelir · soluk: gider)"
+    };
+
+    /// <summary>Ay ay birikerek giden net kâr — yılın gidişatı tek çizgide.</summary>
+    private RenderFragment CumulativeBars() => builder =>
+    {
+        var html = new System.Text.StringBuilder();
+        var running = 0m;
+        var totals = new List<(string Label, decimal Value)>();
+        foreach (var m in _monthly) { running += m.Result; totals.Add((m.Label, running)); }
+
+        var max = totals.Count == 0 ? 1m : totals.Max(t => Math.Abs(t.Value));
+        if (max <= 0m) max = 1m;
+
+        html.Append("<div style=\"display:flex;align-items:flex-end;gap:18px;padding-top:18px\">");
+        foreach (var t in totals)
+        {
+            var h = (double)(Math.Abs(t.Value) / max) * 100.0;
+            html.Append("<div style=\"flex:1;display:flex;flex-direction:column;align-items:center;gap:5px\">")
+                .Append("<div style=\"display:flex;align-items:flex-end;justify-content:center;height:120px;width:100%\">")
+                .Append(string.Create(Inv,
+                    $"<div style=\"flex:1;max-width:70px;height:{h:0.#}%;min-height:2px;background:var(--color-accent)\"></div>"))
+                .Append("</div>")
+                .Append($"<span class=\"kpi-hint\">{t.Label}</span>")
+                .Append($"<span style=\"font-size:11px;font-variant-numeric:tabular-nums\">{t.Value.ToMoney()}</span>")
+                .Append("</div>");
+        }
+        html.Append("</div>");
+        builder.AddMarkupContent(0, html.ToString());
+    };
+
+    /// <summary>Defterdeki en büyük beş hesap bakiyesi — yatay çubuk.</summary>
+    private RenderFragment AccountBars() => builder =>
+    {
+        var html = new System.Text.StringBuilder();
+        if (_balances.Count == 0)
+        {
+            html.Append("<div class=\"text-muted\">Hareket gören hesap yok.</div>");
+            builder.AddMarkupContent(0, html.ToString());
+            return;
+        }
+
+        var max = _balances.Max(r => Math.Abs(r.Balance));
+        if (max <= 0m) max = 1m;
+
+        html.Append("<div style=\"padding-top:10px\">");
+        foreach (var row in _balances)
+        {
+            var pct = Math.Abs(row.Balance) / max * 100m;
+            var side = row.Balance > 0 ? "borç" : "alacak";
+            html.Append("<div style=\"display:flex;align-items:center;gap:8px;margin-bottom:3px\">")
+                .Append($"<span style=\"flex:1\"><b>{row.Code}</b> {System.Net.WebUtility.HtmlEncode(row.Name)} <span class=\"kpi-hint\">· {side} bakiye</span></span>")
+                .Append($"<span class=\"num\" style=\"font-weight:600\">{Math.Abs(row.Balance):N2}</span></div>")
+                .Append("<div class=\"bar-track\" style=\"margin-bottom:10px\">")
+                .Append(string.Create(Inv, $"<div class=\"bar-fill\" style=\"width:{pct:0.##}%\"></div>"))
+                .Append("</div>");
+        }
+        html.Append("</div>");
+        builder.AddMarkupContent(0, html.ToString());
+    };
+
+    /// <summary>Aylık gelir/gider sütunları — kalın çubuklar, üstünde tutar.</summary>
+    private RenderFragment MonthlyBars() => builder =>
+    {
+        var max = _monthly.Max(m => Math.Max(m.Revenue, m.Expense));
+        if (max <= 0m) max = 1m;
+
+        var html = new System.Text.StringBuilder();
+        // Sütunlar panelin TAMAMINA yayılır (flex:1). Sabit genişlikte olunca
+        // grafik sola sıkışıp sağda kocaman boşluk kalıyordu.
+        html.Append("<div style=\"display:flex;align-items:flex-end;gap:18px;padding-top:18px\">");
+
+        foreach (var m in _monthly)
+        {
+            var rh = (double)(m.Revenue / max) * 100.0;
+            var eh = (double)(m.Expense / max) * 100.0;
+
+            html.Append("<div style=\"flex:1;display:flex;flex-direction:column;align-items:center;gap:5px\">")
+                .Append("<div style=\"display:flex;align-items:flex-end;justify-content:center;gap:6px;height:120px;width:100%\">")
+                .Append(string.Create(Inv,
+                    $"<div title=\"Gelir {m.Revenue:N2}\" style=\"flex:1;max-width:54px;height:{rh:0.#}%;min-height:2px;background:var(--color-accent)\"></div>"))
+                .Append(string.Create(Inv,
+                    $"<div title=\"Gider {m.Expense:N2}\" style=\"flex:1;max-width:54px;height:{eh:0.#}%;min-height:2px;background:var(--color-accent-600);opacity:.45\"></div>"))
+                .Append("</div>")
+                .Append($"<span class=\"kpi-hint\">{m.Label}</span>")
+                .Append($"<span style=\"font-size:11px;font-variant-numeric:tabular-nums\">{m.Revenue.ToMoney()}</span>")
+                .Append("</div>");
+        }
+
+        html.Append("</div>");
+        builder.AddMarkupContent(0, html.ToString());
+    };
 
     private static string Fmt(decimal v) => v == 0m ? "—" : v.ToMoney();
 

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NexusErp.Domain.Entities;
 using NexusErp.Domain.Enums;
+using NexusErp.Infrastructure.Persistence.Seed;
 
 namespace NexusErp.Infrastructure.Persistence;
 
@@ -24,6 +25,9 @@ public static class DatabaseSeeder
         await SeedCoreAsync(db, ct);
         await SeedSubscriptionsAsync(db, ct);
         await SeedMeteredDemoAsync(db, ct);
+        // Hesap planı SeedCoreAsync'ten ayrı: mevcut veri tabanlarında tenant zaten
+        // var ve SeedCoreAsync erken dönüyor; hesap planı o durumda da kurulmalı.
+        await ChartOfAccountsSeeder.EnsureAsync(db, DemoTenantId, ct);
         // Fatura ve tahsilat demo verisi Application katmanındaki DemoDataSeeder'da —
         // servisleri kullanması gerekiyor, Infrastructure oraya bağımlı olamaz.
     }

@@ -1,0 +1,170 @@
+﻿@page "/bilanco"
+@attribute [Authorize(Roles = "Admin,Muhasebe")]
+@using NexusErp.Application.Accounting
+@inject AccountingReportService Reports
+
+<PageTitle>Bilanço · NexusERP</PageTitle>
+
+<PageHeader Kicker="MUHASEBE" Title="Bilanço"
+            Description="Belirtilen tarihte neyiniz var, kime borçlusunuz">
+    <Actions>
+        <div class="field" style="width:150px">
+            <label>Tarih</label>
+            <input class="input" type="date" @bind="_asOf" />
+        </div>
+        <button class="btn btn-primary btn-sm" @onclick="LoadAsync">Getir</button>
+    </Actions>
+</PageHeader>
+
+<div class="stack">
+
+
+    @if (_report is null)
+    {
+        <Blueprint Class="bp-pad"><div class="text-muted">Yükleniyor…</div></Blueprint>
+    }
+    else
+    {
+        <Blueprint Class="bp-pad">
+            <div class="grid-mini">
+                <MiniStat Label="Aktif toplam" Value="@Money(_report.TotalAssets)"
+                          Hint="varlıklar" />
+                <MiniStat Label="Pasif toplam"
+                          Value="@Money(_report.TotalLiabilitiesAndEquity)"
+                          Hint="kaynaklar" />
+                <MiniStat Label="Dönem sonucu" Value="@Money(_report.PeriodResult)"
+                          Hint="@(_report.PeriodResult >= 0 ? "kâr" : "zarar")" />
+                <MiniStat Label="Fark" Value="@Money(Math.Abs(_report.Difference))"
+                          Hint="sıfır olmalı" />
+            </div>
+
+            <div style="margin-top:12px;display:flex;align-items:center;gap:12px">
+                <StatusTag Text="@(_report.IsBalanced ? "BİLANÇO DENK" : "DENK DEĞİL")"
+                           Variant="@(_report.IsBalanced ? "accent-2" : "outline")" />
+                <span class="kpi-hint">
+                    @if (_report.IsBalanced)
+                    {
+                        <text>Aktif = Pasif · muhasebenin temel denklemi sağlanıyor.</text>
+                    }
+                    else
+                    {
+                        <text>
+                            <b>Dikkat:</b> aktif ve pasif eşit değil. Bir fiş dengesiz
+                            kesinleşmiş ya da bir hesap yanlış türde tanımlanmış olabilir.
+                        </text>
+                    }
+                </span>
+            </div>
+        </Blueprint>
+
+        @* .grid-2 sınıfı 2fr/1fr — bilançoda iki taraf EŞİT genişlikte olmalı,
+           yoksa aktif ve pasif görsel olarak kıyaslanamaz. Dar ekranda alt alta iner. *@
+        <div style="display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(380px,1fr))">
+            <Blueprint Class="bp-pad">
+                <h5 style="margin:0 0 4px">AKTİF</h5>
+                <div class="kpi-hint" style="margin-bottom:10px">
+                    Sahip olduklarınız — nakit, alacak ve stoklar
+                </div>
+
+                @if (_report.Assets.Lines.Count == 0)
+                {
+                    <div class="text-muted">Bu tarihte varlık hareketi yok.</div>
+                }
+                else
+                {
+                    <table class="table">
+                        <tbody>
+                            @foreach (var line in _report.Assets.Lines)
+                            {
+                                <tr>
+                                    <td style="width:80px;font-variant-numeric:tabular-nums">
+                                        @line.Code
+                                    </td>
+                                    <td>@line.Name</td>
+                                    <td class="num">@line.Amount.ToString("N2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="2"><b>AKTİF TOPLAM</b></td>
+                                <td class="num"><b>@Money(_report.TotalAssets)</b></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                }
+            </Blueprint>
+
+            <Blueprint Class="bp-pad">
+                <h5 style="margin:0 0 4px">PASİF</h5>
+                <div class="kpi-hint" style="margin-bottom:10px">
+                    Bu varlıklar nereden geldi — borçlar, sermaye ve kâr
+                </div>
+
+                <table class="table">
+                    <tbody>
+                        @foreach (var line in _report.Liabilities.Lines)
+                        {
+                            <tr>
+                                <td style="width:80px;font-variant-numeric:tabular-nums">
+                                    @line.Code
+                                </td>
+                                <td>@line.Name</td>
+                                <td class="num">@line.Amount.ToString("N2")</td>
+                            </tr>
+                        }
+                        @foreach (var line in _report.Equity.Lines)
+                        {
+                            <tr>
+                                <td style="width:80px;font-variant-numeric:tabular-nums">
+                                    @line.Code
+                                </td>
+                                <td>@line.Name</td>
+                                <td class="num">@line.Amount.ToString("N2")</td>
+                            </tr>
+                        }
+                        <tr>
+                            <td></td>
+                            <td>
+                                Dönem Net @(_report.PeriodResult >= 0 ? "Kârı" : "Zararı")
+                                <span class="kpi-hint">· gelir − gider</span>
+                            </td>
+                            <td class="num">@_report.PeriodResult.ToString("N2")</td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="2"><b>PASİF TOPLAM</b></td>
+                            <td class="num">
+                                <b>@Money(_report.TotalLiabilitiesAndEquity)</b>
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </Blueprint>
+        </div>
+    }
+</div>
+
+@code {
+    private Application.Accounting.BalanceSheet? _report;
+    private DateTime _asOf = DateTime.Today;
+
+    private static readonly System.Globalization.CultureInfo Inv =
+        System.Globalization.CultureInfo.InvariantCulture;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _report = null;
+        _report = await Reports.GetBalanceSheetAsync(DateOnly.FromDateTime(_asOf));
+    }
+
+    /// <summary>
+    /// Pasif tarafı: yabancı kaynak + özkaynak + dönem sonucu.
+    /// Dönem sonucu ayrı bir hesap satırı değil, hesaplanan bir kalem olduğu için
+    /// listeye burada ekleniyor.
+    /// </summary>
+    private static string Money(decimal value) => value.ToString("N2") + " ₺";
+}

@@ -4,11 +4,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NexusErp.Application.Abstractions;
+using NexusErp.Application.Accounting;
 using NexusErp.Application.Invoicing;
 using NexusErp.Application.Messaging;
 using NexusErp.Application.Parties;
 using NexusErp.Application.Payments;
 using NexusErp.Application.Subscriptions;
+using NexusErp.Domain.Accounting;
 using NexusErp.Domain.Common;
 using NexusErp.Domain.Entities;
 using NexusErp.Domain.Enums;
@@ -18,6 +20,7 @@ using NexusErp.Domain.ValueObjects;
 using NexusErp.Infrastructure.Identity;
 using NexusErp.Infrastructure.Messaging;
 using NexusErp.Infrastructure.Persistence;
+using NexusErp.Infrastructure.Persistence.Seed;
 using RabbitMQ.Client;
 
 namespace NexusErp.Infrastructure.Diagnostics;
@@ -55,6 +58,7 @@ public sealed class SelfTestService(
     private const string Metered = "Kullanım Bazlı Faturalama";
     private const string Messaging = "Mesajlaşma (Outbox → RabbitMQ)";
     private const string Security = "Kullanıcı ve Yetki";
+    private const string Accounting = "Muhasebe";
 
     public async Task<SelfTestRun> RunAsync(CancellationToken ct = default)
     {
@@ -80,6 +84,7 @@ public sealed class SelfTestService(
             RunScheduleMath(results);
             await RunSubscriptionAsync(sp, seed, results, ct);
             await RunMeteredAsync(sp, seed, results, ct);
+            await RunAccountingAsync(sp, seed, results, ct);
             await RunMessagingAsync(sp, results, ct);
             await RunSecurityAsync(sp, results, ct);
         }
@@ -173,6 +178,10 @@ public sealed class SelfTestService(
     {
         var db = sp.GetRequiredService<AppDbContext>();
 
+        // ⚠️ Hesap planı ÖNCE kurulmalı: fatura kesmek ve tahsilat işlemek artık
+        // otomatik muhasebe fişi üretiyor ve fiş hesap planı olmadan yazılamaz.
+        await ChartOfAccountsSeeder.EnsureAsync(db, SandboxTenantId, ct);
+
         var tax = new TaxRate
         {
             TenantId = SandboxTenantId, Code = "KDV20", Name = "KDV %20", Rate = 0.20m,
@@ -234,6 +243,17 @@ public sealed class SelfTestService(
             .Where(x => db.Payments.IgnoreQueryFilters()
                 .Any(p => p.Id == x.PaymentId && p.TenantId == SandboxTenantId))
             .ExecuteDeleteAsync(ct);
+
+        // Muhasebe: satırlar hesaplara FK ile bağlı, önce onlar silinmeli.
+        await db.JournalLines.IgnoreQueryFilters()
+            .Where(x => x.TenantId == SandboxTenantId).ExecuteDeleteAsync(ct);
+        await db.JournalEntries.IgnoreQueryFilters()
+            .Where(x => x.TenantId == SandboxTenantId).ExecuteDeleteAsync(ct);
+        await db.Accounts.IgnoreQueryFilters()
+            .Where(x => x.TenantId == SandboxTenantId && x.ParentId != null)
+            .ExecuteDeleteAsync(ct);
+        await db.Accounts.IgnoreQueryFilters()
+            .Where(x => x.TenantId == SandboxTenantId).ExecuteDeleteAsync(ct);
 
         await db.InvoiceLines.IgnoreQueryFilters()
             .Where(x => db.Invoices.IgnoreQueryFilters()
@@ -981,6 +1001,189 @@ public sealed class SelfTestService(
                 return await ExpectRejectAsync(
                     () => usage.DeleteAsync(billedId, ct), "değiştirilemez");
             });
+    }
+
+    // ==================================================================
+    // MUHASEBE
+    // ==================================================================
+
+    private static async Task RunAccountingAsync(
+        IServiceProvider sp, Sandbox seed, List<CheckResult> results, CancellationToken ct)
+    {
+        var factory = sp.GetRequiredService<IAppDbContextFactory>();
+        var journals = sp.GetRequiredService<JournalService>();
+        var accounts = sp.GetRequiredService<ChartOfAccountsService>();
+        var reports = sp.GetRequiredService<AccountingReportService>();
+
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var from = new DateOnly(today.Year, 1, 1);
+        var to = new DateOnly(today.Year, 12, 31);
+
+        await CheckAsync(results, Accounting, "Hesap planı kuruldu",
+            "Hesap planı yoksa otomatik fiş üretilemez ve fatura kesilemez. " +
+            "Tek Düzen Hesap Planı yeni firmada hazır gelmeli.",
+            async () =>
+            {
+                var list = await accounts.ListAsync(ct: ct);
+                Assert(list.Count > 50, $"Yalnızca {list.Count} hesap bulundu.");
+
+                var postable = list.Count(a => a.IsPostable);
+                return $"{list.Count} hesap · {postable} tanesi hareket görebilir " +
+                       $"(120 Alıcılar, 600 Yurtiçi Satışlar, 391 Hesaplanan KDV dahil)";
+            });
+
+        await CheckAsync(results, Accounting, "Satış faturası otomatik fiş üretti",
+            "Fiş üretilmezse defter eksik kalır: mizan o satışı hiç görmez ve " +
+            "dönemin raporu yanlış çıkar. Fiş faturayla AYNI transaction'da yazılıyor.",
+            async () =>
+            {
+                await using var db = factory.Create();
+                var entry = await db.JournalEntries.AsNoTracking()
+                    .Include(j => j.Lines)
+                    .Where(j => j.SourceType == JournalSourceType.SalesInvoice)
+                    .OrderByDescending(j => j.CreatedAt)
+                    .FirstOrDefaultAsync(ct);
+
+                Assert(entry is not null, "Satış faturasından fiş üretilmemiş.");
+                Assert(entry!.IsPosted, "Fiş kesinleşmemiş.");
+
+                var lines = string.Join(" · ", entry.Lines
+                    .OrderBy(l => l.LineNumber)
+                    .Select(l => l.Debit > 0
+                        ? $"{l.AccountCode} B {l.Debit:N2}"
+                        : $"{l.AccountCode} A {l.Credit:N2}"));
+
+                return $"{entry.Number} ({entry.SourceDocumentNumber}) → {lines}";
+            });
+
+        await CheckAsync(results, Accounting, "Alış faturası fişi ters yönde yazıldı",
+            "Alış satışın aynasıdır: mal ve indirilecek KDV borç, tedarikçi alacak. " +
+            "Yön karışırsa tedarikçi bize borçlu görünür.",
+            async () =>
+            {
+                await using var db = factory.Create();
+                var entry = await db.JournalEntries.AsNoTracking()
+                    .Include(j => j.Lines)
+                    .Where(j => j.SourceType == JournalSourceType.PurchaseInvoice)
+                    .OrderByDescending(j => j.CreatedAt)
+                    .FirstOrDefaultAsync(ct);
+
+                Assert(entry is not null, "Alış faturasından fiş üretilmemiş.");
+
+                var supplier = entry!.Lines.FirstOrDefault(
+                    l => l.AccountCode == TdhpAccounts.Saticilar);
+                Assert(supplier is not null, "320 Satıcılar satırı yok.");
+                Assert(supplier!.Credit > 0,
+                       "320 Satıcılar ALACAK tarafında olmalı, borçta yazılmış.");
+
+                return $"{entry.Number} → 320 Satıcılar alacak {supplier.Credit:N2} ₺ · " +
+                       $"borç toplamı {entry.DebitTotal:N2} ₺";
+            });
+
+        await CheckAsync(results, Accounting, "Aynı belgeden ikinci fiş üretilemiyor",
+            "Çift fiş mizanı bozmaz (dengeli kalır) ama ciroyu ve KDV'yi İKİ KATI " +
+            "gösterir. Bu hata ancak beyanname aşamasında fark edilir. Garanti " +
+            "(tenant, kaynak tür, kaynak kimlik) unique index'inde.",
+            async () =>
+            {
+                await using var db = factory.Create();
+
+                var duplicates = await db.JournalEntries.AsNoTracking()
+                    .Where(j => j.SourceId != null)
+                    .GroupBy(j => new { j.SourceType, j.SourceId })
+                    .Where(g => g.Count() > 1)
+                    .CountAsync(ct);
+
+                Assert(duplicates == 0, $"{duplicates} kaynak belgede mükerrer fiş var.");
+
+                var total = await db.JournalEntries.CountAsync(j => j.SourceId != null, ct);
+                return $"{total} otomatik fişin tamamı tekil — mükerrer kayıt yok";
+            });
+
+        await CheckAsync(results, Accounting, "Dengesiz fiş kesinleştirilemiyor",
+            "Dengesiz fiş kesinleşirse mizan tutmaz ve hangi fişten geldiğini " +
+            "bulmak binlerce kaydı elle taramak demektir.",
+            async () =>
+            {
+                var postable = await accounts.PostableAsync(ct);
+                var kasa = postable.First(a => a.Code == TdhpAccounts.Kasa);
+                var satis = postable.First(a => a.Code == TdhpAccounts.YurtIciSatislar);
+
+                var id = await journals.SaveDraftAsync(new JournalEntryForm
+                {
+                    EntryDate = today,
+                    Description = "Sistem testi — dengesiz fiş denemesi",
+                    Lines =
+                    [
+                        new JournalLineForm { AccountId = kasa.Id, Debit = 1_000m },
+                        new JournalLineForm { AccountId = satis.Id, Credit = 900m }
+                    ]
+                }, ct);
+
+                return await ExpectRejectAsync(() => journals.PostAsync(id, ct), "dengesiz");
+            });
+
+        await CheckAsync(results, Accounting, "Mizan denk: borç toplamı = alacak toplamı",
+            "Muhasebenin ilk kontrolü. Tutmuyorsa bir yerde tek taraflı kayıt " +
+            "oluşmuş demektir ve tüm mali tablolar güvenilmez hale gelir.",
+            async () =>
+            {
+                var mizan = await reports.GetTrialBalanceAsync(from, to, ct: ct);
+
+                Assert(mizan.Rows.Count > 0, "Mizanda hiç hareket yok.");
+                Assert(mizan.IsBalanced,
+                    $"Borç {mizan.TotalDebit:N2} ≠ Alacak {mizan.TotalCredit:N2}");
+
+                return $"{mizan.Rows.Count} hesap · borç {mizan.TotalDebit:N2} ₺ = " +
+                       $"alacak {mizan.TotalCredit:N2} ₺";
+            });
+
+        await CheckAsync(results, Accounting, "Bilanço denk: aktif = pasif",
+            "Muhasebenin temel denklemi. Dönem kâr/zararı pasife eklenmezse tablo " +
+            "denk çıkmaz ve kullanıcı olmayan bir hata arar.",
+            async () =>
+            {
+                var bilanco = await reports.GetBalanceSheetAsync(to, ct);
+
+                Assert(bilanco.IsBalanced,
+                    $"Aktif {bilanco.TotalAssets:N2} ≠ Pasif " +
+                    $"{bilanco.TotalLiabilitiesAndEquity:N2} " +
+                    $"(fark {bilanco.Difference:N2})");
+
+                return $"aktif {bilanco.TotalAssets:N2} ₺ = pasif " +
+                       $"{bilanco.TotalLiabilitiesAndEquity:N2} ₺ " +
+                       $"(dönem sonucu {bilanco.PeriodResult:N2} ₺ dahil)";
+            });
+
+        await CheckAsync(results, Accounting, "Gelir tablosu net sonucu doğru",
+            "Gelir − gider = dönem sonucu. Bilançodaki dönem kârıyla birebir " +
+            "aynı çıkmalı; farklıysa bir hesap yanlış sınıflandırılmış demektir.",
+            async () =>
+            {
+                var gelir = await reports.GetIncomeStatementAsync(from, to, ct);
+                var bilanco = await reports.GetBalanceSheetAsync(to, ct);
+
+                Assert(gelir.NetResult == bilanco.PeriodResult,
+                    $"Gelir tablosu {gelir.NetResult:N2} ≠ bilanço {bilanco.PeriodResult:N2}");
+
+                return $"gelir {gelir.TotalRevenue:N2} ₺ − gider {gelir.TotalExpense:N2} ₺ " +
+                       $"= {gelir.NetResult:N2} ₺ ({(gelir.IsProfit ? "kâr" : "zarar")})";
+            });
+
+        await CheckAsync(results, Accounting, "Taslak fiş raporlara karışmıyor",
+            "Taslak fiş dengesiz olabilir. Rapora karışsaydı mizan tutmazdı.",
+            async () =>
+            {
+                await using var db = factory.Create();
+                var drafts = await db.JournalEntries.CountAsync(j => !j.IsPosted, ct);
+                var mizan = await reports.GetTrialBalanceAsync(from, to, ct: ct);
+
+                Assert(mizan.IsBalanced, "Taslak fiş mizana karışmış.");
+                return $"{drafts} taslak fiş var, mizan hâlâ denk " +
+                       $"({mizan.TotalDebit:N2} ₺)";
+            });
+
+        _ = seed;   // imza diğer kategorilerle aynı kalsın diye duruyor
     }
 
     // ==================================================================

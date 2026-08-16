@@ -44,6 +44,35 @@ public sealed record SubscriptionMovement(
 public sealed record UnallocatedPayment(
     Guid PaymentId, string? Number, string PartyTitle, string? Reference, decimal Amount);
 
+/// <summary>
+/// Muhasebe defterinin özeti — yıl başından bugüne.
+///
+/// Dashboard'a alınmasının sebebi <see cref="IsBalanced"/>: defter tutmuyorsa
+/// bunu ay sonunda mizan ekranını açtığında değil, ana ekranda ANINDA görmeli.
+/// Dengesiz bir defterde ciro, kâr ve bilanço rakamlarının hiçbiri güvenilir değil.
+/// </summary>
+public sealed record AccountingSnapshot(
+    int EntryCount,
+    int AutoPostedCount,
+    int DraftCount,
+    decimal TotalDebit,
+    decimal TotalCredit,
+    decimal Revenue,
+    decimal Expense)
+{
+    public bool IsBalanced => TotalDebit == TotalCredit;
+
+    /// <summary>Gelir − gider. Bilançodaki "dönem net kârı" ile aynı tutar.</summary>
+    public decimal PeriodResult => Revenue - Expense;
+
+    public bool IsProfit => PeriodResult >= 0;
+
+    /// <summary>Elle girilen fiş sayısı — otomatik olmayanlar.</summary>
+    public int ManualCount => EntryCount - AutoPostedCount;
+
+    public static readonly AccountingSnapshot Empty = new(0, 0, 0, 0m, 0m, 0m, 0m);
+}
+
 public sealed record DashboardSummary(
     decimal OpenReceivables,
     decimal OverdueReceivables,
@@ -72,7 +101,8 @@ public sealed record DashboardSummary(
     decimal DaysSalesOutstanding,
     int IssuedThisMonth,
     IReadOnlyList<UnallocatedPayment> UnallocatedPayments,
-    ChurnAnalysis Churn)
+    ChurnAnalysis Churn,
+    AccountingSnapshot Accounting)
 {
     /// <summary>Alacak eksi borç. Nakit değil, TAHAKKUK pozisyonu.</summary>
     public decimal NetPosition => OpenReceivables - OpenPayables;
@@ -372,6 +402,50 @@ public sealed class DashboardService(IAppDbContextFactory factory)
                 p.Id, p.Number, p.Party.Title, p.Reference, p.Amount - p.AllocatedAmount))
             .ToListAsync(ct);
 
+        // --- Muhasebe defteri özeti (yıl başından bugüne) ---
+        // ⚠️ Yalnızca KESİNLEŞMİŞ fişler sayılır; taslak dengesiz olabilir ve
+        // toplamlara karışırsa "defter tutmuyor" alarmı yanlış yere çalar.
+        var yearStart = new DateOnly(today.Year, 1, 1);
+
+        var entryCounts = await db.JournalEntries
+            .Where(j => j.EntryDate >= yearStart && j.EntryDate <= today)
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Posted = g.Count(j => j.IsPosted),
+                Auto = g.Count(j => j.IsPosted && j.SourceId != null),
+                Drafts = g.Count(j => !j.IsPosted)
+            })
+            .FirstOrDefaultAsync(ct);
+
+        var ledgerTotals = await db.JournalLines
+            .Where(l => l.JournalEntry.IsPosted
+                     && l.JournalEntry.EntryDate >= yearStart
+                     && l.JournalEntry.EntryDate <= today)
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Debit = g.Sum(l => l.Debit),
+                Credit = g.Sum(l => l.Credit),
+                // Gelir alacakla, gider borçla artar.
+                Revenue = g.Sum(l => l.Account.Type == AccountType.Revenue
+                                     ? l.Credit - l.Debit : 0m),
+                Expense = g.Sum(l => l.Account.Type == AccountType.Expense
+                                     ? l.Debit - l.Credit : 0m)
+            })
+            .FirstOrDefaultAsync(ct);
+
+        var accounting = entryCounts is null || ledgerTotals is null
+            ? AccountingSnapshot.Empty
+            : new AccountingSnapshot(
+                EntryCount: entryCounts.Posted,
+                AutoPostedCount: entryCounts.Auto,
+                DraftCount: entryCounts.Drafts,
+                TotalDebit: ledgerTotals.Debit,
+                TotalCredit: ledgerTotals.Credit,
+                Revenue: ledgerTotals.Revenue,
+                Expense: ledgerTotals.Expense);
+
         // Zaman serisinde EKSİK AYLARI DOLDUR — veri tabanı sadece dolu ayları döner,
         // ham veriyi grafiğe verirsen çizgi yalan söyler.
         var fullTrend = FillMonths(trend, trendStart);
@@ -412,7 +486,8 @@ public sealed class DashboardService(IAppDbContextFactory factory)
             DaysSalesOutstanding: dso,
             IssuedThisMonth: issuedThisMonth,
             UnallocatedPayments: unallocated,
-            Churn: churn);
+            Churn: churn,
+            Accounting: accounting);
     }
 
     private static List<MonthlyRevenue> FillMonths(List<MonthlyRevenue> source, DateOnly start) =>

@@ -21,6 +21,9 @@ public interface IAppDbContext : IAsyncDisposable
     DbSet<Payment> Payments { get; }
     DbSet<PaymentAllocation> PaymentAllocations { get; }
     DbSet<PartyLedgerEntry> PartyLedgerEntries { get; }
+    DbSet<Account> Accounts { get; }
+    DbSet<JournalEntry> JournalEntries { get; }
+    DbSet<JournalLine> JournalLines { get; }
     DbSet<AuditEntry> AuditEntries { get; }
     DbSet<OutBoxMessage> OutboxMessages { get; }
     DbSet<ProcessedMessage> ProcessedMessages { get; }

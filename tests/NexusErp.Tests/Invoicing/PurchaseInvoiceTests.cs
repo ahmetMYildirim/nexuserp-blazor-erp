@@ -1,4 +1,5 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using NexusErp.Application.Accounting;
 using NexusErp.Application.Invoicing;
 using NexusErp.Domain.Common;
 using NexusErp.Domain.Entities;
@@ -22,10 +23,15 @@ public sealed class PurchaseInvoiceTests(DatabaseFixture fixture)
     private (InvoiceService Service, AppDbContext Db, Guid SupplierId, Guid CustomerId) Setup(
         Guid tenant)
     {
+        // Fatura kesmek otomatik muhasebe fişi üretiyor; fiş hesap planı olmadan
+        // yazılamaz. Üretimde her tenant açılışında kuruluyor.
+        fixture.SeedChartOfAccounts(tenant);
+
         var db = fixture.CreateContext(tenant);
         var generator = new InvoiceNumberGenerator(db, fixture.CreateTenantContext(tenant));
         var service = new InvoiceService(
-            fixture.CreateFactory(tenant), generator, TimeProvider.System);
+            fixture.CreateFactory(tenant), generator, TimeProvider.System,
+            new AutoPostingService(generator));
 
         var supplier = new Party
         {
