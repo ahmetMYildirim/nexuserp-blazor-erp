@@ -1,0 +1,125 @@
+@page "/profil"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Identity
+@using NexusErp.Infrastructure.Identity
+@inject UserManager<AppUser> Users
+
+@*
+    Profilim (docs/ui-v2 §"Profilim").
+
+    ⚠️ BİLEREK salt okunur: prototipte "Kaydet" düğmesi var ama bu alanları
+    (ad, telefon, unvan…) güncelleyen bir servis depoda yok. Düzenlenebilir
+    görünüp gerçekte hiçbir şey kaydetmeyen bir form kullanıcıyı yanıltır —
+    bu yüzden gerçek veriyi salt okunur gösteriyoruz, sahte bir kaydet akışı
+    kurmuyoruz. Düzenleme gerekirse UserAdminService üzerine inşa edilmeli
+    (bkz. Administration/UserAdmin.razor — yalnızca Admin rolü erişebiliyor).
+*@
+
+<PageTitle>Profilim · NexusERP</PageTitle>
+
+<PageHeader Kicker="HESAP" Title="Profilim" Description="Kişisel bilgiler ve oturum" />
+
+<div class="stack">
+    @if (_me is null)
+    {
+        <Blueprint Class="bp-pad"><div class="text-muted">Yükleniyor…</div></Blueprint>
+    }
+    else
+    {
+        <Blueprint Class="bp-pad">
+            <div style="display:flex;align-items:center;gap:14px">
+                <span style="width:44px;height:44px;display:grid;place-items:center;
+                             background:var(--color-accent-200);font-family:var(--font-heading);
+                             font-size:17px;flex:none">@Initials</span>
+                <div style="min-width:0">
+                    <div style="font-family:var(--font-heading);font-size:19px">@_me.FullName</div>
+                    <div class="text-muted" style="font-size:12px">
+                        @_me.Email
+                        @if (_me.LastLoginAt is { } last)
+                        {
+                            <text> · son giriş @last.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</text>
+                        }
+                    </div>
+                </div>
+                <span class="tag tag-accent" style="margin-left:auto">@_role</span>
+            </div>
+        </Blueprint>
+
+        <div style="display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(380px,1fr))">
+            <Blueprint Class="bp-pad">
+                <h5 style="margin:0 0 10px">Kişisel Bilgiler</h5>
+                <div class="kpi-hint" style="margin-bottom:10px">
+                    Bu bilgiler salt okunurdur. Değişiklik için sistem yöneticinize
+                    başvurun — <b>Sistem → Kullanıcılar</b> ekranından güncellenir.
+                </div>
+                <table class="table">
+                    <tbody>
+                        <tr><td class="text-muted" style="width:140px">Ad Soyad</td><td>@_me.FullName</td></tr>
+                        <tr><td class="text-muted">Kullanıcı Kodu</td><td>@_me.UserName</td></tr>
+                        <tr><td class="text-muted">E-posta</td><td>@_me.Email</td></tr>
+                        <tr><td class="text-muted">Durum</td>
+                            <td><StatusTag Text="@(_me.IsActive ? "Aktif" : "Pasif")"
+                                          Variant="@(_me.IsActive ? "accent-2" : "neutral")" /></td></tr>
+                    </tbody>
+                </table>
+            </Blueprint>
+
+            <Blueprint Class="bp-pad">
+                <h5 style="margin:0 0 10px">Rol ve Yetki</h5>
+                <table class="table">
+                    <tbody>
+                        <tr><td class="text-muted" style="width:140px">Rol</td><td>@_role</td></tr>
+                        <tr><td class="text-muted">Kapsam</td><td>@RoleScope(_role)</td></tr>
+                    </tbody>
+                </table>
+                <div class="kpi-hint" style="margin-top:10px">@RoleDescription(_role)</div>
+            </Blueprint>
+        </div>
+    }
+</div>
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState>? AuthTask { get; set; }
+
+    private AppUser? _me;
+    private string _role = "—";
+
+    private string Initials
+    {
+        get
+        {
+            if (_me is null) return "?";
+            var tr = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
+            var parts = _me.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 0) return "?";
+            if (parts.Length == 1) return parts[0][..1].ToUpper(tr);
+            return string.Concat(parts[0][..1], parts[^1][..1]).ToUpper(tr);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthTask is null) return;
+        var state = await AuthTask;
+        _me = await Users.GetUserAsync(state.User);
+        _role = state.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "—";
+    }
+
+    private static string RoleScope(string role) => role switch
+    {
+        "Admin" => "Tüm modüller · kullanıcı ve yetki yönetimi",
+        "Muhasebe" => "Fatura, tahsilat, abonelik faturalandırma, muhasebe, raporlar",
+        "Satis" => "Cari ve fatura oluşturma",
+        "Goruntuleyici" => "Salt okuma",
+        _ => "—"
+    };
+
+    private static string RoleDescription(string role) => role switch
+    {
+        "Admin" => "Kullanıcı ekleyebilir, rol değiştirebilir, sistem testini çalıştırabilirsiniz.",
+        "Muhasebe" => "Fatura kesebilir, tahsilat işleyebilir, muhasebe fişi girebilir ve mali tabloları görebilirsiniz.",
+        "Satis" => "Cari kart ve fatura oluşturabilirsiniz; tahsilat işleyemezsiniz.",
+        "Goruntuleyici" => "Kayıtları görüntüleyebilirsiniz; hiçbir kayıt değiştiremezsiniz.",
+        _ => ""
+    };
+}

@@ -1,0 +1,146 @@
+@page "/ayarlar"
+@attribute [Authorize]
+@inject IJSRuntime JS
+
+@*
+    Ayarlar (docs/ui-v2 §"Ayarlar").
+
+    ⚠️ Yalnızca GERÇEKTEN VAR OLAN üç davranış anahtarlı: koyu tema, sol
+    kısayol paneli, satır gölgelendirme. Prototipte listelenen "Belge
+    sekmeleri", "Kolon filtre satırı", "Fonksiyon tuşu ipuçları" bu depoda
+    henüz yok (belge sekmeleri oturum durumu, kolon filtresi/F-tuşu ayrı
+    birer özellik) — çalışmayan bir anahtarı "AÇIK" gösterip kullanıcıyı
+    yanıltmak yerine devre dışı + "yakında" notuyla listeleniyor.
+*@
+
+<PageTitle>Ayarlar · NexusERP</PageTitle>
+
+<PageHeader Kicker="SİSTEM" Title="Ayarlar" Description="Görünüm tercihleri — bu tarayıcıda saklanır" />
+
+<div class="stack">
+    <div style="display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(380px,1fr))">
+        <Blueprint Class="bp-pad">
+            <h5 style="margin:0 0 4px">Görünüm</h5>
+            <div class="kpi-hint" style="margin-bottom:10px">
+                Bu tarayıcıya özeldir; başka bir cihazda oturum açtığınızda sıfırdan başlar.
+            </div>
+
+            @SwitchRow("Koyu tema", "Tüm ekranlarda koyu zemin", _dark,
+                       EventCallback.Factory.Create<bool>(this, SetDarkAsync))
+            @SwitchRow("Sol kısayol paneli", "Kısayollar, dönem ve kuyruk özeti", _rail,
+                       EventCallback.Factory.Create<bool>(this, SetRailAsync))
+            @SwitchRow("Satır gölgelendirme", "Tablo satırlarını bir atlayarak hafif gölgeler", _zebra,
+                       EventCallback.Factory.Create<bool>(this, SetZebraAsync))
+
+            <div style="margin-top:4px;opacity:.55">
+                @DisabledRow("Belge sekmeleri", "yakında — açık belgeler arası sekmeyle geçiş")
+                @DisabledRow("Kolon filtre satırı", "yakında — liste başlıklarının altında satır bazlı filtre")
+                @DisabledRow("Fonksiyon tuşu ipuçları", "yakında — F2/F4 gibi kısayolların ekranda gösterimi")
+            </div>
+
+            <button class="btn btn-secondary btn-sm" style="margin-top:12px" @onclick="ResetAsync">
+                Varsayılana dön
+            </button>
+        </Blueprint>
+
+        <Blueprint Class="bp-pad">
+            <h5 style="margin:0 0 10px">Sistem</h5>
+            <table class="table">
+                <tbody>
+                    <tr><td class="text-muted" style="width:140px">Sunucu saati</td>
+                        <td>@DateTime.Now.ToString("dd.MM.yyyy HH:mm")</td></tr>
+                    <tr><td class="text-muted">Dönem</td><td>@DateTime.Today.Year</td></tr>
+                </tbody>
+            </table>
+
+            <h5 style="margin:16px 0 8px">Kısayollar</h5>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <a class="btn btn-secondary btn-sm" href="/denetim">Denetim Kaydı</a>
+                <AuthorizeView Roles="Admin">
+                    <Authorized>
+                        <a class="btn btn-secondary btn-sm" href="/sistem-testi">Sistem Testi</a>
+                        <a class="btn btn-secondary btn-sm" href="/kullanicilar">Kullanıcılar</a>
+                    </Authorized>
+                </AuthorizeView>
+            </div>
+        </Blueprint>
+    </div>
+</div>
+
+@code {
+    private bool _dark;
+    private bool _rail = true;
+    private bool _zebra;
+    private bool _loaded;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _loaded) return;
+        _loaded = true;
+
+        _dark = await JS.InvokeAsync<string>("nexusTheme.get") == "dark";
+
+        var prefs = await JS.InvokeAsync<UiPrefs>("nexusUi.get");
+        _rail = prefs.Rail;
+        _zebra = prefs.Zebra;
+
+        StateHasChanged();
+    }
+
+    private async Task SetDarkAsync(bool value)
+    {
+        _dark = value;
+        await JS.InvokeVoidAsync("nexusTheme.set", value ? "dark" : "light");
+    }
+
+    private async Task SetRailAsync(bool value)
+    {
+        _rail = value;
+        await JS.InvokeVoidAsync("nexusUi.set", new UiPrefs(_rail, _zebra));
+    }
+
+    private async Task SetZebraAsync(bool value)
+    {
+        _zebra = value;
+        await JS.InvokeVoidAsync("nexusUi.set", new UiPrefs(_rail, _zebra));
+    }
+
+    private async Task ResetAsync()
+    {
+        var prefs = await JS.InvokeAsync<UiPrefs>("nexusUi.reset");
+        _rail = prefs.Rail;
+        _zebra = prefs.Zebra;
+
+        _dark = false;
+        await JS.InvokeVoidAsync("nexusTheme.set", "light");
+    }
+
+    private sealed record UiPrefs(bool Rail, bool Zebra);
+
+    private RenderFragment SwitchRow(string title, string hint, bool value, EventCallback<bool> onChange)
+        => @<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--color-divider)">
+            <div style="min-width:0">
+                <div style="font-size:13px">@title</div>
+                <div class="kpi-hint">@hint</div>
+            </div>
+            <span style="margin-left:auto;display:flex;align-items:center;gap:8px;flex:none">
+                <span class="kpi-hint">@(value ? "AÇIK" : "KAPALI")</span>
+                <label class="nx-switch">
+                    <input type="checkbox" checked="@value"
+                           @onchange="@(async (ChangeEventArgs e) => await onChange.InvokeAsync((bool)(e.Value ?? false)))" />
+                    <span class="track"></span><span class="thumb"></span>
+                </label>
+            </span>
+        </div>;
+
+    private RenderFragment DisabledRow(string title, string hint)
+        => @<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--color-divider)">
+            <div style="min-width:0">
+                <div style="font-size:13px">@title</div>
+                <div class="kpi-hint">@hint</div>
+            </div>
+            <span style="margin-left:auto;flex:none">
+                <label class="nx-switch"><input type="checkbox" disabled /><span class="track"></span><span class="thumb"></span></label>
+            </span>
+        </div>;
+}

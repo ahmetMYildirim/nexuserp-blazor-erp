@@ -72,6 +72,77 @@
    Yapılan tek şey ikonlara nefes payı vermek: */
 .mud-table-root .mud-table-cell .mud-icon-button { margin: 0 4px; }
 
+/* ═══════════════════ UI v2 kabuk şeritleri (docs/ui-v2) ═══════════════════
+   Breadcrumb/işlem çubuğu, sol kısayol paneli, durum çubuğu — tasarım
+   referansındaki ölçüler (33px / 186px / 23px) birebir. */
+.nx-toolbar {
+  height: 33px; flex: none; display: flex; align-items: center; gap: 4px;
+  padding: 0 8px; background: var(--color-neutral-100);
+  border-bottom: 1px solid var(--color-divider);
+}
+.nx-crumb {
+  margin-right: 8px; font-size: 11px; letter-spacing: .1em;
+  white-space: nowrap; color: color-mix(in srgb, var(--color-text) 60%, transparent);
+}
+.nx-toolbar-actions { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.nx-toolbar-actions .btn { height: 23px; padding: 0 9px; font-size: 12px; }
+
+.nx-shell-body { flex: 1; min-height: 0; display: flex; }
+
+.nx-rail {
+  width: 186px; flex: none; overflow: auto; padding: 8px 0 12px;
+  background: var(--color-neutral-100); border-right: 1px solid var(--color-divider);
+}
+.nx-rail-kicker {
+  padding: 0 10px 4px; font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+.nx-rail-kicker:not(:first-child) { padding-top: 14px; }
+.nx-rail-item {
+  width: 100%; display: flex; align-items: center; gap: 8px;
+  padding: 3px 10px; background: transparent; border: 0; border-left: 2px solid transparent;
+  cursor: pointer; font: inherit; font-size: 12px; text-align: left;
+  color: var(--color-text); text-decoration: none;
+}
+.nx-rail-item:hover { background: var(--color-accent-100); }
+.nx-rail-item.active { background: var(--color-accent-100); border-left-color: var(--color-accent); }
+.nx-rail-item .count { margin-left: auto; font-size: 11px; color: color-mix(in srgb, var(--color-text) 55%, transparent); }
+.nx-rail-row {
+  padding: 0 10px; display: flex; justify-content: space-between;
+  font-size: 12px; margin-bottom: 3px;
+}
+
+.nx-statusbar {
+  height: 23px; flex: none; display: flex; align-items: center; gap: 10px;
+  padding: 0 10px; background: var(--color-accent-900); color: var(--nx-onbar, #f2f2f3);
+  font-size: 11px;
+}
+.nx-statusbar .dot {
+  width: 6px; height: 6px; background: var(--color-accent-300); flex: none;
+}
+.nx-statusbar .sep { opacity: .4; }
+.nx-statusbar .push { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+/* Ayarlar ekranı anahtarları (wwwroot/js/ui-prefs.js). Sayfa açılışında
+   Blazor devresi kurulmadan uygulanır — CSS özniteliği okuyor, JS yazıyor. */
+html[data-rail="hide"] .nx-rail { display: none; }
+html[data-zebra="on"] .table tbody tr:nth-child(even) { background: color-mix(in srgb, var(--color-text) 3%, transparent); }
+
+/* — anahtar (switch) — */
+.nx-switch { position: relative; display: inline-flex; width: 38px; height: 20px; flex: none; }
+.nx-switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.nx-switch .track {
+  position: absolute; inset: 0; background: var(--color-neutral-400);
+  transition: background .15s;
+}
+.nx-switch .thumb {
+  position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+  background: var(--color-bg); transition: transform .15s;
+}
+.nx-switch input:checked ~ .track { background: var(--color-accent); }
+.nx-switch input:checked ~ .thumb { transform: translateX(18px); }
+.nx-switch input:focus-visible ~ .track { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
 /* ⚠️ MudDataGrid tablosu içeriği kadar genişliyor; kapsayıcıdan dar kalınca
    satır alt çizgisi tablonun bittiği yerde KESİLİYOR ve satırlar ortadan
    bölünmüş görünüyor. Tabloyu kapsayıcıya yaymak çizgiyi uçtan uca taşır. */
@@ -260,9 +331,11 @@ a:hover { color: var(--color-accent-700); }
 
 .nx-content {
   padding: 22px 20px 56px;
-  max-width: var(--content-max);
-  margin: 0 auto;
 }
+/* İçerik kolonunun kendisi genişliği sınırlar; dıştaki .nx-shell-body
+   flex satırı zaten kalan alanı verdiği için margin:auto burada gereksiz
+   ve rail'i ortaya çekip asimetrik boşluk bırakırdı. */
+.nx-content > * { max-width: var(--content-max); margin-inline: auto; }
 
 /* ═══════════════════ Blueprint panel ═══════════════════ */
 

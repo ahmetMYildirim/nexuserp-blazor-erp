@@ -9,10 +9,16 @@
 <MudSnackbarProvider />
 
 @*
-    Kabuk: 44px üst bar + 38px modül menüsü + içerik.
-    MudLayout/MudDrawer kaldırıldı — gezinme tamamen üst menüden.
+    Kabuk (UI v2, docs/ui-v2): 44px üst bar + 32px modül menüsü + 33px
+    breadcrumb/işlem çubuğu + [186px kısayol paneli | içerik] + 23px durum çubuğu.
+
+    ⚠️ Belge sekmeleri (docs/ui-v2 §"Belge sekmeleri") ve bildirim paneli bu
+    turda BİLEREK dışarıda bırakıldı: sekmeler oturum/tab durumu izlemek
+    gerektiriyor, bildirimler ayrı bir servis ister — ikisi de tek başına ayrı
+    bir iş. Kalan beş şerit tasarımın çekirdeğini oluşturuyor ve her sayfada
+    görünür, bu yüzden önce onlar kuruldu.
 *@
-<div style="min-height:100vh;background:var(--color-bg)">
+<div style="height:100vh;display:flex;flex-direction:column;background:var(--color-bg);overflow:hidden">
 
     @* z-index: arama listesi modül menüsünün üstünde kalsın. Liste bu barın
        ÇOCUĞU olduğu için barın kendi stacking context'i menüden yüksek olmalı;
@@ -76,25 +82,41 @@
 
             <AuthorizeView>
                 <Authorized>
-                    <span class="nx-user">
-                        <span class="nx-user-initials">@Initials(FullNameOf(context))</span>
-                        <span style="display:flex;flex-direction:column;line-height:1.25">
-                            <span style="font-size:11.5px">@FullNameOf(context)</span>
-                            <span style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;opacity:.6">
-                                @RoleOf(context)
+                    <span style="position:relative;display:flex">
+                        <button type="button" class="nx-user" style="border:0;cursor:pointer"
+                                @onclick="@(() => _profileOpen = !_profileOpen)">
+                            <span class="nx-user-initials">@Initials(FullNameOf(context))</span>
+                            <span style="display:flex;flex-direction:column;line-height:1.25">
+                                <span style="font-size:11.5px">@FullNameOf(context)</span>
+                                <span style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;opacity:.6">
+                                    @RoleOf(context)
+                                </span>
                             </span>
-                        </span>
-                        @* Çıkış POST olmalı — cookie silmek HttpContext gerektiriyor *@
-                        <form method="post" action="/hesap/cikis" style="margin:0;display:flex">
-                            <AntiforgeryToken />
-                            <button type="submit" title="Çıkış yap"
-                                    style="background:none;border:0;cursor:pointer;color:inherit;padding:0 0 0 6px;display:flex">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                                     stroke="currentColor" stroke-width="1.5">
-                                    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"></path>
-                                </svg>
-                            </button>
-                        </form>
+                        </button>
+
+                        @if (_profileOpen)
+                        {
+                            <div class="blueprint" style="@DropdownStyle;right:0;left:auto"
+                                 @onmouseleave="@(() => _profileOpen = false)">
+                                <a class="nx-dropdown-item" href="/profil">
+                                    <strong>Profilim</strong>
+                                    <span class="text-muted">kişisel bilgiler</span>
+                                </a>
+                                <a class="nx-dropdown-item" href="/ayarlar">
+                                    <strong>Ayarlar</strong>
+                                    <span class="text-muted">tema, sol panel</span>
+                                </a>
+                                <div style="border-top:1px solid var(--color-divider);margin:4px 0"></div>
+                                @* Çıkış POST olmalı — cookie silmek HttpContext gerektiriyor *@
+                                <form method="post" action="/hesap/cikis" style="margin:0">
+                                    <AntiforgeryToken />
+                                    <button type="submit" class="nx-dropdown-item"
+                                            style="width:100%;border:0;background:transparent;cursor:pointer;text-align:left">
+                                        <strong>Oturumu kapat</strong>
+                                    </button>
+                                </form>
+                            </div>
+                        }
                     </span>
                 </Authorized>
             </AuthorizeView>
@@ -103,14 +125,64 @@
 
     <ModuleNav />
 
-    <main class="nx-content">
-        @Body
-    </main>
+    @* Breadcrumb + sayfaya özel işlem çubuğu. Kırıntı, MainLayout'un zaten
+       tuttuğu sayfa listesinden (arama için kullanılan Pages) türetiliyor —
+       ayrı bir eşleme tablosu bakımı gerektirmesin diye. *@
+    <div class="nx-toolbar">
+        <span class="nx-crumb">@Breadcrumb()</span>
+    </div>
+
+    <div class="nx-shell-body">
+        @* Sol kısayol paneli. İçerik şimdilik sabit — gerçek kuyruk sayıları
+           (outbox, e-fatura) ayrı bir servis bağlantısı gerektiriyor, sonraki
+           adım olarak not düşüldü. *@
+        <aside class="nx-rail">
+            <div class="nx-rail-kicker">Kısayollar</div>
+            @foreach (var item in RailShortcuts)
+            {
+                <a class="nx-rail-item @(CurrentPath == item.Href ? "active" : "")" href="@item.Href">
+                    <span>@item.Title</span>
+                </a>
+            }
+
+            <div class="nx-rail-kicker">Dönem</div>
+            <div class="nx-rail-row">
+                <span class="text-muted">@DateTime.Today.ToString("MMMM yyyy",
+                    System.Globalization.CultureInfo.GetCultureInfo("tr-TR"))</span>
+                <span class="tag tag-accent" style="font-size:9px;padding:1px 6px">AÇIK</span>
+            </div>
+
+            <div class="nx-rail-kicker">Kuyruklar</div>
+            <div class="nx-rail-row">
+                <span class="text-muted">Outbox</span>
+                <a href="/sistem-testi" class="text-muted" style="text-decoration:none">bkz. sistem testi</a>
+            </div>
+        </aside>
+
+        <main class="nx-content" style="flex:1;min-width:0;overflow:auto">
+            @Body
+        </main>
+    </div>
+
+    <div class="nx-statusbar">
+        <span class="dot"></span>
+        <span>Bağlı</span>
+        <span class="sep">·</span>
+        <span>@DateTime.Today.ToString("yyyy") dönemi</span>
+        <span class="push">
+            <AuthorizeView>
+                <Authorized><span>@RoleOf(context)</span></Authorized>
+            </AuthorizeView>
+            <span class="sep">·</span>
+            <span>Ctrl+K ile ara</span>
+        </span>
+    </div>
 </div>
 
 @code {
     private bool _isDark;
     private bool _themeLoaded;
+    private bool _profileOpen;
 
     // ---------------- Arama ----------------
 
@@ -137,8 +209,39 @@
         new("Gelir Tablosu", "/gelir-tablosu", "Muhasebe"),
         new("Denetim Kaydı", "/denetim", "Sistem"),
         new("Kullanıcılar", "/kullanicilar", "Sistem"),
-        new("Sistem Testi", "/sistem-testi", "Sistem")
+        new("Sistem Testi", "/sistem-testi", "Sistem"),
+        new("Ayarlar", "/ayarlar", "Sistem"),
+        new("Profilim", "/profil", "Hesap")
     ];
+
+    // ---------------- Kabuk: kırıntı + sol panel ----------------
+
+    private static readonly SearchItem[] RailShortcuts =
+    [
+        Pages[3],  // Faturalar
+        Pages[7],  // Tahsilatlar
+        Pages[10], // Abonelikler
+        Pages[14], // Mizan
+        Pages[17], // Denetim Kaydı
+    ];
+
+    private string CurrentPath => "/" + Nav.ToBaseRelativePath(Nav.Uri).Split('?')[0].TrimEnd('/');
+
+    /// <summary>
+    /// "GRUP › SAYFA" — arama için tutulan Pages listesinden türetiliyor, ayrı
+    /// bir eşleme tablosu bakımı gerektirmesin diye. Eşleşme yoksa (örn. alt
+    /// rotalar: /faturalar/{id}) en uzun ön ekle eşleşen sayfa kullanılır.
+    /// </summary>
+    private string Breadcrumb()
+    {
+        var path = CurrentPath;
+        var match = Pages
+            .Where(p => path == p.Href || (p.Href != "/" && path.StartsWith(p.Href, StringComparison.OrdinalIgnoreCase)))
+            .OrderByDescending(p => p.Href.Length)
+            .FirstOrDefault();
+
+        return match is null ? "NEXUSERP" : $"{match.Group.ToUpper(System.Globalization.CultureInfo.GetCultureInfo("tr-TR"))} › {match.Title}";
+    }
 
     private string _query = string.Empty;
 
@@ -206,8 +309,9 @@
     protected override void OnInitialized() =>
         Nav.LocationChanged += (_, _) =>
         {
-            if (_query.Length == 0) return;
+            if (_query.Length == 0 && !_profileOpen) return;
             _query = string.Empty;
+            _profileOpen = false;
             InvokeAsync(StateHasChanged);
         };
 
