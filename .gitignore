@@ -1,4 +1,4 @@
-bin/
+﻿bin/
 obj/
 *.user
 *.suo
@@ -18,6 +18,8 @@ logs/
 # tanımlanamaz. İçeriği hariç tutup istisnayı öyle veriyoruz.
 docs/*
 !docs/screenshots/
+!docs/ui-v2/
+!docs/ui-v2/**
 *.pdf
 *.xlsx
 *.zip

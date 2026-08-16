@@ -1,0 +1,2080 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/industry-8f92f963-e3c9-492b-be3a-cf48c9656c01/styles.css">
+<script src="_ds/industry-8f92f963-e3c9-492b-be3a-cf48c9656c01/_ds_bundle.js"></script>
+<style>
+  :root { --nx-onbar: #f2f2f3; }
+  [data-theme="dark"] {
+    --color-bg: #1b1e21; --color-text: #e9eaeb; --color-divider: rgba(233,234,235,0.20);
+    --color-neutral-100: #212529; --color-neutral-200: #262b30; --color-neutral-300: #333940;
+    --color-neutral-400: #4b525a; --color-neutral-500: #6c757e; --color-neutral-600: #98a1aa;
+    --color-neutral-700: #b3bac1; --color-neutral-800: #ccd2d8; --color-neutral-900: #e9eaeb;
+    --color-accent: #94bce3; --color-accent-100: #223140; --color-accent-200: #2c4255;
+    --color-accent-300: #3c5b74; --color-accent-400: #5c87a9; --color-accent-500: #7ba3c8;
+    --color-accent-600: #a9cbec; --color-accent-700: #c0daf2; --color-accent-800: #d6e6f7;
+    --color-accent-900: #141a20; --nx-onbar: #e9eaeb;
+    color-scheme: dark;
+  }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  a { color: var(--color-accent-700); }
+  a:hover { color: var(--color-accent-800); }
+  .nx-num { font-variant-numeric: tabular-nums; }
+  .nx-ico { font-family: var(--font-heading); }
+</style>
+</helmet>
+
+<div style="height: 100vh; display: flex; flex-direction: column; background: var(--color-bg); color: var(--color-text); font-family: var(--font-body); font-size: 13px; overflow: hidden;">
+  <div data-theme="{{ themeAttr }}" style="flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--color-bg); color: var(--color-text);">
+
+  <div style="height: 44px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 6px; background: var(--color-accent-900); color: var(--nx-onbar);">
+    <button onClick="{{ goHome }}" title="Genel Bakış" style="height: 28px; padding: 0 8px; background: transparent; border: 0; cursor: pointer; color: inherit; font-family: var(--font-heading); font-size: 15px; letter-spacing: 0.16em;" style-hover="background: rgba(242,242,243,0.12);">NEXUSERP</button>
+    <span style="width: 1px; height: 20px; background: rgba(242,242,243,0.28);"></span>
+    <span style="display: flex; flex-direction: column; line-height: 1.15; min-width: 0;">
+      <span style="font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.6;">Nexus Demo Yazılım A.Ş.</span>
+      <span style="font-family: var(--font-heading); font-size: 14px; white-space: nowrap;">{{ pageTitle }}</span>
+    </span>
+    <span style="position: relative; display: flex; flex: 1; max-width: 460px; margin: 0 auto;">
+      <input ref="{{ searchRef }}" value="{{ pq }}" onChange="{{ setPq }}" onKeyDown="{{ pqKey }}" type="search" placeholder="Ara…  Ctrl+K" title="Sayfa adı yazıp Enter'a basın" style="width: 100%; height: 22px; padding: 0 8px; background: rgba(242,242,243,0.09); border: 1px solid rgba(242,242,243,0.22); color: inherit; font: inherit; font-size: 12px;">
+      <sc-if value="{{ hasMatches }}" hint-placeholder-val="{{ false }}">
+        <span class="blueprint elev-lg" style="position: absolute; top: 26px; left: 0; width: 320px; padding: 4px; background: var(--color-bg); color: var(--color-text); z-index: 999;">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <sc-for list="{{ pResults }}" as="p" hint-placeholder-count="4">
+            <button onClick="{{ p.go }}" style="width: 100%; display: flex; align-items: baseline; gap: 8px; padding: 4px 7px; background: transparent; border: 0; cursor: pointer; font: inherit; text-align: left;" style-hover="background: var(--color-accent-100);">
+              <span style="font-family: var(--font-heading); font-size: 13px;">{{ p.label }}</span>
+              <span class="text-muted" style="margin-left: auto; font-size: 11px;">{{ p.group }}</span>
+            </button>
+          </sc-for>
+        </span>
+      </sc-if>
+    </span>
+    <span style="display: flex; align-items: center; gap: 10px; font-size: 11px;">
+      <span class="nx-ico" style="padding: 2px 7px; border: 1px solid rgba(242,242,243,0.22); letter-spacing: 0.1em; opacity: 0.85;">DÖNEM 2026-08 · AÇIK</span>
+      <button onClick="{{ toggleTheme }}" title="{{ themeTitle }}" style="display: flex; align-items: center; gap: 5px; height: 24px; padding: 0 7px; background: transparent; border: 1px solid rgba(242,242,243,0.22); cursor: pointer; color: inherit; font: inherit; font-size: 11px;" style-hover="background: rgba(242,242,243,0.12);">
+        <sc-if value="{{ isDark }}" hint-placeholder-val="{{ false }}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+        </sc-if>
+        <sc-if value="{{ isLight }}" hint-placeholder-val="{{ true }}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"></path></svg>
+        </sc-if>
+        {{ themeLabel }}
+      </button>
+      <span style="position: relative; display: flex;">
+        <button onClick="{{ toggleNotif }}" title="Bildirimler" style="position: relative; width: 26px; height: 26px; display: grid; place-items: center; padding: 0; background: {{ notifBg }}; border: 0; cursor: pointer; color: inherit;" style-hover="background: rgba(242,242,243,0.12);">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 01-3.4 0"></path></svg>
+          <span class="nx-num" style="position: absolute; top: 1px; right: 0; min-width: 13px; height: 13px; display: grid; place-items: center; padding: 0 2px; background: var(--color-accent-400); color: #10161c; font-size: 9px; font-weight: 700;">{{ notifCount }}</span>
+        </button>
+        <sc-if value="{{ notifOpen }}" hint-placeholder-val="{{ false }}">
+          <span class="blueprint elev-lg" style="position: absolute; top: 30px; right: 0; width: 380px; padding: 4px; background: var(--color-bg); color: var(--color-text); z-index: 999;">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <span class="nx-ico" style="display: flex; align-items: center; gap: 8px; padding: 5px 7px; border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;">
+              Bildirimler
+              <span class="text-muted nx-num" style="letter-spacing: 0; text-transform: none; font-size: 11px;">{{ notifSummary }}</span>
+              <button onClick="{{ readAll }}" class="btn btn-ghost" style="margin-left: auto; height: 18px; padding: 0 5px; font-size: 11px; letter-spacing: 0;">Tümünü okundu işaretle</button>
+            </span>
+            <sc-for list="{{ notifications }}" as="n" hint-placeholder-count="5">
+              <button onClick="{{ n.go }}" style="width: 100%; display: flex; align-items: flex-start; gap: 9px; padding: 6px 7px; background: {{ n.bg }}; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); cursor: pointer; font: inherit; text-align: left;" style-hover="background: var(--color-accent-100);">
+                <span style="width: 3px; align-self: stretch; flex: none; background: {{ n.mark }};"></span>
+                <span style="min-width: 0; flex: 1;">
+                  <span class="nx-ico" style="display: block; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-neutral-600);">{{ n.module }}</span>
+                  <span style="display: block; font-size: 12.5px; line-height: 1.3;">{{ n.title }}</span>
+                  <span class="text-muted nx-num" style="display: block; font-size: 11px;">{{ n.meta }}</span>
+                </span>
+                <span class="tag {{ n.tagCls }}" style="flex: none; margin-top: 2px; font-size: 9px; padding: 1px 6px;">{{ n.tag }}</span>
+              </button>
+            </sc-for>
+            <button onClick="{{ goAudit }}" class="btn btn-ghost" style="width: 100%; height: 24px; margin-top: 2px; font-size: 11px;">Tüm hareketler · Denetim kaydı</button>
+          </span>
+        </sc-if>
+      </span>
+      <span style="width: 1px; height: 20px; background: rgba(242,242,243,0.28);"></span>
+      <span style="position: relative; display: flex;">
+        <button onClick="{{ toggleProfile }}" title="Profil ve oturum" style="display: flex; align-items: center; gap: 7px; height: 30px; padding: 0 6px; background: {{ profileBg }}; border: 0; cursor: pointer; color: inherit; font: inherit; text-align: left;" style-hover="background: rgba(242,242,243,0.12);">
+          <span style="width: 24px; height: 24px; display: grid; place-items: center; background: rgba(242,242,243,0.14); font-family: var(--font-heading); font-size: 11px;">{{ meInitials }}</span>
+          <span style="display: flex; flex-direction: column; line-height: 1.2;">
+            <span style="font-size: 11.5px;">{{ meName }}</span>
+            <span style="font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.6;">{{ meRole }} · TR</span>
+          </span>
+          <span style="font-size: 8px; opacity: 0.6;">▾</span>
+        </button>
+        <sc-if value="{{ profileOpen }}" hint-placeholder-val="{{ false }}">
+          <span class="blueprint elev-lg" style="position: absolute; top: 34px; right: 0; width: 320px; padding: 4px; background: var(--color-bg); color: var(--color-text); z-index: 999;">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <span style="display: flex; align-items: center; gap: 9px; padding: 8px 8px 9px; border-bottom: 1px solid var(--color-divider);">
+              <span style="width: 34px; height: 34px; flex: none; display: grid; place-items: center; background: var(--color-accent-200); font-family: var(--font-heading); font-size: 14px;">{{ meInitials }}</span>
+              <span style="min-width: 0;">
+                <span style="display: block; font-family: var(--font-heading); font-size: 15px;">{{ meName }}</span>
+                <span class="text-muted nx-num" style="display: block; font-size: 11px;">{{ meMail }}</span>
+              </span>
+              <span class="tag tag-accent" style="margin-left: auto; flex: none; font-size: 9px; padding: 1px 7px;">{{ meRole }}</span>
+            </span>
+            <span style="display: block; padding: 6px 8px; border-bottom: 1px solid var(--color-divider);">
+              <span class="nx-ico" style="display: block; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-neutral-600);">Oturum rolü</span>
+              <span style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;">
+                <sc-for list="{{ roleSwitch }}" as="r" hint-placeholder-count="4">
+                  <button onClick="{{ r.pick }}" class="btn {{ r.cls }}" style="height: 20px; padding: 0 7px; font-size: 11px;">{{ r.label }}</button>
+                </sc-for>
+              </span>
+              <span class="text-muted" style="display: block; margin-top: 5px; font-size: 10.5px; line-height: 1.35;">{{ meScope }}</span>
+            </span>
+            <button onClick="{{ goProfile }}" style="width: 100%; display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: transparent; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); cursor: pointer; font: inherit; font-size: 12.5px; text-align: left;" style-hover="background: var(--color-accent-100);">Profilim<span class="text-muted" style="margin-left: auto; font-size: 11px;">kişisel bilgiler</span></button>
+            <button onClick="{{ goPerms }}" style="width: 100%; display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: transparent; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); cursor: pointer; font: inherit; font-size: 12.5px; text-align: left;" style-hover="background: var(--color-accent-100);">Yetkilerim<span class="text-muted" style="margin-left: auto; font-size: 11px;">{{ mePermCount }}</span></button>
+            <button onClick="{{ goSettings }}" style="width: 100%; display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: transparent; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); cursor: pointer; font: inherit; font-size: 12.5px; text-align: left;" style-hover="background: var(--color-accent-100);">Tercihler<span class="text-muted" style="margin-left: auto; font-size: 11px;">tema, sekmeler</span></button>
+            <button style="width: 100%; display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: transparent; border: 0; cursor: pointer; font: inherit; font-size: 12.5px; text-align: left; color: var(--color-accent-800);" style-hover="background: var(--color-accent-100);">Oturumu kapat<span class="text-muted nx-num" style="margin-left: auto; font-size: 11px;">08:12'den beri</span></button>
+          </span>
+        </sc-if>
+      </span>
+    </span>
+  </div>
+
+  <div style="height: 32px; flex: none; display: flex; align-items: stretch; padding: 0 6px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); position: relative; z-index: 30;">
+    <button onClick="{{ goHome }}" class="nx-ico" title="Tüm modüller" style="display: flex; align-items: center; gap: 6px; padding: 0 10px 0 4px; margin-right: 4px; background: transparent; border: 0; border-right: 1px solid var(--color-divider); cursor: pointer; font-family: var(--font-heading); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-text);" style-hover="background: var(--color-accent-100);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>
+      Modüller
+    </button>
+    <sc-for list="{{ modules }}" as="g" hint-placeholder-count="7">
+      <span style="position: relative; display: flex;">
+        <button onClick="{{ g.toggle }}" class="nx-ico" style="height: 100%; display: flex; align-items: center; gap: 5px; padding: 0 10px; background: {{ g.bg }}; border: 0; border-bottom: 2px solid {{ g.mark }}; color: var(--color-text); font-family: var(--font-heading); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer;">
+          {{ g.label }}<span style="font-size: 8px; opacity: 0.5;">{{ g.caret }}</span>
+        </button>
+        <sc-if value="{{ g.open }}" hint-placeholder-val="{{ false }}">
+          <div class="blueprint elev-md" style="position: absolute; top: 32px; left: 0; width: 480px; background: var(--color-bg); padding: 6px; z-index: 40; display: grid; grid-template-columns: 1fr 1fr; gap: 2px;">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <span class="nx-ico" style="grid-column: 1 / -1; padding: 2px 6px 4px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-neutral-600);">{{ g.label }} modülü</span>
+            <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="3">
+              <button onClick="{{ it.go }}" style="width: 100%; display: block; text-align: left; padding: 5px 8px; background: transparent; border: 0; cursor: pointer; font: inherit;" style-hover="background: var(--color-accent-100);">
+                <span style="display: block; font-family: var(--font-heading); font-size: 13px;">{{ it.title }}</span>
+                <span class="text-muted" style="display: block; font-size: 11px; line-height: 1.35;">{{ it.desc }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+      </span>
+    </sc-for>
+  </div>
+
+  <sc-if value="{{ showTabs }}" hint-placeholder-val="{{ true }}">
+  <div style="height: 28px; flex: none; display: flex; align-items: stretch; gap: 0; padding-left: 4px; background: var(--color-bg); border-bottom: 1px solid var(--color-divider); overflow-x: auto; overflow-y: hidden;">
+    <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+      <span style="display: flex; flex: none; align-items: stretch; white-space: nowrap; border-right: 1px solid var(--color-divider); background: {{ t.bg }};">
+        <button onClick="{{ t.go }}" style="display: flex; align-items: center; gap: 7px; padding: 0 9px; background: transparent; border: 0; border-top: 2px solid {{ t.mark }}; cursor: pointer; font: inherit; font-size: 12px; color: var(--color-text);">
+          <span class="nx-ico" style="font-size: 9px; letter-spacing: 0.06em; color: var(--color-accent-700);">{{ t.kind }}</span>
+          <span>{{ t.label }}</span>
+          <span style="font-size: 10px; color: var(--color-accent-700);">{{ t.dirty }}</span>
+        </button>
+        <button onClick="{{ t.close }}" style="width: 18px; background: transparent; border: 0; cursor: pointer; font-size: 12px; line-height: 1; color: var(--color-neutral-600);" style-hover="background: var(--color-neutral-300); color: var(--color-text);">{{ t.x }}</button>
+      </span>
+    </sc-for>
+    <button onClick="{{ openPalette }}" style="width: 26px; flex: none; background: transparent; border: 0; border-right: 1px solid var(--color-divider); cursor: pointer; font-size: 13px; color: var(--color-neutral-600);" style-hover="background: var(--color-neutral-200); color: var(--color-text);">+</button>
+    <span style="margin-left: auto; display: flex; flex: none; align-items: center; gap: 10px; padding: 0 10px; font-size: 11px; white-space: nowrap;" class="text-muted">
+      <span>{{ tabHint }}</span>
+    </span>
+  </div>
+  </sc-if>
+
+  <div style="height: 33px; flex: none; display: flex; align-items: center; gap: 4px; padding: 0 8px; background: var(--color-neutral-100); border-bottom: 1px solid var(--color-divider);">
+    <span class="nx-ico text-muted" style="margin-right: 8px; font-size: 11px; letter-spacing: 0.1em; white-space: nowrap;">{{ crumb }}</span>
+    <span style="margin-left: auto; display: flex; align-items: center; gap: 4px;">
+      <sc-for list="{{ toolbar }}" as="a" hint-placeholder-count="5">
+        <button onClick="{{ a.run }}" class="btn {{ a.cls }}" style="height: 23px; padding: 0 9px; font-size: 12px; gap: 7px; white-space: nowrap;">
+          {{ a.label }}<span style="font-size: 9px; letter-spacing: 0.06em; opacity: 0.6;">{{ a.hint }}</span>
+        </button>
+      </sc-for>
+    </span>
+  </div>
+
+  <div style="flex: 1; min-height: 0; display: flex; overflow: hidden;">
+
+    <sc-if value="{{ rail }}" hint-placeholder-val="{{ true }}">
+      <div style="width: 186px; flex: none; border-right: 1px solid var(--color-divider); overflow: auto; padding: 8px 0 12px; background: var(--color-neutral-100);">
+        <div class="nx-ico" style="padding: 0 10px 4px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-neutral-600);">Kısayollar</div>
+        <sc-for list="{{ favs }}" as="f" hint-placeholder-count="5">
+          <button onClick="{{ f.go }}" style="width: 100%; display: flex; align-items: center; gap: 8px; padding: 3px 10px; background: {{ f.bg }}; border: 0; border-left: 2px solid {{ f.mark }}; cursor: pointer; font: inherit; font-size: 12px; text-align: left; color: var(--color-text);" style-hover="background: var(--color-accent-100);">
+            <span>{{ f.label }}</span>
+            <span class="nx-num" style="margin-left: auto; font-size: 11px; color: var(--color-neutral-600);">{{ f.count }}</span>
+          </button>
+        </sc-for>
+        <div class="nx-ico" style="padding: 14px 10px 4px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-neutral-600);">Dönem</div>
+        <div style="padding: 0 10px; display: flex; flex-direction: column; gap: 3px; font-size: 12px;">
+          <div style="display: flex; justify-content: space-between;"><span class="text-muted">Ağustos 2026</span><span class="tag tag-accent" style="font-size: 9px; padding: 1px 6px;">AÇIK</span></div>
+          <div style="display: flex; justify-content: space-between;"><span class="text-muted">Temmuz 2026</span><span class="text-muted" style="font-size: 11px;">kapalı</span></div>
+          <div style="display: flex; justify-content: space-between;"><span class="text-muted">Haziran 2026</span><span class="text-muted" style="font-size: 11px;">kapalı</span></div>
+        </div>
+        <div class="nx-ico" style="padding: 14px 10px 4px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-neutral-600);">Kuyruklar</div>
+        <div style="padding: 0 10px; display: flex; flex-direction: column; gap: 3px; font-size: 12px;">
+          <div style="display: flex; justify-content: space-between;"><span class="text-muted">Outbox</span><span class="nx-num">0 bekleyen</span></div>
+          <div style="display: flex; justify-content: space-between;"><span class="text-muted">E-Fatura</span><span class="nx-num">2 kuyrukta</span></div>
+          <div style="display: flex; justify-content: space-between;"><span class="text-muted">Son senkron</span><span class="nx-num">09:41</span></div>
+        </div>
+      </div>
+    </sc-if>
+
+    <div style="flex: 1; min-width: 0; overflow: auto;">
+
+      <sc-if value="{{ isDash }}" hint-placeholder-val="{{ true }}">
+        <div style="padding: 10px 12px 16px; display: flex; flex-direction: column; gap: 12px;">
+
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+            <div class="blueprint" style="padding: 8px 10px 9px;">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <div class="nx-ico" style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-neutral-600);">Açık Alacak</div>
+              <div class="nx-num" style="font-family: var(--font-heading); font-size: 26px; line-height: 1.1;">167.086,80 <span style="font-size: 15px; color: var(--color-neutral-600);">₺</span></div>
+              <div class="text-muted" style="font-size: 11px;">12 fatura kayıtlı</div>
+            </div>
+            <div class="blueprint" style="padding: 8px 10px 9px;">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <div class="nx-ico" style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-neutral-600);">Vadesi Geçen</div>
+              <div class="nx-num" style="font-family: var(--font-heading); font-size: 26px; line-height: 1.1; color: var(--color-accent-800);">60.160,00 <span style="font-size: 15px; opacity: 0.6;">₺</span></div>
+              <div class="text-muted" style="font-size: 11px;">2 fatura gecikmede</div>
+            </div>
+            <div class="blueprint" style="padding: 8px 10px 9px;">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <div class="nx-ico" style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-neutral-600);">MRR</div>
+              <div class="nx-num" style="font-family: var(--font-heading); font-size: 26px; line-height: 1.1;">17.946,67 <span style="font-size: 15px; color: var(--color-neutral-600);">₺</span></div>
+              <div class="text-muted" style="font-size: 11px;">6 abonelik · ARR 215.360,04 ₺</div>
+            </div>
+            <div class="blueprint" style="padding: 8px 10px 9px;">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <div class="nx-ico" style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-neutral-600);">Bu Ay Ciro (KDV hariç)</div>
+              <div style="display: flex; align-items: flex-end; gap: 8px;">
+                <span class="nx-num" style="font-family: var(--font-heading); font-size: 26px; line-height: 1.1; white-space: nowrap;">87.789,00 <span style="font-size: 15px; color: var(--color-neutral-600);">₺</span></span>
+                <span style="display: flex; align-items: flex-end; gap: 2px; height: 22px; margin-bottom: 3px; margin-left: auto;">
+                  <sc-for list="{{ spark }}" as="v" hint-placeholder-count="12">
+                    <span style="width: 3px; height: {{ v.h }}; background: var(--color-accent-400);"></span>
+                  </sc-for>
+                </span>
+              </div>
+              <div class="text-muted" style="font-size: 11px;"><span class="nx-num" style="color: var(--color-accent-800);">%1.363,2</span> geçen aya göre</div>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="nx-ico" style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-neutral-600);">Özet Göstergeler</span>
+            <span class="text-muted nx-num" style="font-size: 11px;">12 / 12 kart</span>
+            <button onClick="{{ toggleCards }}" class="btn btn-ghost" style="margin-left: auto; height: 19px; padding: 0 6px; font-size: 11px;">{{ cardsBtn }}</button>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(6, 1fr); border: 1px solid var(--color-divider); margin-top: -6px;">
+            <sc-for list="{{ mini }}" as="m" hint-placeholder-count="12">
+              <span style="padding: 5px 9px 6px; border-right: 1px solid var(--color-divider); border-bottom: 1px solid var(--color-divider);">
+                <span class="nx-ico" style="display: block; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-neutral-600);">{{ m.label }}</span>
+                <span class="nx-num" style="font-family: var(--font-heading); font-size: 17px;">{{ m.value }}</span>
+                <span class="text-muted" style="display: block; font-size: 10px;">{{ m.hint }}</span>
+              </span>
+            </sc-for>
+          </div>
+
+          <div class="blueprint" style="padding: 9px 11px 12px;">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 9px;">
+              <span style="font-family: var(--font-heading); font-size: 17px;">Muhasebe Defteri</span>
+              <span class="text-muted" style="font-size: 11px;">2026 yılı · kesinleşmiş fişler</span>
+              <span style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+                <span class="tag tag-accent" style="font-size: 9px; padding: 1px 7px;">DEFTER DENK</span>
+                <button onClick="{{ goMizan }}" class="btn btn-ghost" style="height: 19px; padding: 0 6px; font-size: 11px;">Mizan</button>
+                <button onClick="{{ goBilanco }}" class="btn btn-ghost" style="height: 19px; padding: 0 6px; font-size: 11px;">Bilanço</button>
+              </span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(7, 1fr); border: 1px solid var(--color-divider);">
+              <sc-for list="{{ ledgerStats }}" as="m" hint-placeholder-count="7">
+                <span style="padding: 5px 9px 6px; border-right: 1px solid var(--color-divider);">
+                  <span class="nx-ico" style="display: block; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-neutral-600);">{{ m.label }}</span>
+                  <span class="nx-num" style="font-family: var(--font-heading); font-size: 16px;">{{ m.value }}</span>
+                  <span class="text-muted" style="display: block; font-size: 10px;">{{ m.hint }}</span>
+                </span>
+              </sc-for>
+            </div>
+
+            <div style="display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-top: 12px;">
+              <span>
+                <span class="nx-ico" style="display: block; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;">{{ chartTitle }}</span>
+                <span class="text-muted" style="display: block; font-size: 11px;">{{ chartHint }}</span>
+              </span>
+              <span style="display: flex; align-items: center; gap: 12px; margin-left: 16px;" class="text-muted">
+                <span style="display: flex; align-items: center; gap: 5px; font-size: 11px;"><span style="width: 10px; height: 10px; background: var(--color-accent-700);"></span>{{ legend1 }}</span>
+                <sc-if value="{{ isBarChart }}" hint-placeholder-val="{{ true }}">
+                  <span style="display: flex; align-items: center; gap: 5px; font-size: 11px;"><span style="width: 10px; height: 10px; background: var(--color-accent-200); border: 1px solid var(--color-accent-600);"></span>Gider</span>
+                </sc-if>
+              </span>
+              <span style="margin-left: auto; display: flex; gap: 6px;">
+                <sc-for list="{{ chartTabs }}" as="c" hint-placeholder-count="3">
+                  <button onClick="{{ c.pick }}" class="btn {{ c.cls }}" style="height: 21px; padding: 0 8px; font-size: 11px;">{{ c.label }}</button>
+                </sc-for>
+              </span>
+            </div>
+
+            <sc-if value="{{ isBarChart }}" hint-placeholder-val="{{ true }}">
+              <div style="display: flex; gap: 10px; padding-top: 10px;">
+                <div class="nx-num" style="width: 40px; flex: none; display: flex; flex-direction: column; justify-content: space-between; height: 172px; padding-bottom: 22px; text-align: right; font-size: 10px; color: var(--color-neutral-600);">
+                  <sc-for list="{{ axisLabels }}" as="t" hint-placeholder-count="5">
+                    <span style="line-height: 1;">{{ t }}</span>
+                  </sc-for>
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="position: relative; height: 150px;">
+                    <span style="position: absolute; left: 0; right: 0; top: 0; border-top: 1px solid var(--color-divider);"></span>
+                    <span style="position: absolute; left: 0; right: 0; top: 25%; border-top: 1px dashed var(--color-divider);"></span>
+                    <span style="position: absolute; left: 0; right: 0; top: 50%; border-top: 1px dashed var(--color-divider);"></span>
+                    <span style="position: absolute; left: 0; right: 0; top: 75%; border-top: 1px dashed var(--color-divider);"></span>
+                    <span style="position: absolute; left: 0; right: 0; bottom: 0; border-top: 1px solid var(--color-neutral-500);"></span>
+                    <div style="position: absolute; inset: 0; display: flex; align-items: flex-end; gap: 22px;">
+                      <sc-for list="{{ chartBars }}" as="b" hint-placeholder-count="5">
+                        <span style="flex: 1; display: flex; align-items: flex-end; justify-content: center; gap: 5px; height: 100%;">
+                          <span title="Gelir" style="flex: 1; max-width: 38px; min-height: 3px; height: {{ b.h1 }}; background: var(--color-accent-700);"></span>
+                          <sc-if value="{{ b.two }}" hint-placeholder-val="{{ true }}">
+                            <span title="Gider" style="flex: 1; max-width: 38px; min-height: 3px; height: {{ b.h2 }}; background: var(--color-accent-200); border: 1px solid var(--color-accent-600);"></span>
+                          </sc-if>
+                        </span>
+                      </sc-for>
+                    </div>
+                  </div>
+                  <table class="nx-num" style="width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 6px;">
+                    <thead>
+                      <tr>
+                        <th style="width: 74px; padding: 3px 6px 3px 0; border-bottom: 1px solid var(--color-divider);"></th>
+                        <sc-for list="{{ chartBars }}" as="b" hint-placeholder-count="5">
+                          <th class="nx-ico" style="padding: 3px 6px; border-bottom: 1px solid var(--color-divider); border-left: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; text-align: right;">{{ b.label }}</th>
+                        </sc-for>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="nx-ico" style="padding: 3px 6px 3px 0; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-neutral-700);">{{ legend1 }}</td>
+                        <sc-for list="{{ chartBars }}" as="b" hint-placeholder-count="5">
+                          <td style="padding: 3px 6px; border-left: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); text-align: right;">{{ b.v1 }}</td>
+                        </sc-for>
+                      </tr>
+                      <sc-if value="{{ showExpenseRow }}" hint-placeholder-val="{{ true }}">
+                        <tr>
+                          <td class="nx-ico" style="padding: 3px 6px 3px 0; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-neutral-700);">Gider</td>
+                          <sc-for list="{{ chartBars }}" as="b" hint-placeholder-count="5">
+                            <td style="padding: 3px 6px; border-left: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); text-align: right; color: var(--color-neutral-700);">{{ b.v2 }}</td>
+                          </sc-for>
+                        </tr>
+                        <tr>
+                          <td class="nx-ico" style="padding: 3px 6px 3px 0; border-top: 1px solid var(--color-divider); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;">Net</td>
+                          <sc-for list="{{ chartBars }}" as="b" hint-placeholder-count="5">
+                            <td style="padding: 3px 6px; border-top: 1px solid var(--color-divider); border-left: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); text-align: right; font-weight: 700;">{{ b.net }}</td>
+                          </sc-for>
+                        </tr>
+                      </sc-if>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ isAcctChart }}" hint-placeholder-val="{{ false }}">
+              <div style="padding-top: 10px;">
+                <sc-for list="{{ acctBars }}" as="a" hint-placeholder-count="5">
+                  <span style="display: block; margin-bottom: 9px;">
+                    <span style="display: flex; align-items: center; gap: 8px; margin-bottom: 3px; font-size: 12px;">
+                      <span><b class="nx-num">{{ a.code }}</b> {{ a.name }} <span class="text-muted">· {{ a.side }} bakiye</span></span>
+                      <span class="nx-num" style="margin-left: auto; font-weight: 600;">{{ a.value }}</span>
+                    </span>
+                    <span style="display: block; height: 8px; background: var(--color-neutral-300);"><span style="display: block; height: 100%; width: {{ a.w }}; background: var(--color-accent-700);"></span></span>
+                  </span>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1.35fr 1fr; gap: 12px; align-items: start;">
+            <div class="blueprint" style="padding: 9px 11px 10px;">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
+                <span style="font-family: var(--font-heading); font-size: 17px;">Son 12 Ay</span>
+                <span style="margin-left: auto; display: flex; align-items: center; gap: 12px;" class="text-muted">
+                  <span style="display: flex; align-items: center; gap: 5px; font-size: 11px;"><svg width="16" height="3"><line x1="0" y1="1.5" x2="16" y2="1.5" stroke="var(--color-accent)" stroke-width="2"></line></svg>Ciro</span>
+                  <span style="display: flex; align-items: center; gap: 5px; font-size: 11px;"><svg width="16" height="3"><line x1="0" y1="1.5" x2="16" y2="1.5" stroke="var(--color-accent-600)" stroke-width="1.5" stroke-dasharray="3 3"></line></svg>Tahsilat</span>
+                </span>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <div class="nx-num" style="width: 34px; flex: none; display: flex; flex-direction: column; justify-content: space-between; height: 190px; text-align: right; font-size: 10px; color: var(--color-neutral-600);">
+                  <sc-for list="{{ trendAxis }}" as="t" hint-placeholder-count="5">
+                    <span style="line-height: 1;">{{ t.label }}</span>
+                  </sc-for>
+                </div>
+                <div style="flex: 1; min-width: 0;">
+              <svg viewBox="0 0 690 200" width="100%" height="190" role="img" aria-label="Son 12 ay ciro ve tahsilat">
+                <line x1="0" y1="6" x2="690" y2="6" stroke="var(--color-divider)" stroke-width="1" stroke-dasharray="2 4"></line>
+                <line x1="0" y1="54.5" x2="690" y2="54.5" stroke="var(--color-divider)" stroke-width="1" stroke-dasharray="2 4"></line>
+                <line x1="0" y1="103" x2="690" y2="103" stroke="var(--color-divider)" stroke-width="1" stroke-dasharray="2 4"></line>
+                <line x1="0" y1="151.5" x2="690" y2="151.5" stroke="var(--color-divider)" stroke-width="1" stroke-dasharray="2 4"></line>
+                <line x1="0" y1="200" x2="690" y2="200" stroke-dasharray="0" stroke="var(--color-divider)" stroke-width="1" stroke-dasharray="2 4"></line>
+                <polygon points="{{ revArea }}" fill="var(--color-accent-300)" opacity="0.28"></polygon>
+                <polyline points="{{ colPts }}" fill="none" stroke="var(--color-accent-600)" stroke-width="1.5" stroke-dasharray="4 3"></polyline>
+                <polyline points="{{ revPts }}" fill="none" stroke="var(--color-accent)" stroke-width="2"></polyline>
+                <sc-for list="{{ trendDots }}" as="d" hint-placeholder-count="12">
+                  <circle cx="{{ d.x }}" cy="{{ d.y }}" r="2.5" fill="var(--color-bg)" stroke="var(--color-accent)" stroke-width="1.5"></circle>
+                </sc-for>
+              </svg>
+                  <div class="nx-num" style="display: flex; margin-top: 3px; font-size: 10px; color: var(--color-neutral-600);">
+                    <sc-for list="{{ trendLabels }}" as="l" hint-placeholder-count="12">
+                      <span style="flex: 1; text-align: center;">{{ l.label }}</span>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="blueprint" style="padding: 9px 11px 10px;">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                <span style="font-family: var(--font-heading); font-size: 17px;">Yaşlandırma</span>
+                <button onClick="{{ goAging }}" class="btn btn-ghost" style="margin-left: auto; height: 19px; padding: 0 6px; font-size: 11px;">Rapor</button>
+              </div>
+              <div style="display: flex; height: 26px; overflow: hidden;">
+                <span title="Vadesi gelmemiş · 106.926,80" style="width: 64%; background: var(--color-accent-300);"></span>
+                <span title="31–60 gün · 59.760,00" style="width: 35.77%; background: var(--color-accent-600);"></span>
+                <span title="61–90 gün · 400,00" style="width: 0.23%; background: var(--color-accent-800);"></span>
+              </div>
+              <div class="text-muted" style="display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; font-size: 10px;">
+                <span style="display: flex; align-items: center; gap: 4px;"><span style="width: 9px; height: 9px; background: var(--color-accent-300);"></span>Vadesi gelmemiş <span class="nx-num" style="color: var(--color-text);">%64,0</span></span>
+                <span style="display: flex; align-items: center; gap: 4px;"><span style="width: 9px; height: 9px; background: var(--color-accent-600);"></span>31–60 gün <span class="nx-num" style="color: var(--color-text);">%35,8</span></span>
+                <span style="display: flex; align-items: center; gap: 4px;"><span style="width: 9px; height: 9px; background: var(--color-accent-800);"></span>61–90 gün <span class="nx-num" style="color: var(--color-text);">%0,2</span></span>
+              </div>
+              <table class="nx-num" style="width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px;">
+                <tbody>
+                  <tr><td style="padding: 3px 0;">Vadesi gelmemiş</td><td style="padding: 3px 0; text-align: right;">106.926,80</td></tr>
+                  <tr><td style="padding: 3px 0;">1–30 gün</td><td class="text-muted" style="padding: 3px 0; text-align: right;">—</td></tr>
+                  <tr><td style="padding: 3px 0;">31–60 gün</td><td style="padding: 3px 0; text-align: right;">59.760,00</td></tr>
+                  <tr><td style="padding: 3px 0;">61–90 gün</td><td style="padding: 3px 0; text-align: right;">400,00</td></tr>
+                  <tr><td style="padding: 3px 0;">90+ gün</td><td class="text-muted" style="padding: 3px 0; text-align: right;">—</td></tr>
+                </tbody>
+                <tfoot>
+                  <tr style="border-top: 1px solid var(--color-divider);"><td class="nx-ico" style="padding: 5px 0; text-transform: uppercase; letter-spacing: 0.06em;">Toplam</td><td style="padding: 5px 0; text-align: right; font-weight: 700;">167.086,80</td></tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; align-items: start;">
+            <div class="blueprint" style="padding: 9px 11px 10px;">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <div style="font-family: var(--font-heading); font-size: 17px; margin-bottom: 8px;">Fatura Durumları</div>
+              <sc-for list="{{ statusRows }}" as="r" hint-placeholder-count="3">
+                <span style="display: block; margin-bottom: 9px;">
+                  <span style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                    <span class="tag {{ r.cls }}" style="font-size: 9px; padding: 1px 7px;">{{ r.label }}</span>
+                    <span class="text-muted" style="font-size: 11px;">{{ r.count }} adet</span>
+                    <span class="nx-num" style="margin-left: auto; font-weight: 600;">{{ r.amount }}</span>
+                  </span>
+                  <span style="display: block; height: 8px; background: var(--color-neutral-300);"><span style="display: block; height: 100%; width: {{ r.w }}; background: var(--color-accent-700);"></span></span>
+                </span>
+              </sc-for>
+            </div>
+
+            <div class="blueprint" style="padding: 9px 11px 10px;">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <div style="font-family: var(--font-heading); font-size: 17px; margin-bottom: 6px;">En Çok Alacaklı Cariler</div>
+              <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <tbody>
+                  <sc-for list="{{ debtors }}" as="d" hint-placeholder-count="4">
+                    <tr onClick="{{ d.go }}" style="cursor: default;" style-hover="background: var(--color-accent-100);">
+                      <td style="padding: 4px 0; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);">{{ d.name }}<span class="text-muted" style="display: block; font-size: 11px;">{{ d.hint }}</span></td>
+                      <td class="nx-num" style="padding: 4px 0; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); text-align: right; vertical-align: top;">{{ d.amount }}</td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="blueprint" style="padding: 9px 11px 10px;">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <div style="font-family: var(--font-heading); font-size: 17px; margin-bottom: 6px;">Abonelik Hareketi</div>
+              <table class="nx-num" style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <tbody>
+                  <tr><td style="padding: 3px 0;">Bu ay yeni</td><td style="padding: 3px 0; text-align: right;">2</td></tr>
+                  <tr><td style="padding: 3px 0;">Bu ay iptal</td><td style="padding: 3px 0; text-align: right;">1</td></tr>
+                  <tr><td style="padding: 3px 0;">MRR değişimi</td><td style="padding: 3px 0; text-align: right;">+1.450,00</td></tr>
+                  <tr><td style="padding: 3px 0;">Churn</td><td style="padding: 3px 0; text-align: right;">%2,4</td></tr>
+                  <tr><td style="padding: 3px 0;">Bu hafta faturalanacak</td><td style="padding: 3px 0; text-align: right;">3 adet</td></tr>
+                </tbody>
+                <tfoot>
+                  <tr style="border-top: 1px solid var(--color-divider);"><td style="padding: 4px 0;">Hafta tutarı</td><td style="padding: 4px 0; text-align: right; font-weight: 700;">6.240,00</td></tr>
+                </tfoot>
+              </table>
+              <div class="nx-ico" style="margin-top: 10px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-neutral-600);">Neden kaybedildi · son 90 gün</div>
+              <table class="nx-num" style="width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 3px;">
+                <tbody>
+                  <tr><td style="padding: 3px 0;">Fiyat</td><td style="padding: 3px 0; text-align: right;">1</td><td style="padding: 3px 0; text-align: right;">890,00</td></tr>
+                  <tr><td style="padding: 3px 0;">Ürün eksiği</td><td style="padding: 3px 0; text-align: right;">1</td><td style="padding: 3px 0; text-align: right;">560,00</td></tr>
+                </tbody>
+                <tfoot>
+                  <tr style="border-top: 1px solid var(--color-divider);"><td style="padding: 4px 0;">Kayıp MRR</td><td style="padding: 4px 0; text-align: right;">2</td><td style="padding: 4px 0; text-align: right; font-weight: 700;">1.450,00</td></tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1.35fr 1fr; gap: 12px; align-items: start;">
+            <div class="blueprint" style="padding: 9px 11px 10px;">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <div style="font-family: var(--font-heading); font-size: 17px; margin-bottom: 6px;">Yaklaşan Vadeler</div>
+              <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <thead>
+                  <tr class="nx-ico" style="color: var(--color-neutral-700);">
+                    <th style="padding: 3px 0; border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: left;">Fatura No</th>
+                    <th style="padding: 3px 0; border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: left;">Cari</th>
+                    <th style="padding: 3px 0; border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: left;">Vade</th>
+                    <th style="padding: 3px 0; border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: right;">Kalan</th>
+                    <th style="padding: 3px 0; border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: right;">Gün</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <sc-for list="{{ upcoming }}" as="u" hint-placeholder-count="5">
+                    <tr onClick="{{ u.go }}" style="cursor: default;" style-hover="background: var(--color-accent-100);">
+                      <td class="nx-num" style="padding: 3px 0; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);">{{ u.no }}</td>
+                      <td style="padding: 3px 0; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);">{{ u.party }}</td>
+                      <td class="nx-num" style="padding: 3px 0; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);">{{ u.due }}</td>
+                      <td class="nx-num" style="padding: 3px 0; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); text-align: right;">{{ u.left }}</td>
+                      <td class="nx-num" style="padding: 3px 0; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); text-align: right;">{{ u.days }}</td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="blueprint" style="padding: 9px 11px 10px;">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <div style="font-family: var(--font-heading); font-size: 17px; margin-bottom: 6px;">Eşleşme Bekleyen</div>
+              <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <tbody>
+                  <tr>
+                    <td style="padding: 4px 0; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);">Ege Tekstil Ltd. Şti.<span class="text-muted nx-num" style="display: block; font-size: 11px;">HVL-2026-114</span></td>
+                    <td class="nx-num" style="padding: 4px 0; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); text-align: right; vertical-align: top;">2.983,20</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 4px 0; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);">Anadolu Lojistik A.Ş.<span class="text-muted nx-num" style="display: block; font-size: 11px;">HVL-2026-118</span></td>
+                    <td class="nx-num" style="padding: 4px 0; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); text-align: right; vertical-align: top;">1.200,00</td>
+                  </tr>
+                </tbody>
+              </table>
+              <button onClick="{{ goPayments }}" class="btn btn-secondary" style="margin-top: 10px; height: 22px; padding: 0 9px; font-size: 12px;">Tahsilatlara git</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isInv }}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-direction: column; height: 100%; min-height: 0;">
+          <div style="flex: none; display: flex; flex-wrap: wrap; align-items: end; gap: 8px; row-gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--color-divider);">
+            <span class="field" style="width: 210px; flex: none;">
+              <label style="font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px;">Fatura no / cari</label>
+              <input class="input nx-num" value="{{ q }}" onChange="{{ setQ }}" placeholder="ara…" style="height: 25px; font-size: 12px; background: var(--color-neutral-100);">
+            </span>
+            <span class="field" style="width: 130px; flex: none;">
+              <label style="font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px;">Durum</label>
+              <select class="input" value="{{ status }}" onChange="{{ setStatus }}" style="height: 25px; font-size: 12px; background: var(--color-neutral-100);">
+                <option>Tümü</option><option>Taslak</option><option>Kesildi</option><option>Kısmi Tahsil</option><option>Tahsil Edildi</option><option>İptal</option>
+              </select>
+            </span>
+            <span class="field" style="width: 110px; flex: none;">
+              <label style="font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px;">Tip</label>
+              <select class="input" value="{{ type }}" onChange="{{ setType }}" style="height: 25px; font-size: 12px; background: var(--color-neutral-100);">
+                <option>Tümü</option><option>Satış</option><option>Alış</option>
+              </select>
+            </span>
+            <span class="field" style="width: 108px; flex: none;">
+              <label style="font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px;">Tarih başl.</label>
+              <input class="input nx-num" value="01.04.2026" style="height: 25px; font-size: 12px; background: var(--color-neutral-100);">
+            </span>
+            <span class="field" style="width: 108px; flex: none;">
+              <label style="font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px;">Tarih bitiş</label>
+              <input class="input nx-num" value="31.08.2026" style="height: 25px; font-size: 12px; background: var(--color-neutral-100);">
+            </span>
+            <label style="display: flex; flex: none; align-items: center; gap: 6px; height: 25px; font-size: 12px; white-space: nowrap; cursor: pointer;">
+              <input type="checkbox" checked="{{ overdue }}" onChange="{{ toggleOverdue }}" style="accent-color: var(--color-accent);">
+              Sadece vadesi geçen
+            </label>
+            <button onClick="{{ resetFilter }}" class="btn btn-secondary" style="flex: none; height: 25px; padding: 0 9px; font-size: 12px; white-space: nowrap;">Temizle</button>
+            <button class="btn btn-secondary" style="flex: none; height: 25px; padding: 0 9px; font-size: 12px; white-space: nowrap;">Filtreyi kaydet</button>
+            <span class="nx-num text-muted" style="margin-left: auto; align-self: center; font-size: 11px; white-space: nowrap;">{{ resultLine }}</span>
+          </div>
+
+          <sc-if value="{{ hasSel }}" hint-placeholder-val="{{ false }}">
+            <div style="flex: none; display: flex; align-items: center; gap: 8px; padding: 5px 10px; background: var(--color-accent-100); border-bottom: 1px solid var(--color-divider);">
+              <span class="nx-num nx-ico" style="font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase;">{{ selLine }}</span>
+              <span style="width: 1px; height: 16px; background: var(--color-divider);"></span>
+              <button class="btn btn-secondary" style="height: 21px; padding: 0 8px; font-size: 11px; background: var(--color-bg);">E-Fatura gönder</button>
+              <button class="btn btn-secondary" style="height: 21px; padding: 0 8px; font-size: 11px; background: var(--color-bg);">Tahsilat eşleştir</button>
+              <button class="btn btn-secondary" style="height: 21px; padding: 0 8px; font-size: 11px; background: var(--color-bg);">PDF indir</button>
+              <button class="btn btn-secondary" style="height: 21px; padding: 0 8px; font-size: 11px; background: var(--color-bg);">Muhasebeleştir</button>
+              <button class="btn btn-secondary" style="height: 21px; padding: 0 8px; font-size: 11px; background: var(--color-bg);">İptal et</button>
+              <button onClick="{{ clearSel }}" class="btn btn-ghost" style="margin-left: auto; height: 21px; padding: 0 6px; font-size: 11px;">Seçimi temizle</button>
+            </div>
+          </sc-if>
+
+          <div style="flex: 1; min-height: 0; overflow: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+              <thead>
+                <tr style="background: var(--color-neutral-200);">
+                  <th style="position: sticky; top: 0; z-index: 2; width: 26px; padding: 4px 6px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider);">
+                    <button onClick="{{ toggleAll }}" style="width: 13px; height: 13px; display: grid; place-items: center; padding: 0; background: var(--color-bg); border: 1px solid var(--color-neutral-500); cursor: pointer; font-size: 10px; line-height: 1; color: var(--color-accent-700);">{{ allCheck }}</button>
+                  </th>
+                  <sc-for list="{{ cols }}" as="c" hint-placeholder-count="8">
+                    <th onClick="{{ c.sort }}" class="nx-ico" style="position: sticky; top: 0; z-index: 2; padding: 4px 7px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); border-left: 1px solid var(--color-neutral-300); font-family: var(--font-heading); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; text-align: {{ c.align }}; white-space: nowrap; cursor: pointer; color: var(--color-neutral-800);">
+                      {{ c.label }}<span style="font-size: 9px; color: var(--color-accent-700);">{{ c.arrow }}</span>
+                    </th>
+                  </sc-for>
+                  <th style="position: sticky; top: 0; z-index: 2; padding: 4px 7px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); border-left: 1px solid var(--color-neutral-300); font-family: var(--font-heading); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: right; width: 66px; color: var(--color-neutral-800);">İşlem</th>
+                </tr>
+                <sc-if value="{{ colFilters }}" hint-placeholder-val="{{ true }}">
+                  <tr style="background: var(--color-neutral-100);">
+                    <td style="border-bottom: 1px solid var(--color-divider);"></td>
+                    <td style="padding: 2px 4px; border-bottom: 1px solid var(--color-divider);"><input value="{{ q }}" onChange="{{ setQ }}" placeholder="≡" style="width: 100%; height: 19px; padding: 0 5px; font: inherit; font-size: 11px; background: var(--color-bg); border: 1px solid var(--color-divider);"></td>
+                    <td style="padding: 2px 4px; border-bottom: 1px solid var(--color-divider);"><input value="{{ q }}" onChange="{{ setQ }}" placeholder="≡" style="width: 100%; height: 19px; padding: 0 5px; font: inherit; font-size: 11px; background: var(--color-bg); border: 1px solid var(--color-divider);"></td>
+                    <td style="padding: 2px 4px; border-bottom: 1px solid var(--color-divider);"><input placeholder="≡" style="width: 100%; height: 19px; padding: 0 5px; font: inherit; font-size: 11px; background: var(--color-bg); border: 1px solid var(--color-divider);"></td>
+                    <td style="padding: 2px 4px; border-bottom: 1px solid var(--color-divider);"><input placeholder="≡" style="width: 100%; height: 19px; padding: 0 5px; font: inherit; font-size: 11px; background: var(--color-bg); border: 1px solid var(--color-divider);"></td>
+                    <td style="padding: 2px 4px; border-bottom: 1px solid var(--color-divider);"><input placeholder="≡" style="width: 100%; height: 19px; padding: 0 5px; font: inherit; font-size: 11px; background: var(--color-bg); border: 1px solid var(--color-divider);"></td>
+                    <td style="padding: 2px 4px; border-bottom: 1px solid var(--color-divider);"><input placeholder="≥" style="width: 100%; height: 19px; padding: 0 5px; font: inherit; font-size: 11px; text-align: right; background: var(--color-bg); border: 1px solid var(--color-divider);"></td>
+                    <td style="padding: 2px 4px; border-bottom: 1px solid var(--color-divider);"><input placeholder="≥" style="width: 100%; height: 19px; padding: 0 5px; font: inherit; font-size: 11px; text-align: right; background: var(--color-bg); border: 1px solid var(--color-divider);"></td>
+                    <td style="padding: 2px 4px; border-bottom: 1px solid var(--color-divider);"></td>
+                    <td style="border-bottom: 1px solid var(--color-divider);"></td>
+                  </tr>
+                </sc-if>
+              </thead>
+              <tbody>
+                <sc-for list="{{ rows }}" as="r" hint-placeholder-count="12">
+                  <tr onClick="{{ r.focus }}" style="background: {{ r.bg }}; cursor: default;" style-hover="background: var(--color-accent-100);">
+                    <td style="padding: 0 6px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);">
+                      <button onClick="{{ r.toggle }}" style="width: 13px; height: 13px; display: grid; place-items: center; padding: 0; background: var(--color-bg); border: 1px solid var(--color-neutral-500); cursor: pointer; font-size: 10px; line-height: 1; color: var(--color-accent-700);">{{ r.check }}</button>
+                    </td>
+                    <td class="nx-num" style="padding: 3px 7px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); white-space: nowrap;">
+                      <button onClick="{{ r.open }}" class="btn btn-ghost" style="height: 17px; padding: 0; font-family: var(--font-body); font-size: 12px; letter-spacing: 0.02em;">{{ r.no }}</button>
+                    </td>
+                    <td style="padding: 3px 7px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); white-space: nowrap;">{{ r.party }}</td>
+                    <td style="padding: 3px 7px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);">{{ r.type }}</td>
+                    <td class="nx-num" style="padding: 3px 7px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);">{{ r.date }}</td>
+                    <td class="nx-num" style="padding: 3px 7px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); font-weight: {{ r.dueWeight }};">{{ r.due }}<span style="font-size: 10px; color: var(--color-accent-800);">{{ r.dueFlag }}</span></td>
+                    <td class="nx-num" style="padding: 3px 7px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); text-align: right;">{{ r.gross }}</td>
+                    <td class="nx-num" style="padding: 3px 7px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); text-align: right;">{{ r.open_ }}</td>
+                    <td style="padding: 3px 7px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);"><span class="tag {{ r.tagCls }}" style="font-size: 10px; padding: 1px 7px;">{{ r.status }}</span></td>
+                    <td class="nx-ico" style="padding: 3px 7px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); text-align: right; white-space: nowrap; font-size: 10px; letter-spacing: 0.06em; color: var(--color-accent-700);">PDF · XML</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="6" class="nx-ico" style="position: sticky; bottom: 0; padding: 5px 7px; background: var(--color-neutral-200); border-top: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;">{{ footLabel }}</td>
+                  <td class="nx-num" style="position: sticky; bottom: 0; padding: 5px 7px; background: var(--color-neutral-200); border-top: 1px solid var(--color-divider); text-align: right; font-weight: 700;">{{ footGross }}</td>
+                  <td class="nx-num" style="position: sticky; bottom: 0; padding: 5px 7px; background: var(--color-neutral-200); border-top: 1px solid var(--color-divider); text-align: right; font-weight: 700;">{{ footOpen }}</td>
+                  <td colspan="2" style="position: sticky; bottom: 0; background: var(--color-neutral-200); border-top: 1px solid var(--color-divider);"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <div style="flex: none; border-top: 1px solid var(--color-divider); background: var(--color-neutral-100);">
+            <div class="nx-ico" style="display: flex; align-items: center; gap: 10px; padding: 4px 10px; border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;">
+              Kayıt Önizleme<span class="nx-num" style="letter-spacing: 0; text-transform: none; color: var(--color-neutral-700);">{{ prevNo }}</span>
+              <button onClick="{{ openFocused }}" class="btn btn-secondary" style="margin-left: auto; height: 20px; padding: 0 8px; font-size: 11px; background: var(--color-bg);">Belgeyi aç <span style="opacity: 0.6;">F4</span></button>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 0 12px; padding: 7px 10px 9px;">
+              <span><span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;">Cari</span><span style="font-size: 12px;">{{ prevParty }}</span></span>
+              <span><span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;">Vergi No</span><span class="nx-num" style="font-size: 12px;">{{ prevTax }}</span></span>
+              <span><span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;">Vade</span><span class="nx-num" style="font-size: 12px;">{{ prevDue }}</span></span>
+              <span><span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;">Genel Toplam</span><span class="nx-num" style="font-size: 12px;">{{ prevGross }}</span></span>
+              <span><span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;">Kalan</span><span class="nx-num" style="font-size: 12px;">{{ prevOpen }}</span></span>
+              <span><span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;">Muhasebe Fişi</span><span class="nx-num" style="font-size: 12px;">{{ prevJournal }}</span></span>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isDoc }}" hint-placeholder-val="{{ false }}">
+        <div style="padding: 9px 12px 16px; display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="nx-num" style="font-family: var(--font-heading); font-size: 21px;">Satış Faturası {{ docNo }}</span>
+            <span class="tag tag-accent" style="font-size: 10px; padding: 1px 8px;">{{ docStatus }}</span>
+            <span class="tag tag-outline" style="font-size: 10px; padding: 1px 8px;">E-FATURA GÖNDERİLDİ</span>
+            <span class="text-muted nx-num" style="margin-left: auto; font-size: 11px;">Oluşturan admin · 03.08.2026 09:14 · Son değişiklik 03.08.2026 09:20</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(6, 1fr); border: 1px solid var(--color-divider);">
+            <span style="padding: 5px 8px; border-right: 1px solid var(--color-divider); border-bottom: 1px solid var(--color-divider);"><span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;">Cari</span><span style="font-size: 12px;">Ege Tekstil Ltd. Şti.</span></span>
+            <span style="padding: 5px 8px; border-right: 1px solid var(--color-divider); border-bottom: 1px solid var(--color-divider);"><span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;">Cari Kodu</span><span class="nx-num" style="font-size: 12px;">120.01.0002</span></span>
+            <span style="padding: 5px 8px; border-right: 1px solid var(--color-divider); border-bottom: 1px solid var(--color-divider);"><span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;">Vergi No / Daire</span><span class="nx-num" style="font-size: 12px;">4560123478 · Konak</span></span>
+            <span style="padding: 5px 8px; border-right: 1px solid var(--color-divider); border-bottom: 1px solid var(--color-divider);"><span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;">Tip</span><span style="font-size: 12px;">Satış · e-Fatura</span></span>
+            <span style="padding: 5px 8px; border-right: 1px solid var(--color-divider); border-bottom: 1px solid var(--color-divider);"><span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;">Fatura Tarihi</span><span class="nx-num" style="font-size: 12px;">03.08.2026</span></span>
+            <span style="padding: 5px 8px; border-bottom: 1px solid var(--color-divider);"><span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;">Vade Tarihi</span><span class="nx-num" style="font-size: 12px;">02.09.2026</span></span>
+            <span style="padding: 5px 8px; border-right: 1px solid var(--color-divider);"><span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;">Döviz / Kur</span><span class="nx-num" style="font-size: 12px;">TRY · 1,000000</span></span>
+            <span style="padding: 5px 8px; border-right: 1px solid var(--color-divider);"><span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;">Ödeme Şekli</span><span style="font-size: 12px;">Havale · 30 gün</span></span>
+            <span style="padding: 5px 8px; border-right: 1px solid var(--color-divider);"><span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;">Belge Seri / No</span><span class="nx-num" style="font-size: 12px;">NEX · 0000006</span></span>
+            <span style="padding: 5px 8px; border-right: 1px solid var(--color-divider);"><span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;">Muhasebe Fişi</span><span class="nx-num" style="font-size: 12px;">2026/08-0031</span></span>
+            <span style="padding: 5px 8px; border-right: 1px solid var(--color-divider);"><span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;">Sorumlu</span><span style="font-size: 12px;">admin</span></span>
+            <span style="padding: 5px 8px;"><span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;">Belge İskontosu</span><span class="nx-num" style="font-size: 12px;">Yok</span></span>
+          </div>
+
+          <div style="display: flex; align-items: stretch; gap: 0; border-bottom: 1px solid var(--color-divider);">
+            <sc-for list="{{ docTabs }}" as="d" hint-placeholder-count="5">
+              <button onClick="{{ d.go }}" class="nx-ico" style="padding: 5px 12px; background: {{ d.bg }}; border: 1px solid var(--color-divider); border-bottom: 0; border-right: 0; font-family: var(--font-heading); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; color: {{ d.fg }};">
+                {{ d.label }}<span class="nx-num" style="margin-left: 6px; font-size: 10px; opacity: 0.6;">{{ d.n }}</span>
+              </button>
+            </sc-for>
+          </div>
+
+          <sc-if value="{{ docLines }}" hint-placeholder-val="{{ true }}">
+            <div style="display: grid; grid-template-columns: 1fr 268px; gap: 12px; align-items: start;">
+              <div style="border: 1px solid var(--color-divider);">
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                  <thead>
+                    <tr style="background: var(--color-neutral-200);">
+                      <th class="nx-ico" style="width: 26px; padding: 4px 6px; border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.08em; text-align: left; color: var(--color-neutral-800);">#</th>
+                      <th class="nx-ico" style="width: 120px; padding: 4px 6px; border-bottom: 1px solid var(--color-divider); border-left: 1px solid var(--color-neutral-300); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: left; color: var(--color-neutral-800);">Ürün Kodu</th>
+                      <th class="nx-ico" style="padding: 4px 6px; border-bottom: 1px solid var(--color-divider); border-left: 1px solid var(--color-neutral-300); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: left; color: var(--color-neutral-800);">Açıklama</th>
+                      <th class="nx-ico" style="width: 72px; padding: 4px 6px; border-bottom: 1px solid var(--color-divider); border-left: 1px solid var(--color-neutral-300); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: right; color: var(--color-neutral-800);">Miktar</th>
+                      <th class="nx-ico" style="width: 56px; padding: 4px 6px; border-bottom: 1px solid var(--color-divider); border-left: 1px solid var(--color-neutral-300); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: left; color: var(--color-neutral-800);">Birim</th>
+                      <th class="nx-ico" style="width: 96px; padding: 4px 6px; border-bottom: 1px solid var(--color-divider); border-left: 1px solid var(--color-neutral-300); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: right; color: var(--color-neutral-800);">Birim Fiyat</th>
+                      <th class="nx-ico" style="width: 52px; padding: 4px 6px; border-bottom: 1px solid var(--color-divider); border-left: 1px solid var(--color-neutral-300); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: right; color: var(--color-neutral-800);">İsk %</th>
+                      <th class="nx-ico" style="width: 52px; padding: 4px 6px; border-bottom: 1px solid var(--color-divider); border-left: 1px solid var(--color-neutral-300); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: right; color: var(--color-neutral-800);">KDV %</th>
+                      <th class="nx-ico" style="width: 106px; padding: 4px 6px; border-bottom: 1px solid var(--color-divider); border-left: 1px solid var(--color-neutral-300); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: right; color: var(--color-neutral-800);">Satır Toplamı</th>
+                      <th style="width: 24px; padding: 4px 6px; border-bottom: 1px solid var(--color-divider);"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <sc-for list="{{ lines }}" as="l" hint-placeholder-count="2">
+                      <tr>
+                        <td class="nx-num text-muted" style="padding: 2px 6px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);">{{ l.n }}</td>
+                        <td style="padding: 2px 4px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);"><input class="nx-num" value="{{ l.code }}" onChange="{{ l.setCode }}" style="width: 100%; height: 21px; padding: 0 4px; font: inherit; font-size: 12px; background: transparent; border: 1px solid transparent;" style-hover="border-color: var(--color-divider);" style-focus="border-color: var(--color-accent); background: var(--color-neutral-100);"></td>
+                        <td style="padding: 2px 4px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);"><input value="{{ l.name }}" onChange="{{ l.setName }}" style="width: 100%; height: 21px; padding: 0 4px; font: inherit; font-size: 12px; background: transparent; border: 1px solid transparent;" style-hover="border-color: var(--color-divider);" style-focus="border-color: var(--color-accent); background: var(--color-neutral-100);"></td>
+                        <td style="padding: 2px 4px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);"><input class="nx-num" value="{{ l.qty }}" onChange="{{ l.setQty }}" style="width: 100%; height: 21px; padding: 0 4px; font: inherit; font-size: 12px; text-align: right; background: transparent; border: 1px solid transparent;" style-hover="border-color: var(--color-divider);" style-focus="border-color: var(--color-accent); background: var(--color-neutral-100);"></td>
+                        <td class="text-muted" style="padding: 2px 6px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); font-size: 11px;">{{ l.unit }}</td>
+                        <td style="padding: 2px 4px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);"><input class="nx-num" value="{{ l.price }}" onChange="{{ l.setPrice }}" style="width: 100%; height: 21px; padding: 0 4px; font: inherit; font-size: 12px; text-align: right; background: transparent; border: 1px solid transparent;" style-hover="border-color: var(--color-divider);" style-focus="border-color: var(--color-accent); background: var(--color-neutral-100);"></td>
+                        <td style="padding: 2px 4px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);"><input class="nx-num" value="{{ l.disc }}" onChange="{{ l.setDisc }}" style="width: 100%; height: 21px; padding: 0 4px; font: inherit; font-size: 12px; text-align: right; background: transparent; border: 1px solid transparent;" style-hover="border-color: var(--color-divider);" style-focus="border-color: var(--color-accent); background: var(--color-neutral-100);"></td>
+                        <td class="nx-num" style="padding: 2px 6px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); text-align: right;">{{ l.vat }}</td>
+                        <td class="nx-num" style="padding: 2px 6px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); text-align: right; font-weight: 500;">{{ l.total }}</td>
+                        <td style="padding: 2px 4px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);"><button onClick="{{ l.del }}" style="width: 18px; height: 18px; padding: 0; background: transparent; border: 0; cursor: pointer; color: var(--color-neutral-600); font-size: 12px; line-height: 1;" style-hover="color: var(--color-text); background: var(--color-neutral-300);">×</button></td>
+                      </tr>
+                    </sc-for>
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colspan="10" style="padding: 4px 6px; background: var(--color-neutral-100); border-top: 1px solid var(--color-divider);">
+                        <button onClick="{{ addLine }}" class="btn btn-secondary" style="height: 21px; padding: 0 9px; font-size: 11px; background: var(--color-bg);">+ Satır ekle <span style="opacity: 0.6;">CTRL+ENTER</span></button>
+                        <span class="text-muted nx-num" style="margin-left: 10px; font-size: 11px;">{{ lineCount }}</span>
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              <div style="border: 1px solid var(--color-divider);">
+                <div class="nx-ico" style="padding: 5px 9px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;">Belge Toplamları</div>
+                <table class="nx-num" style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                  <tbody>
+                    <tr><td style="padding: 4px 9px;">Ara toplam</td><td style="padding: 4px 9px; text-align: right;">{{ tSub }}</td></tr>
+                    <tr><td style="padding: 4px 9px;">Satır iskontosu</td><td style="padding: 4px 9px; text-align: right;">{{ tDisc }}</td></tr>
+                    <tr><td style="padding: 4px 9px;">KDV matrahı</td><td style="padding: 4px 9px; text-align: right;">{{ tBase }}</td></tr>
+                    <tr><td style="padding: 4px 9px;">KDV %20</td><td style="padding: 4px 9px; text-align: right;">{{ tVat }}</td></tr>
+                    <tr><td style="padding: 4px 9px;">Tevkifat</td><td style="padding: 4px 9px; text-align: right;">{{ tWht }}</td></tr>
+                    <tr style="border-top: 1px solid var(--color-divider); background: var(--color-accent-100);"><td class="nx-ico" style="padding: 6px 9px; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase;">Genel toplam</td><td style="padding: 6px 9px; text-align: right; font-family: var(--font-heading); font-size: 17px;">{{ tGross }}</td></tr>
+                    <tr><td style="padding: 4px 9px;">Tahsil edilen</td><td style="padding: 4px 9px; text-align: right;">0,00</td></tr>
+                    <tr><td class="nx-ico" style="padding: 4px 9px; text-transform: uppercase; letter-spacing: 0.06em;">Kalan</td><td style="padding: 4px 9px; text-align: right; font-weight: 700;">{{ tGross }}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ docJournal }}" hint-placeholder-val="{{ false }}">
+            <div style="border: 1px solid var(--color-divider);">
+              <div class="nx-ico" style="display: flex; align-items: center; gap: 10px; padding: 5px 9px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;">
+                Fiş 2026/08-0031 · Otomatik<span class="tag tag-accent" style="margin-left: auto; letter-spacing: 0; font-size: 9px; padding: 1px 7px;">DENGEDE</span>
+              </div>
+              <table class="nx-num" style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <thead>
+                  <tr class="nx-ico" style="background: var(--color-neutral-100);">
+                    <th style="padding: 4px 8px; border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: left;">Hesap</th>
+                    <th style="padding: 4px 8px; border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: left;">Açıklama</th>
+                    <th style="padding: 4px 8px; border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: right;">Borç</th>
+                    <th style="padding: 4px 8px; border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: right;">Alacak</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td style="padding: 3px 8px;">120.01.0002</td><td style="padding: 3px 8px;">Alıcılar · Ege Tekstil Ltd. Şti.</td><td style="padding: 3px 8px; text-align: right;">29.880,00</td><td style="padding: 3px 8px; text-align: right;">—</td></tr>
+                  <tr><td style="padding: 3px 8px;">600.01</td><td style="padding: 3px 8px;">Yurtiçi satışlar · lisans</td><td style="padding: 3px 8px; text-align: right;">—</td><td style="padding: 3px 8px; text-align: right;">17.400,00</td></tr>
+                  <tr><td style="padding: 3px 8px;">600.02</td><td style="padding: 3px 8px;">Yurtiçi satışlar · hizmet</td><td style="padding: 3px 8px; text-align: right;">—</td><td style="padding: 3px 8px; text-align: right;">7.500,00</td></tr>
+                  <tr><td style="padding: 3px 8px;">391.01</td><td style="padding: 3px 8px;">Hesaplanan KDV %20</td><td style="padding: 3px 8px; text-align: right;">—</td><td style="padding: 3px 8px; text-align: right;">4.980,00</td></tr>
+                  <tr style="background: var(--color-neutral-100); border-top: 1px solid var(--color-divider);"><td colspan="2" class="nx-ico" style="padding: 5px 8px; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase;">Toplam</td><td style="padding: 5px 8px; text-align: right; font-weight: 700;">29.880,00</td><td style="padding: 5px 8px; text-align: right; font-weight: 700;">29.880,00</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ docOther }}" hint-placeholder-val="{{ false }}">
+            <div style="border: 1px solid var(--color-divider); padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+              <span class="nx-ico" style="font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-neutral-700);">{{ docOtherTitle }}</span>
+              <span class="text-muted" style="font-size: 12px;">{{ docOtherHint }}</span>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isCard }}" hint-placeholder-val="{{ false }}">
+        <div style="padding: 9px 12px 16px; display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-family: var(--font-heading); font-size: 21px;">Ege Tekstil Ltd. Şti.</span>
+            <span class="nx-num text-muted" style="font-size: 12px;">120.01.0002</span>
+            <span class="tag tag-accent" style="font-size: 10px; padding: 1px 8px;">AKTİF</span>
+            <span class="tag tag-outline" style="font-size: 10px; padding: 1px 8px;">MÜŞTERİ</span>
+            <span class="text-muted nx-num" style="margin-left: auto; font-size: 11px;">Kayıt 14.01.2024 · son hareket 12.08.2026</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 320px; gap: 12px; align-items: start;">
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <sc-for list="{{ cardGroups }}" as="g" hint-placeholder-count="3">
+                <div style="border: 1px solid var(--color-divider);">
+                  <div class="nx-ico" style="padding: 5px 9px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;">{{ g.title }}</div>
+                  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0;">
+                    <sc-for list="{{ g.fields }}" as="f" hint-placeholder-count="6">
+                      <label style="display: block; padding: 5px 9px 6px; border-right: 1px solid var(--color-divider); border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);">
+                        <span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;">{{ f.label }}</span>
+                        <input class="{{ f.cls }}" value="{{ f.value }}" onChange="{{ f.set }}" readOnly="{{ f.ro }}" style="width: 100%; height: 22px; padding: 0 3px; margin-top: 1px; font: inherit; font-size: 12px; color: {{ f.fg }}; background: transparent; border: 1px solid transparent;" style-hover="border-color: var(--color-divider);" style-focus="border-color: var(--color-accent); background: var(--color-neutral-100);">
+                      </label>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-for>
+
+              <div style="border: 1px solid var(--color-divider);">
+                <div class="nx-ico" style="display: flex; align-items: center; gap: 10px; padding: 5px 9px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;">
+                  Cari Ekstre · Son Hareketler<span class="nx-num" style="margin-left: auto; letter-spacing: 0; text-transform: none; color: var(--color-neutral-700);">6 hareket</span>
+                </div>
+                <table class="nx-num" style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                  <thead>
+                    <tr class="nx-ico" style="background: var(--color-neutral-100);">
+                      <th style="padding: 4px 8px; border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: left;">Tarih</th>
+                      <th style="padding: 4px 8px; border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: left;">Belge</th>
+                      <th style="padding: 4px 8px; border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: left;">Açıklama</th>
+                      <th style="padding: 4px 8px; border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: right;">Borç</th>
+                      <th style="padding: 4px 8px; border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: right;">Alacak</th>
+                      <th style="padding: 4px 8px; border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: right;">Bakiye</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <sc-for list="{{ ledger }}" as="e" hint-placeholder-count="6">
+                      <tr>
+                        <td style="padding: 3px 8px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);">{{ e.date }}</td>
+                        <td style="padding: 3px 8px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);">{{ e.doc }}</td>
+                        <td style="padding: 3px 8px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); font-variant-numeric: normal;">{{ e.desc }}</td>
+                        <td style="padding: 3px 8px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); text-align: right;">{{ e.debit }}</td>
+                        <td style="padding: 3px 8px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); text-align: right;">{{ e.credit }}</td>
+                        <td style="padding: 3px 8px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); text-align: right; font-weight: 500;">{{ e.balance }}</td>
+                      </tr>
+                    </sc-for>
+                    <tr style="background: var(--color-neutral-100); border-top: 1px solid var(--color-divider);">
+                      <td colspan="3" class="nx-ico" style="padding: 5px 8px; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase;">Dönem toplamı</td>
+                      <td style="padding: 5px 8px; text-align: right; font-weight: 700;">41.246,40</td>
+                      <td style="padding: 5px 8px; text-align: right; font-weight: 700;">7.983,20</td>
+                      <td style="padding: 5px 8px; text-align: right; font-weight: 700;">33.263,20</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div style="border: 1px solid var(--color-divider);">
+                <div class="nx-ico" style="padding: 5px 9px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;">Risk Durumu</div>
+                <div style="padding: 8px 9px 10px;">
+                  <div class="nx-num" style="display: flex; align-items: baseline; justify-content: space-between;">
+                    <span class="text-muted" style="font-size: 11px;">Kullanılan / Limit</span>
+                    <span style="font-family: var(--font-heading); font-size: 17px;">33.263,20 / 400.000,00</span>
+                  </div>
+                  <div style="height: 8px; margin-top: 6px; background: var(--color-neutral-300);"><span style="display: block; width: 8.3%; height: 100%; background: var(--color-accent-700);"></span></div>
+                  <div class="nx-num text-muted" style="margin-top: 3px; font-size: 11px;">Limit kullanımı %8,3 · risk grubu düşük</div>
+                </div>
+                <table class="nx-num" style="width: 100%; border-collapse: collapse; font-size: 12px; border-top: 1px solid var(--color-divider);">
+                  <tbody>
+                    <tr><td style="padding: 3px 9px;">Toplam bakiye</td><td style="padding: 3px 9px; text-align: right;">33.263,20</td></tr>
+                    <tr><td style="padding: 3px 9px;">Vadesi geçen</td><td style="padding: 3px 9px; text-align: right; color: var(--color-accent-800); font-weight: 700;">400,00</td></tr>
+                    <tr><td style="padding: 3px 9px;">Açık fatura</td><td style="padding: 3px 9px; text-align: right;">4</td></tr>
+                    <tr><td style="padding: 3px 9px;">Ort. ödeme süresi</td><td style="padding: 3px 9px; text-align: right;">34 gün</td></tr>
+                    <tr><td style="padding: 3px 9px;">Son tahsilat</td><td style="padding: 3px 9px; text-align: right;">05.08.2026</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div style="border: 1px solid var(--color-divider);">
+                <div class="nx-ico" style="padding: 5px 9px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;">İlgili Kayıtlar</div>
+                <button onClick="{{ goInv }}" style="width: 100%; display: flex; align-items: center; gap: 8px; padding: 5px 9px; background: transparent; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); cursor: pointer; font: inherit; font-size: 12px; text-align: left;" style-hover="background: var(--color-accent-100);">Faturalar<span class="nx-num text-muted" style="margin-left: auto;">4</span></button>
+                <button onClick="{{ goInv }}" style="width: 100%; display: flex; align-items: center; gap: 8px; padding: 5px 9px; background: transparent; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); cursor: pointer; font: inherit; font-size: 12px; text-align: left;" style-hover="background: var(--color-accent-100);">Tahsilatlar<span class="nx-num text-muted" style="margin-left: auto;">2</span></button>
+                <button onClick="{{ goInv }}" style="width: 100%; display: flex; align-items: center; gap: 8px; padding: 5px 9px; background: transparent; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); cursor: pointer; font: inherit; font-size: 12px; text-align: left;" style-hover="background: var(--color-accent-100);">Abonelikler<span class="nx-num text-muted" style="margin-left: auto;">1</span></button>
+                <button onClick="{{ goRep }}" style="width: 100%; display: flex; align-items: center; gap: 8px; padding: 5px 9px; background: transparent; border: 0; cursor: pointer; font: inherit; font-size: 12px; text-align: left;" style-hover="background: var(--color-accent-100);">Yaşlandırmadaki payı<span class="nx-num text-muted" style="margin-left: auto;">%19,9</span></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isRep }}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-direction: column; height: 100%; min-height: 0;">
+          <div style="flex: none; display: flex; flex-wrap: wrap; align-items: end; gap: 8px; row-gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--color-divider);">
+            <span class="field" style="width: 118px; flex: none;">
+              <label style="font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px;">Baz tarih</label>
+              <input class="input nx-num" value="16.08.2026" onChange="{{ noop }}" style="height: 25px; font-size: 12px; background: var(--color-neutral-100);">
+            </span>
+            <span class="field" style="width: 140px; flex: none;">
+              <label style="font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px;">Gruplama</label>
+              <select class="input" value="{{ repGroup }}" onChange="{{ setRepGroup }}" style="height: 25px; font-size: 12px; background: var(--color-neutral-100);">
+                <option>Cari bazında</option><option>Fatura bazında</option><option>Temsilci bazında</option>
+              </select>
+            </span>
+            <span class="field" style="width: 110px; flex: none;">
+              <label style="font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px;">Para birimi</label>
+              <select class="input" value="TRY" onChange="{{ noop }}" style="height: 25px; font-size: 12px; background: var(--color-neutral-100);">
+                <option>TRY</option><option>USD</option><option>EUR</option>
+              </select>
+            </span>
+            <span class="field" style="width: 130px; flex: none;">
+              <label style="font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px;">Kova aralığı</label>
+              <select class="input" value="30 günlük" onChange="{{ noop }}" style="height: 25px; font-size: 12px; background: var(--color-neutral-100);">
+                <option>30 günlük</option><option>15 günlük</option>
+              </select>
+            </span>
+            <button class="btn btn-primary" style="flex: none; height: 25px; padding: 0 10px; font-size: 12px; white-space: nowrap;">Raporu çalıştır <span style="opacity: 0.7;">F5</span></button>
+            <button class="btn btn-secondary" style="flex: none; height: 25px; padding: 0 9px; font-size: 12px; white-space: nowrap;">Excel</button>
+            <button class="btn btn-secondary" style="flex: none; height: 25px; padding: 0 9px; font-size: 12px; white-space: nowrap;">PDF</button>
+            <span class="nx-num text-muted" style="margin-left: auto; align-self: center; font-size: 11px; white-space: nowrap;">4 cari · 12 fatura · 16.08.2026 09:41 itibarıyla</span>
+          </div>
+
+          <div style="flex: 1; min-height: 0; overflow: auto;">
+            <table class="nx-num" style="width: 100%; border-collapse: collapse; font-size: 12px;">
+              <thead>
+                <tr class="nx-ico" style="background: var(--color-neutral-200);">
+                  <th style="position: sticky; top: 0; z-index: 2; padding: 5px 8px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: left; font-variant-numeric: normal;">Cari</th>
+                  <th style="position: sticky; top: 0; z-index: 2; padding: 5px 8px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); border-left: 1px solid var(--color-neutral-300); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: left;">Kod</th>
+                  <th style="position: sticky; top: 0; z-index: 2; padding: 5px 8px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); border-left: 1px solid var(--color-neutral-300); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: right;">Vadesi Gelmemiş</th>
+                  <th style="position: sticky; top: 0; z-index: 2; padding: 5px 8px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); border-left: 1px solid var(--color-neutral-300); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: right;">1–30 Gün</th>
+                  <th style="position: sticky; top: 0; z-index: 2; padding: 5px 8px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); border-left: 1px solid var(--color-neutral-300); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: right;">31–60 Gün</th>
+                  <th style="position: sticky; top: 0; z-index: 2; padding: 5px 8px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); border-left: 1px solid var(--color-neutral-300); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: right;">61–90 Gün</th>
+                  <th style="position: sticky; top: 0; z-index: 2; padding: 5px 8px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); border-left: 1px solid var(--color-neutral-300); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: right;">90+ Gün</th>
+                  <th style="position: sticky; top: 0; z-index: 2; padding: 5px 8px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); border-left: 1px solid var(--color-neutral-300); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: right;">Toplam</th>
+                  <th style="position: sticky; top: 0; z-index: 2; padding: 5px 8px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); border-left: 1px solid var(--color-neutral-300); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: right;">Pay</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ aging }}" as="a" hint-placeholder-count="4">
+                  <tr onClick="{{ a.open }}" style="cursor: default;" style-hover="background: var(--color-accent-100);">
+                    <td style="padding: 4px 8px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); font-variant-numeric: normal;">{{ a.name }}</td>
+                    <td style="padding: 4px 8px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); color: var(--color-neutral-700);">{{ a.code }}</td>
+                    <td style="padding: 4px 8px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); text-align: right;">{{ a.b0 }}</td>
+                    <td style="padding: 4px 8px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); text-align: right;">{{ a.b1 }}</td>
+                    <td style="padding: 4px 8px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); text-align: right; font-weight: {{ a.w2 }};">{{ a.b2 }}</td>
+                    <td style="padding: 4px 8px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); text-align: right; font-weight: {{ a.w3 }};">{{ a.b3 }}</td>
+                    <td style="padding: 4px 8px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); text-align: right;">{{ a.b4 }}</td>
+                    <td style="padding: 4px 8px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); text-align: right; font-weight: 700;">{{ a.total }}</td>
+                    <td style="padding: 4px 8px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); text-align: right; color: var(--color-neutral-700);">{{ a.share }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+              <tfoot>
+                <tr class="nx-ico">
+                  <td colspan="2" style="position: sticky; bottom: 0; padding: 6px 8px; background: var(--color-neutral-200); border-top: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;">Genel toplam</td>
+                  <td style="position: sticky; bottom: 0; padding: 6px 8px; background: var(--color-neutral-200); border-top: 1px solid var(--color-divider); text-align: right; font-weight: 700;">106.926,80</td>
+                  <td style="position: sticky; bottom: 0; padding: 6px 8px; background: var(--color-neutral-200); border-top: 1px solid var(--color-divider); text-align: right; font-weight: 700;">—</td>
+                  <td style="position: sticky; bottom: 0; padding: 6px 8px; background: var(--color-neutral-200); border-top: 1px solid var(--color-divider); text-align: right; font-weight: 700;">59.760,00</td>
+                  <td style="position: sticky; bottom: 0; padding: 6px 8px; background: var(--color-neutral-200); border-top: 1px solid var(--color-divider); text-align: right; font-weight: 700;">400,00</td>
+                  <td style="position: sticky; bottom: 0; padding: 6px 8px; background: var(--color-neutral-200); border-top: 1px solid var(--color-divider); text-align: right; font-weight: 700;">—</td>
+                  <td style="position: sticky; bottom: 0; padding: 6px 8px; background: var(--color-neutral-200); border-top: 1px solid var(--color-divider); text-align: right; font-weight: 700;">167.086,80</td>
+                  <td style="position: sticky; bottom: 0; padding: 6px 8px; background: var(--color-neutral-200); border-top: 1px solid var(--color-divider); text-align: right;">%100,0</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <div style="flex: none; display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid var(--color-divider); background: var(--color-neutral-100);">
+            <span style="padding: 6px 9px; border-right: 1px solid var(--color-divider);"><span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;">Vadesi gelmemiş</span><span class="nx-num" style="font-family: var(--font-heading); font-size: 16px;">106.926,80</span><span class="text-muted nx-num" style="margin-left: 6px; font-size: 11px;">%64,0</span></span>
+            <span style="padding: 6px 9px; border-right: 1px solid var(--color-divider);"><span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;">1–30 gün</span><span class="nx-num" style="font-family: var(--font-heading); font-size: 16px;">—</span></span>
+            <span style="padding: 6px 9px; border-right: 1px solid var(--color-divider);"><span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;">31–60 gün</span><span class="nx-num" style="font-family: var(--font-heading); font-size: 16px; color: var(--color-accent-800);">59.760,00</span><span class="text-muted nx-num" style="margin-left: 6px; font-size: 11px;">%35,8</span></span>
+            <span style="padding: 6px 9px; border-right: 1px solid var(--color-divider);"><span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;">61–90 gün</span><span class="nx-num" style="font-family: var(--font-heading); font-size: 16px; color: var(--color-accent-800);">400,00</span><span class="text-muted nx-num" style="margin-left: 6px; font-size: 11px;">%0,2</span></span>
+            <span style="padding: 6px 9px;"><span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;">90+ gün</span><span class="nx-num" style="font-family: var(--font-heading); font-size: 16px;">—</span></span>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isSys }}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; height: 100%; min-height: 0;">
+          <div style="width: 250px; flex: none; border-right: 1px solid var(--color-divider); overflow: auto;">
+            <div class="nx-ico" style="display: flex; align-items: center; padding: 5px 9px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;">Roller<span class="nx-num" style="margin-left: auto; letter-spacing: 0; text-transform: none; color: var(--color-neutral-700);">4</span></div>
+            <sc-for list="{{ roles }}" as="r" hint-placeholder-count="4">
+              <button onClick="{{ r.pick }}" style="width: 100%; display: block; padding: 6px 9px; background: {{ r.bg }}; border: 0; border-left: 2px solid {{ r.mark }}; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); cursor: pointer; font: inherit; text-align: left;" style-hover="background: var(--color-accent-100);">
+                <span style="display: flex; align-items: center; gap: 8px;"><span style="font-family: var(--font-heading); font-size: 14px;">{{ r.name }}</span><span class="nx-num text-muted" style="margin-left: auto; font-size: 11px;">{{ r.users }} kullanıcı</span></span>
+                <span class="text-muted" style="display: block; font-size: 11px; line-height: 1.35;">{{ r.desc }}</span>
+              </button>
+            </sc-for>
+            <div class="nx-ico" style="display: flex; align-items: center; padding: 5px 9px; margin-top: 10px; background: var(--color-neutral-200); border-top: 1px solid var(--color-divider); border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;">Bu roldeki kullanıcılar</div>
+            <sc-for list="{{ roleUsers }}" as="u" hint-placeholder-count="3">
+              <div style="display: flex; align-items: center; gap: 8px; padding: 5px 9px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);">
+                <span style="width: 20px; height: 20px; flex: none; display: grid; place-items: center; background: var(--color-neutral-200); font-family: var(--font-heading); font-size: 10px;">{{ u.ini }}</span>
+                <span style="min-width: 0;"><span style="display: block; font-size: 12px;">{{ u.name }}</span><span class="text-muted nx-num" style="display: block; font-size: 11px;">{{ u.mail }}</span></span>
+                <span class="tag {{ u.tagCls }}" style="margin-left: auto; flex: none; font-size: 9px; padding: 1px 6px;">{{ u.state }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="flex: 1; min-width: 0; overflow: auto;">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid var(--color-divider);">
+              <span style="font-family: var(--font-heading); font-size: 17px;">{{ roleName }} · Yetki Matrisi</span>
+              <span class="tag tag-outline" style="font-size: 10px; padding: 1px 8px;">{{ roleScope }}</span>
+              <button class="btn btn-secondary" style="flex: none; height: 23px; padding: 0 9px; font-size: 12px; white-space: nowrap;">Rolü kopyala</button>
+              <button class="btn btn-primary" style="flex: none; height: 23px; padding: 0 9px; font-size: 12px; white-space: nowrap;">Değişiklikleri kaydet <span style="opacity: 0.7;">F9</span></button>
+              <span class="nx-num text-muted" style="margin-left: auto; font-size: 11px;">{{ permCount }}</span>
+            </div>
+            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+              <thead>
+                <tr class="nx-ico" style="background: var(--color-neutral-200);">
+                  <th style="position: sticky; top: 0; z-index: 2; padding: 5px 8px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: left;">Modül / İşlem</th>
+                  <sc-for list="{{ permCols }}" as="c" hint-placeholder-count="5">
+                    <th style="position: sticky; top: 0; z-index: 2; width: 84px; padding: 5px 8px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); border-left: 1px solid var(--color-neutral-300); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; text-align: center;">{{ c }}</th>
+                  </sc-for>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ permRows }}" as="p" hint-placeholder-count="8">
+                  <tr style-hover="background: var(--color-accent-100);">
+                    <td style="padding: 3px 8px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);">{{ p.label }}</td>
+                    <sc-for list="{{ p.cells }}" as="c" hint-placeholder-count="5">
+                      <td style="padding: 3px 8px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); border-left: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent); text-align: center;">
+                        <button onClick="{{ c.toggle }}" style="width: 14px; height: 14px; display: inline-grid; place-items: center; padding: 0; background: {{ c.bg }}; border: 1px solid {{ c.bc }}; cursor: pointer; font-size: 10px; line-height: 1; color: var(--color-bg);">{{ c.mark }}</button>
+                      </td>
+                    </sc-for>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+            <div style="display: flex; gap: 18px; padding: 8px 10px; border-top: 1px solid var(--color-divider); background: var(--color-neutral-100);">
+              <span class="text-muted" style="font-size: 11px;">Değişiklikler denetim kaydına yazılır ve kullanıcının bir sonraki oturumunda geçerli olur.</span>
+              <span class="nx-num text-muted" style="margin-left: auto; font-size: 11px;">Son değişiklik 12.08.2026 · admin</span>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isGrid }}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-direction: column; height: 100%; min-height: 0;">
+          <div style="flex: none; display: flex; flex-wrap: wrap; align-items: end; gap: 8px; row-gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--color-divider);">
+            <span class="field" style="width: 210px; flex: none;">
+              <label style="font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px;">{{ gridSearchLabel }}</label>
+              <input class="input" value="{{ gq }}" onChange="{{ setGq }}" placeholder="ara…" style="height: 25px; font-size: 12px; background: var(--color-neutral-100);">
+            </span>
+            <sc-for list="{{ gridFilters }}" as="f" hint-placeholder-count="2">
+              <span class="field" style="width: 150px; flex: none;">
+                <label style="font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px;">{{ f.label }}</label>
+                <select class="input" value="{{ f.value }}" onChange="{{ f.set }}" style="height: 25px; font-size: 12px; background: var(--color-neutral-100);">
+                  <sc-for list="{{ f.options }}" as="o" hint-placeholder-count="3">
+                    <option>{{ o }}</option>
+                  </sc-for>
+                </select>
+              </span>
+            </sc-for>
+            <button onClick="{{ resetGrid }}" class="btn btn-secondary" style="flex: none; height: 25px; padding: 0 9px; font-size: 12px; white-space: nowrap;">Temizle</button>
+            <button class="btn btn-secondary" style="flex: none; height: 25px; padding: 0 9px; font-size: 12px; white-space: nowrap;">Excel</button>
+            <span class="nx-num text-muted" style="margin-left: auto; align-self: center; font-size: 11px; white-space: nowrap;">{{ gridCount }}</span>
+          </div>
+
+          <div style="flex: 1; min-height: 0; overflow: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+              <thead>
+                <tr style="background: var(--color-neutral-200);">
+                  <sc-for list="{{ gridCols }}" as="c" hint-placeholder-count="7">
+                    <th onClick="{{ c.sort }}" class="nx-ico" style="position: sticky; top: 0; z-index: 2; padding: 4px 8px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); border-left: 1px solid var(--color-neutral-300); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; text-align: {{ c.align }}; white-space: nowrap; cursor: pointer; color: var(--color-neutral-800);">{{ c.label }}<span style="font-size: 9px; color: var(--color-accent-700);">{{ c.arrow }}</span></th>
+                  </sc-for>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ gridRows }}" as="r" hint-placeholder-count="8">
+                  <tr onClick="{{ r.open }}" style="background: {{ r.bg }}; cursor: default;" style-hover="background: var(--color-accent-100);">
+                    <sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="7">
+                      <td class="{{ c.cls }}" style="padding: 3px 8px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); text-align: {{ c.align }}; white-space: nowrap; font-weight: {{ c.weight }}; color: {{ c.fg }};">
+                        <sc-if value="{{ c.isTag }}" hint-placeholder-val="{{ false }}">
+                          <span class="tag {{ c.tagCls }}" style="font-size: 10px; padding: 1px 7px;">{{ c.text }}</span>
+                        </sc-if>
+                        <sc-if value="{{ c.isText }}" hint-placeholder-val="{{ true }}">{{ c.text }}</sc-if>
+                      </td>
+                    </sc-for>
+                  </tr>
+                </sc-for>
+              </tbody>
+              <tfoot>
+                <sc-if value="{{ hasGridFoot }}" hint-placeholder-val="{{ false }}">
+                  <tr>
+                    <sc-for list="{{ gridFoot }}" as="c" hint-placeholder-count="7">
+                      <td class="{{ c.cls }}" style="position: sticky; bottom: 0; padding: 5px 8px; background: var(--color-neutral-200); border-top: 1px solid var(--color-divider); text-align: {{ c.align }}; white-space: nowrap; font-weight: {{ c.weight }}; text-transform: {{ c.tt }}; letter-spacing: {{ c.ls }};">{{ c.text }}</td>
+                    </sc-for>
+                  </tr>
+                </sc-if>
+              </tfoot>
+            </table>
+          </div>
+
+          <div class="text-muted" style="flex: none; display: flex; align-items: center; gap: 10px; padding: 5px 10px; border-top: 1px solid var(--color-divider); background: var(--color-neutral-100); font-size: 11px;">
+            <span>{{ gridNote }}</span>
+            <span class="nx-num" style="margin-left: auto;">Sayfa 1 / 1</span>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isStmt }}" hint-placeholder-val="{{ false }}">
+        <div style="padding: 9px 12px 16px; display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; flex-wrap: wrap; align-items: end; gap: 8px;">
+            <span style="font-family: var(--font-heading); font-size: 21px;">{{ stmtTitle }}</span>
+            <span class="text-muted" style="font-size: 12px;">{{ stmtPeriod }}</span>
+            <button class="btn btn-secondary" style="margin-left: auto; flex: none; height: 23px; padding: 0 9px; font-size: 12px;">Excel</button>
+            <button class="btn btn-secondary" style="flex: none; height: 23px; padding: 0 9px; font-size: 12px;">PDF</button>
+            <button class="btn btn-secondary" style="flex: none; height: 23px; padding: 0 9px; font-size: 12px;">Yazdır</button>
+          </div>
+          <div style="display: grid; grid-template-columns: {{ stmtCols }}; gap: 12px; align-items: start;">
+            <sc-for list="{{ stmtPanels }}" as="p" hint-placeholder-count="2">
+              <div style="border: 1px solid var(--color-divider);">
+                <div class="nx-ico" style="display: flex; padding: 5px 9px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;">{{ p.title }}<span class="nx-num" style="margin-left: auto; letter-spacing: 0; text-transform: none; color: var(--color-neutral-700);">{{ p.total }}</span></div>
+                <table class="nx-num" style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                  <tbody>
+                    <sc-for list="{{ p.rows }}" as="r" hint-placeholder-count="6">
+                      <tr style="background: {{ r.bg }};">
+                        <td style="padding: {{ r.pad }} 9px; padding-left: {{ r.indent }}; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); font-variant-numeric: normal; font-family: {{ r.font }}; text-transform: {{ r.tt }}; letter-spacing: {{ r.ls }}; font-size: {{ r.size }};">{{ r.label }}</td>
+                        <td class="nx-num" style="padding: {{ r.pad }} 9px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); text-align: right; font-weight: {{ r.weight }}; font-size: {{ r.size }};">{{ r.value }}</td>
+                      </tr>
+                    </sc-for>
+                  </tbody>
+                </table>
+              </div>
+            </sc-for>
+          </div>
+          <div class="text-muted" style="font-size: 11px;">{{ stmtNote }}</div>
+        </div>
+      </sc-if>
+
+
+      <sc-if value="{{ isSet }}" hint-placeholder-val="{{ false }}">
+        <div style="padding: 10px 12px 16px; display: grid; grid-template-columns: 1.25fr 1fr; gap: 12px; align-items: start;">
+          <div style="border: 1px solid var(--color-divider);">
+            <div class="nx-ico" style="display: flex; align-items: center; padding: 5px 9px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;">Görünüm ve Çalışma Alanı<span class="text-muted" style="margin-left: auto; letter-spacing: 0; text-transform: none; font-size: 11px;">bu tarayıcıda saklanır</span></div>
+            <sc-for list="{{ settings }}" as="o" hint-placeholder-count="6">
+              <label style="display: flex; align-items: center; gap: 12px; padding: 7px 9px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); cursor: pointer;" style-hover="background: var(--color-accent-100);">
+                <span style="min-width: 0;">
+                  <span style="display: block; font-family: var(--font-heading); font-size: 14px;">{{ o.label }}</span>
+                  <span class="text-muted" style="display: block; font-size: 11px; line-height: 1.35;">{{ o.desc }}</span>
+                </span>
+                <button onClick="{{ o.toggle }}" role="switch" style="margin-left: auto; flex: none; width: 38px; height: 20px; display: flex; align-items: center; padding: 2px; background: {{ o.track }}; border: 1px solid {{ o.border }}; cursor: pointer;">
+                  <span style="width: 14px; height: 14px; background: {{ o.knob }}; margin-left: {{ o.shift }};"></span>
+                </button>
+                <span class="nx-ico" style="flex: none; width: 34px; font-size: 10px; letter-spacing: 0.08em; color: var(--color-neutral-600);">{{ o.state }}</span>
+              </label>
+            </sc-for>
+            <div style="display: flex; gap: 8px; padding: 8px 9px;">
+              <button onClick="{{ resetUi }}" class="btn btn-secondary" style="height: 23px; padding: 0 9px; font-size: 12px;">Varsayılana dön</button>
+              <button class="btn btn-secondary" style="height: 23px; padding: 0 9px; font-size: 12px;">Tercihleri dışa aktar</button>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="border: 1px solid var(--color-divider);">
+              <div class="nx-ico" style="padding: 5px 9px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;">Oturum</div>
+              <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <tbody>
+                  <tr><td style="padding: 4px 9px;">Kullanıcı</td><td style="padding: 4px 9px; text-align: right;">Sistem Yöneticisi</td></tr>
+                  <tr><td style="padding: 4px 9px;">Rol</td><td style="padding: 4px 9px; text-align: right;">Admin</td></tr>
+                  <tr><td style="padding: 4px 9px;">Şirket</td><td style="padding: 4px 9px; text-align: right;">Nexus Demo Yazılım A.Ş.</td></tr>
+                  <tr><td style="padding: 4px 9px;">Dönem</td><td class="nx-num" style="padding: 4px 9px; text-align: right;">2026-08 · Açık</td></tr>
+                  <tr><td style="padding: 4px 9px;">Dil / Biçim</td><td style="padding: 4px 9px; text-align: right;">Türkçe · TRY</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div style="border: 1px solid var(--color-divider);">
+              <div class="nx-ico" style="padding: 5px 9px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;">Sistem</div>
+              <table class="nx-num" style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <tbody>
+                  <tr><td style="padding: 4px 9px; font-variant-numeric: normal;">Sürüm</td><td style="padding: 4px 9px; text-align: right;">1.8.2</td></tr>
+                  <tr><td style="padding: 4px 9px; font-variant-numeric: normal;">Veritabanı</td><td style="padding: 4px 9px; text-align: right;">nexus-prod-01</td></tr>
+                  <tr><td style="padding: 4px 9px; font-variant-numeric: normal;">Son senkron</td><td style="padding: 4px 9px; text-align: right;">{{ clock }}</td></tr>
+                  <tr><td style="padding: 4px 9px; font-variant-numeric: normal;">E-Fatura kuyruğu</td><td style="padding: 4px 9px; text-align: right;">2 bekleyen</td></tr>
+                </tbody>
+              </table>
+              <div style="display: flex; gap: 8px; padding: 8px 9px;">
+                <button onClick="{{ goAudit }}" class="btn btn-secondary" style="height: 23px; padding: 0 9px; font-size: 12px;">Denetim kaydı</button>
+                <button onClick="{{ goTest }}" class="btn btn-secondary" style="height: 23px; padding: 0 9px; font-size: 12px;">Sistem testi</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+
+      <sc-if value="{{ isProfile }}" hint-placeholder-val="{{ false }}">
+        <div style="padding: 10px 12px 16px; display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="width: 44px; height: 44px; display: grid; place-items: center; background: var(--color-accent-200); font-family: var(--font-heading); font-size: 17px;">{{ meInitials }}</span>
+            <span>
+              <span style="display: block; font-family: var(--font-heading); font-size: 21px;">{{ meName }}</span>
+              <span class="text-muted nx-num" style="display: block; font-size: 12px;">{{ meMail }} · son giriş 16.08.2026 08:12 · 10.0.0.14</span>
+            </span>
+            <span class="tag tag-accent" style="font-size: 10px; padding: 1px 8px;">{{ meRole }}</span>
+            <span class="tag tag-outline" style="font-size: 10px; padding: 1px 8px;">{{ meEditTag }}</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 12px; align-items: start;">
+            <div style="border: 1px solid var(--color-divider);">
+              <div class="nx-ico" style="display: flex; align-items: center; padding: 5px 9px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;">Kişisel Bilgiler<span class="text-muted" style="margin-left: auto; letter-spacing: 0; text-transform: none; font-size: 11px;">kendi kaydınızı düzenleyebilirsiniz</span></div>
+              <div style="display: grid; grid-template-columns: repeat(2, 1fr);">
+                <sc-for list="{{ profileFields }}" as="f" hint-placeholder-count="8">
+                  <label style="display: block; padding: 5px 9px 6px; border-right: 1px solid var(--color-divider); border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);">
+                    <span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;">{{ f.label }}</span>
+                    <input class="{{ f.cls }}" value="{{ f.value }}" onChange="{{ f.set }}" readOnly="{{ f.ro }}" style="width: 100%; height: 22px; padding: 0 3px; margin-top: 1px; font: inherit; font-size: 12px; color: {{ f.fg }}; background: transparent; border: 1px solid transparent;" style-hover="border-color: var(--color-divider);" style-focus="border-color: var(--color-accent); background: var(--color-neutral-100);">
+                  </label>
+                </sc-for>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; padding: 8px 9px;">
+                <button class="btn btn-primary" style="height: 23px; padding: 0 10px; font-size: 12px;">Kaydet</button>
+                <button class="btn btn-secondary" style="height: 23px; padding: 0 9px; font-size: 12px;">Parola değiştir</button>
+                <span class="text-muted" style="margin-left: auto; font-size: 11px;">{{ profileNote }}</span>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div style="border: 1px solid var(--color-divider);">
+                <div class="nx-ico" style="display: flex; align-items: center; padding: 5px 9px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;">Rol ve Yetki<span class="nx-num text-muted" style="margin-left: auto; letter-spacing: 0; text-transform: none; font-size: 11px;">{{ mePermCount }}</span></div>
+                <div style="padding: 7px 9px 9px;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-family: var(--font-heading); font-size: 15px;">{{ meRole }}</span>
+                    <span class="text-muted" style="font-size: 11px;">{{ meScope }}</span>
+                  </div>
+                  <div class="text-muted" style="margin-top: 4px; font-size: 11px; line-height: 1.4;">{{ meRoleDesc }}</div>
+                  <sc-if value="{{ meCanAdmin }}" hint-placeholder-val="{{ false }}">
+                    <button onClick="{{ goPerms }}" class="btn btn-secondary" style="margin-top: 8px; height: 22px; padding: 0 9px; font-size: 12px;">Rol yetkilerini düzenle</button>
+                  </sc-if>
+                  <sc-if value="{{ meCannotAdmin }}" hint-placeholder-val="{{ true }}">
+                    <div class="text-muted" style="margin-top: 8px; padding: 5px 8px; border: 1px solid var(--color-divider); font-size: 11px; line-height: 1.4;">Rol ve yetki alanlarını yalnızca sistem yöneticisi değiştirebilir. Değişiklik için Sistem › Kullanıcılar üzerinden talep açın.</div>
+                  </sc-if>
+                </div>
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px; border-top: 1px solid var(--color-divider);">
+                  <tbody>
+                    <sc-for list="{{ mePerms }}" as="p" hint-placeholder-count="6">
+                      <tr>
+                        <td style="padding: 3px 9px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);">{{ p.label }}</td>
+                        <td class="nx-ico" style="padding: 3px 9px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); text-align: right; font-size: 10px; letter-spacing: 0.06em; color: {{ p.fg }};">{{ p.value }}</td>
+                      </tr>
+                    </sc-for>
+                  </tbody>
+                </table>
+              </div>
+
+              <div style="border: 1px solid var(--color-divider);">
+                <div class="nx-ico" style="padding: 5px 9px; background: var(--color-neutral-200); border-bottom: 1px solid var(--color-divider); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;">Son Oturumlar</div>
+                <table class="nx-num" style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                  <tbody>
+                    <tr><td style="padding: 3px 9px;">16.08.2026 08:12</td><td style="padding: 3px 9px;">Chrome · Windows</td><td style="padding: 3px 9px; text-align: right;">10.0.0.14</td></tr>
+                    <tr><td style="padding: 3px 9px;">15.08.2026 09:04</td><td style="padding: 3px 9px;">Chrome · Windows</td><td style="padding: 3px 9px; text-align: right;">10.0.0.14</td></tr>
+                    <tr><td style="padding: 3px 9px;">13.08.2026 17:38</td><td style="padding: 3px 9px;">Safari · iPad</td><td style="padding: 3px 9px; text-align: right;">88.243.16.7</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+
+    </div>
+  </div>
+
+  <div class="nx-num" style="height: 23px; flex: none; display: flex; align-items: center; gap: 14px; padding: 0 10px; background: var(--color-accent-900); color: var(--nx-onbar); font-size: 11px;">
+    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 6px; height: 6px; background: var(--color-accent-300);"></span>Bağlı · nexus-prod-01</span>
+    <span style="opacity: 0.55;">|</span><span>Dönem 2026-08 · Açık</span>
+    <span style="opacity: 0.55;">|</span><span>{{ statusRecords }}</span>
+    <span style="opacity: 0.55;">|</span><span>{{ statusSel }}</span>
+    <span style="margin-left: auto; opacity: 0.75;">{{ statusHint }}</span>
+    <span style="opacity: 0.55;">|</span><span>{{ meRoleUpper }} · TR</span>
+    <span style="opacity: 0.55;">|</span><span>{{ clock }}</span>
+  </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showLeftRail&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Yerleşim&quot;},&quot;showFKeys&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Yerleşim&quot;},&quot;showColumnFilters&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Veri gridi&quot;}}">
+class Component extends DCLogic {
+  state = {
+    tabs: [{ id: 'dash', label: 'Genel Bakış', kind: 'PANO', fixed: true }, { id: 'faturalar', label: 'Faturalar', kind: 'LİSTE' }],
+    active: 'dash', menu: null,
+    q: '', status: 'Tümü', type: 'Tümü', overdue: false,
+    sort: { key: 'date', dir: 'desc' }, sel: [], focus: 'NEX2026000000006',
+    docTab: 'lines',
+    lines: [
+      { id: 1, code: 'NX-LIC-STD', name: 'Standart Lisans (yıllık)', qty: 3, unit: 'ADET', price: 5800, disc: 0, vat: 20 },
+      { id: 2, code: 'NX-CON-01', name: 'Uygulama danışmanlığı', qty: 15, unit: 'SAAT', price: 500, disc: 0, vat: 20 }
+    ],
+    pq: '', clock: '', chart: 'aylik', editCards: false,
+    gq: '', gridFilter: {}, gridSort: null,
+    card: {
+      title: 'Ege Tekstil Ltd. Şti.', code: '120.01.0002', tax: '4560123478', office: 'Konak', kind: 'Müşteri', state: 'Aktif',
+      addr: 'Gazi Bulvarı No: 118 K:4', city: 'İzmir / Konak', phone: '+90 232 441 22 08',
+      mail: 'muhasebe@egetekstil.com.tr', contact: 'Selin Aydın', web: 'egetekstil.com.tr',
+      term: '30 gün', disc: '%0', limit: '400.000,00', ccy: 'TRY', pricelist: 'Kurumsal 2026', rep: 'B. Yalçın',
+      acct: '120.01.0002', vatex: 'Yok', einv: 'Mükellef', gib: 'urn:mail:defaultpk@egetekstil', wht: 'Uygulanmıyor', cc: 'SAT-01'
+    },
+    role: 'Muhasebe', permOverrides: {}, repGroup: 'Cari bazında',
+    theme: 'light', notifOpen: false, notifRead: [], profileOpen: false, myRole: 'Yönetici',
+    me: { name: 'Sistem Yöneticisi', mail: 'admin@nexuserp.local', phone: '+90 212 000 00 00', title: 'Mali İşler Direktörü', dept: 'Finans', lang: 'Türkçe (tr-TR)', tz: 'Europe/Istanbul (UTC+3)', code: 'ADMIN' },
+    ui: { tabs: true, rail: null, fkeys: null, cols: null, zebra: true }
+  };
+
+  searchRef = React.createRef();
+
+  invoices = [
+    { no: 'ABN2026000000003', party: 'Anadolu Lojistik A.Ş.', tax: '3210987654', type: 'Satış', date: '13.08.2026', iso: '2026-08-13', due: '12.09.2026', gross: 54000, open: 54000, status: 'Kesildi', overdue: false, journal: '2026/08-0044' },
+    { no: 'ABN2026000000005', party: 'Ege Tekstil Ltd. Şti.', tax: '4560123478', type: 'Satış', date: '12.08.2026', iso: '2026-08-12', due: '26.09.2026', gross: 1184.4, open: 1184.4, status: 'Kesildi', overdue: false, journal: '2026/08-0042' },
+    { no: 'ABN2026000000004', party: 'Anadolu Lojistik A.Ş.', tax: '3210987654', type: 'Satış', date: '12.08.2026', iso: '2026-08-12', due: '11.09.2026', gross: 1083.6, open: 1083.6, status: 'Kesildi', overdue: false, journal: '2026/08-0041' },
+    { no: 'API2026000000001', party: 'Anadolu Lojistik A.Ş.', tax: '3210987654', type: 'Satış', date: '11.08.2026', iso: '2026-08-11', due: '10.09.2026', gross: 10600, open: 10600, status: 'Kesildi', overdue: false, journal: '2026/08-0039' },
+    { no: 'ABN2026000000002', party: 'Ege Tekstil Ltd. Şti.', tax: '4560123478', type: 'Satış', date: '10.08.2026', iso: '2026-08-10', due: '24.09.2026', gross: 1798.8, open: 1798.8, status: 'Kesildi', overdue: false, journal: '2026/08-0036' },
+    { no: 'ABN2026000000001', party: 'Anadolu Lojistik A.Ş.', tax: '3210987654', type: 'Satış', date: '09.08.2026', iso: '2026-08-09', due: '08.09.2026', gross: 5400, open: 2380, status: 'Kısmi Tahsil', overdue: false, journal: '2026/08-0034' },
+    { no: 'NEX2026000000006', party: 'Ege Tekstil Ltd. Şti.', tax: '4560123478', type: 'Satış', date: '03.08.2026', iso: '2026-08-03', due: '02.09.2026', gross: 29880, open: 29880, status: 'Kesildi', overdue: false, journal: '2026/08-0031' },
+    { no: 'NEX2026000000005', party: 'Marmara Danışmanlık', tax: '7890123456', type: 'Satış', date: '22.07.2026', iso: '2026-07-22', due: '21.08.2026', gross: 6000, open: 6000, status: 'Kesildi', overdue: false, journal: '2026/07-0028' },
+    { no: 'NEX2026000000004', party: 'Anadolu Lojistik A.Ş.', tax: '3210987654', type: 'Satış', date: '27.06.2026', iso: '2026-06-27', due: '27.07.2026', gross: 8480, open: 0, status: 'Tahsil Edildi', overdue: false, journal: '2026/06-0021' },
+    { no: 'NEX2026000000003', party: 'Karadeniz İnşaat A.Ş.', tax: '6543210987', type: 'Satış', date: '02.06.2026', iso: '2026-06-02', due: '02.07.2026', gross: 59760, open: 59760, status: 'Kesildi', overdue: true, days: 45, journal: '2026/06-0017' },
+    { no: 'NEX2026000000002', party: 'Ege Tekstil Ltd. Şti.', tax: '4560123478', type: 'Satış', date: '08.05.2026', iso: '2026-05-08', due: '07.06.2026', gross: 5400, open: 400, status: 'Kısmi Tahsil', overdue: true, days: 70, journal: '2026/05-0011' },
+    { no: 'NEX2026000000001', party: 'Anadolu Lojistik A.Ş.', tax: '3210987654', type: 'Satış', date: '13.04.2026', iso: '2026-04-13', due: '03.05.2026', gross: 12000, open: 0, status: 'Tahsil Edildi', overdue: false, journal: '2026/04-0004' }
+  ];
+
+  pages = [
+    ['Genel Bakış', 'dash', 'Ana ekran'], ['Cari Kartlar', 'cariler', 'Cari'], ['Cari Ekstre', 'ekstre', 'Cari'],
+    ['Faturalar', 'faturalar', 'Satış'], ['Yeni Fatura', 'doc', 'Satış'], ['Alış Faturası Gir', 'doc', 'Satış'],
+    ['Ürün / Hizmet', 'urunler', 'Satış'], ['Tahsilatlar', 'tahsilatlar', 'Finans'], ['Yaşlandırma Raporu', 'yaslandirma', 'Finans'],
+    ['Planlar', 'planlar', 'Abonelik'], ['Abonelikler', 'abonelikler', 'Abonelik'], ['Hesap Planı', 'hesap-plani', 'Muhasebe'],
+    ['Muhasebe Fişleri', 'fisler', 'Muhasebe'], ['Mizan', 'mizan', 'Muhasebe'], ['Bilanço', 'bilanco', 'Muhasebe'],
+    ['Gelir Tablosu', 'gelir-tablosu', 'Muhasebe'], ['Denetim Kaydı', 'denetim', 'Sistem'], ['Kullanıcılar', 'kullanicilar', 'Sistem'],
+    ['Sistem Testi', 'sistem-testi', 'Sistem'], ['Ayarlar', 'ayarlar', 'Sistem']
+  ];
+
+  modules = [
+    { key: 'Cari', items: [['Cari Kartlar', 'Müşteri ve tedarikçi kartları, bakiye ve vade', 'cariler'], ['Cari Ekstre', 'Bir carinin borç / alacak hareketleri ve yürüyen bakiye', 'ekstre']] },
+    { key: 'Satış', items: [['Faturalar', 'Taslak, kesilen ve iptal faturaların listesi', 'faturalar'], ['Yeni Fatura', 'Satır girişi, canlı KDV ve tevkifat önizlemesi', 'doc'], ['Ürün / Hizmet', 'Ürün kataloğu, KDV ve tevkifat oranları', 'urunler']] },
+    { key: 'Finans', items: [['Tahsilatlar', 'Havale, çek ve nakit kayıtları · fatura eşleştirme', 'tahsilatlar'], ['Yaşlandırma Raporu', 'Alacaklar kaç gündür bekliyor: 30 / 60 / 90 gün', 'yaslandirma']] },
+    { key: 'Abonelik', items: [['Planlar', 'Abonelik planları, fiyat ve döngü', 'planlar'], ['Abonelikler', 'Aktif abonelikler, MRR ve yenileme takvimi', 'abonelikler']] },
+    { key: 'Muhasebe', items: [['Hesap Planı', 'Tek Düzen Hesap Planı · hareket gören ve ara hesaplar', 'hesap-plani'], ['Muhasebe Fişleri', 'Otomatik ve manuel fişler · çift taraflı kayıt', 'fisler'], ['Mizan', 'Hesap bazında borç / alacak toplamı ve bakiye', 'mizan'], ['Bilanço', 'Aktif ve pasif kalemler · dönem sonucu dahil', 'bilanco'], ['Gelir Tablosu', 'Dönem gelirleri, giderleri ve net kâr / zarar', 'gelir-tablosu']] },
+    { key: 'Sistem', items: [['Denetim Kaydı', 'Kim, ne zaman, hangi alanı neyden neye çevirdi', 'denetim'], ['Kullanıcılar', 'Erişim yetkileri, rol atamaları ve hesap durumu', 'kullanicilar'], ['Sistem Testi', 'Her iş kuralını canlı veride çalıştırıp raporlar', 'sistem-testi'], ['Ayarlar', 'Görünüm, tema ve çalışma alanı tercihleri', 'ayarlar']] }
+  ];
+
+  tabDefs = {
+    dash: ['Genel Bakış', 'PANO'], cariler: ['Cari Kartlar', 'LİSTE'], ekstre: ['Cari Ekstre', 'CARİ'],
+    faturalar: ['Faturalar', 'LİSTE'], doc: ['NEX…0006', 'BELGE'], urunler: ['Ürün / Hizmet', 'LİSTE'],
+    tahsilatlar: ['Tahsilatlar', 'LİSTE'], yaslandirma: ['Yaşlandırma', 'RAPOR'], planlar: ['Planlar', 'LİSTE'],
+    abonelikler: ['Abonelikler', 'LİSTE'], 'hesap-plani': ['Hesap Planı', 'LİSTE'], fisler: ['Fişler', 'LİSTE'],
+    mizan: ['Mizan', 'RAPOR'], bilanco: ['Bilanço', 'RAPOR'], 'gelir-tablosu': ['Gelir Tablosu', 'RAPOR'],
+    denetim: ['Denetim Kaydı', 'LİSTE'], kullanicilar: ['Kullanıcılar', 'SİSTEM'], 'sistem-testi': ['Sistem Testi', 'SİSTEM'], ayarlar: ['Ayarlar', 'SİSTEM'], profil: ['Profilim', 'HESAP']
+  };
+
+  grids = {
+    cariler: {
+      searchLabel: 'Kod / unvan', note: 'Cari kartlar · bakiye ve vadesi geçen tutar açık faturalardan hesaplanır.',
+      filters: [{ label: 'Tip', col: 2, options: ['Tümü', 'Müşteri', 'Tedarikçi'] }, { label: 'Durum', col: 7, options: ['Tümü', 'Aktif', 'Riskli', 'Pasif'] }],
+      cols: [['Kod', 'left'], ['Unvan', 'left'], ['Tip', 'left'], ['Vergi No', 'left'], ['Telefon', 'left'], ['Bakiye', 'right'], ['Vadesi Geçen', 'right'], ['Durum', 'left']],
+      tags: [7], nums: [5, 6], go: 'ekstre',
+      rows: [
+        ['120.01.0001', 'Anadolu Lojistik A.Ş.', 'Müşteri', '3210987654', '+90 216 344 11 20', '68.063,60', '—', 'Aktif'],
+        ['120.01.0002', 'Ege Tekstil Ltd. Şti.', 'Müşteri', '4560123478', '+90 232 441 22 08', '33.263,20', '400,00', 'Aktif'],
+        ['120.01.0003', 'Marmara Danışmanlık', 'Müşteri', '7890123456', '+90 212 267 55 41', '6.000,00', '—', 'Aktif'],
+        ['120.01.0004', 'Karadeniz İnşaat A.Ş.', 'Müşteri', '6543210987', '+90 462 321 78 90', '59.760,00', '59.760,00', 'Riskli'],
+        ['320.01.0001', 'Bulut Bilişim Hizmetleri', 'Tedarikçi', '1234509876', '+90 312 473 65 02', '—', '—', 'Aktif']
+      ],
+      foot: ['5 cari', '', '', '', '', '167.086,80', '60.160,00', '']
+    },
+    urunler: {
+      searchLabel: 'Kod / ad', note: 'Ürün ve hizmet kataloğu · fiyatlar KDV hariçtir.',
+      filters: [{ label: 'Tür', col: 2, options: ['Tümü', 'Ürün', 'Hizmet'] }],
+      cols: [['Kod', 'left'], ['Ad', 'left'], ['Tür', 'left'], ['Birim', 'left'], ['Liste Fiyatı', 'right'], ['KDV %', 'right'], ['Tevkifat', 'left'], ['Muhasebe Hesabı', 'left']],
+      nums: [4, 5],
+      rows: [
+        ['NX-LIC-STD', 'Standart Lisans', 'Ürün', 'ADET', '5.800,00', '20', '—', '600.01'],
+        ['NX-LIC-ENT', 'Kurumsal Lisans', 'Ürün', 'ADET', '12.400,00', '20', '—', '600.01'],
+        ['NX-CON-01', 'Uygulama Danışmanlığı', 'Hizmet', 'SAAT', '500,00', '20', '5/10', '600.02'],
+        ['NX-SUP-24', '7/24 Destek Paketi', 'Hizmet', 'AY', '1.850,00', '20', '—', '600.03'],
+        ['NX-TRN-01', 'Kullanıcı Eğitimi', 'Hizmet', 'GÜN', '4.200,00', '20', '—', '600.02'],
+        ['NX-IMP-01', 'Veri Aktarımı', 'Hizmet', 'PROJE', '9.500,00', '20', '9/10', '600.02']
+      ],
+      foot: ['6 kalem', '', '', '', '', '', '', '']
+    },
+    tahsilatlar: {
+      searchLabel: 'Belge / cari', note: 'Eşleşmemiş tahsilat cari bakiyeyi kapatmaz — fatura ile eşleştirilmelidir.',
+      filters: [{ label: 'Yöntem', col: 3, options: ['Tümü', 'Havale', 'Çek', 'Nakit'] }, { label: 'Durum', col: 7, options: ['Tümü', 'Eşleşti', 'Eşleşmedi'] }],
+      cols: [['Belge No', 'left'], ['Tarih', 'left'], ['Cari', 'left'], ['Yöntem', 'left'], ['Tutar', 'right'], ['Eşleşen', 'right'], ['Kalan', 'right'], ['Durum', 'left']],
+      tags: [7], nums: [4, 5, 6],
+      rows: [
+        ['THS-0014', '05.08.2026', 'Ege Tekstil Ltd. Şti.', 'Havale', '2.983,20', '—', '2.983,20', 'Eşleşmedi'],
+        ['THS-0013', '02.08.2026', 'Anadolu Lojistik A.Ş.', 'Havale', '3.020,00', '3.020,00', '—', 'Eşleşti'],
+        ['THS-0012', '28.07.2026', 'Anadolu Lojistik A.Ş.', 'Çek', '5.000,00', '5.000,00', '—', 'Eşleşti'],
+        ['THS-0011', '12.07.2026', 'Marmara Danışmanlık', 'Nakit', '1.200,00', '1.200,00', '—', 'Eşleşti'],
+        ['THS-0010', '02.06.2026', 'Ege Tekstil Ltd. Şti.', 'Havale', '5.000,00', '5.000,00', '—', 'Eşleşti']
+      ],
+      foot: ['5 tahsilat', '', '', '', '17.203,20', '14.220,00', '2.983,20', '']
+    },
+    planlar: {
+      searchLabel: 'Kod / plan', note: 'MRR aylık karşılık üzerinden hesaplanır; yıllık planlar 12 aya bölünür.',
+      filters: [{ label: 'Döngü', col: 2, options: ['Tümü', 'Aylık', 'Yıllık'] }, { label: 'Durum', col: 7, options: ['Tümü', 'Aktif', 'Pasif'] }],
+      cols: [['Kod', 'left'], ['Plan', 'left'], ['Döngü', 'left'], ['Fiyat', 'right'], ['KDV %', 'right'], ['Abonelik', 'right'], ['MRR', 'right'], ['Durum', 'left']],
+      tags: [7], nums: [3, 4, 5, 6],
+      rows: [
+        ['PLN-STD', 'Standart Aylık', 'Aylık', '1.450,00', '20', '2', '2.900,00', 'Aktif'],
+        ['PLN-PRO', 'Profesyonel Aylık', 'Aylık', '2.890,00', '20', '2', '5.780,00', 'Aktif'],
+        ['PLN-ENT', 'Kurumsal Yıllık', 'Yıllık', '89.000,00', '20', '1', '7.416,67', 'Aktif'],
+        ['PLN-SUP', 'Destek Paketi', 'Aylık', '1.850,00', '20', '1', '1.850,00', 'Aktif'],
+        ['PLN-LEG', 'Eski Başlangıç', 'Aylık', '690,00', '20', '0', '—', 'Pasif']
+      ],
+      foot: ['5 plan', '', '', '', '', '6', '17.946,67', '']
+    },
+    abonelikler: {
+      searchLabel: 'No / cari', note: 'Yenileme günü geldiğinde fatura otomatik kesilir ve muhasebe fişi oluşur.',
+      filters: [{ label: 'Durum', col: 7, options: ['Tümü', 'Aktif', 'İptal'] }, { label: 'Döngü', col: 5, options: ['Tümü', 'Aylık', 'Yıllık'] }],
+      cols: [['No', 'left'], ['Cari', 'left'], ['Plan', 'left'], ['Başlangıç', 'left'], ['Sonraki Fatura', 'left'], ['Döngü', 'left'], ['MRR', 'right'], ['Durum', 'left']],
+      tags: [7], nums: [6],
+      rows: [
+        ['ABN-0001', 'Anadolu Lojistik A.Ş.', 'Profesyonel Aylık', '01.02.2026', '01.09.2026', 'Aylık', '2.890,00', 'Aktif'],
+        ['ABN-0002', 'Ege Tekstil Ltd. Şti.', 'Standart Aylık', '15.03.2026', '15.09.2026', 'Aylık', '1.450,00', 'Aktif'],
+        ['ABN-0003', 'Anadolu Lojistik A.Ş.', 'Kurumsal Yıllık', '01.01.2026', '01.01.2027', 'Yıllık', '7.416,67', 'Aktif'],
+        ['ABN-0004', 'Marmara Danışmanlık', 'Standart Aylık', '10.06.2026', '10.09.2026', 'Aylık', '1.450,00', 'Aktif'],
+        ['ABN-0005', 'Ege Tekstil Ltd. Şti.', 'Profesyonel Aylık', '01.07.2026', '01.09.2026', 'Aylık', '2.890,00', 'Aktif'],
+        ['ABN-0006', 'Karadeniz İnşaat A.Ş.', 'Destek Paketi', '20.05.2026', '20.08.2026', 'Aylık', '1.850,00', 'Aktif'],
+        ['ABN-0007', 'Bulut Bilişim Hizmetleri', 'Eski Başlangıç', '04.01.2025', '—', 'Aylık', '—', 'İptal']
+      ],
+      foot: ['7 abonelik · 6 aktif', '', '', '', '', '', '17.946,67', '']
+    },
+    'hesap-plani': {
+      searchLabel: 'Kod / hesap', note: 'Tek Düzen Hesap Planı · yalnızca hareket gören hesaplar listelenir.',
+      filters: [{ label: 'Tür', col: 2, options: ['Tümü', 'Aktif', 'Pasif', 'Gelir', 'Gider', 'Özkaynak'] }],
+      cols: [['Kod', 'left'], ['Hesap Adı', 'left'], ['Tür', 'left'], ['Borç', 'right'], ['Alacak', 'right'], ['Bakiye', 'right'], ['Yön', 'left']],
+      nums: [3, 4, 5],
+      rows: [
+        ['100', 'Kasa', 'Aktif', '3.100,00', '3.100,00', '—', '—'],
+        ['102', 'Bankalar', 'Aktif', '148.228,00', '74.772,00', '73.456,00', 'Borç'],
+        ['120', 'Alıcılar', 'Aktif', '215.314,80', '48.228,00', '167.086,80', 'Borç'],
+        ['191', 'İndirilecek KDV', 'Aktif', '12.462,00', '—', '12.462,00', 'Borç'],
+        ['320', 'Satıcılar', 'Pasif', '74.772,00', '74.772,00', '—', '—'],
+        ['391', 'Hesaplanan KDV', 'Pasif', '—', '35.885,80', '35.885,80', 'Alacak'],
+        ['500', 'Sermaye', 'Özkaynak', '—', '100.000,00', '100.000,00', 'Alacak'],
+        ['600', 'Yurtiçi Satışlar', 'Gelir', '—', '179.429,00', '179.429,00', 'Alacak'],
+        ['770', 'Genel Yönetim Giderleri', 'Gider', '62.310,00', '—', '62.310,00', 'Borç']
+      ],
+      foot: ['9 hesap', '', '', '516.186,80', '516.186,80', '', 'DENK']
+    },
+    mizan: {
+      searchLabel: 'Kod / hesap', note: '01.01.2026 – 31.12.2026 · borç ve alacak toplamları eşit olmalıdır.',
+      filters: [{ label: 'Bakiye', col: 6, options: ['Tümü', 'Borç', 'Alacak', '—'] }],
+      cols: [['Kod', 'left'], ['Hesap Adı', 'left'], ['Borç Toplamı', 'right'], ['Alacak Toplamı', 'right'], ['Borç Bakiye', 'right'], ['Alacak Bakiye', 'right'], ['Yön', 'left']],
+      nums: [2, 3, 4, 5],
+      rows: [
+        ['100', 'Kasa', '3.100,00', '3.100,00', '—', '—', '—'],
+        ['102', 'Bankalar', '148.228,00', '74.772,00', '73.456,00', '—', 'Borç'],
+        ['120', 'Alıcılar', '215.314,80', '48.228,00', '167.086,80', '—', 'Borç'],
+        ['191', 'İndirilecek KDV', '12.462,00', '—', '12.462,00', '—', 'Borç'],
+        ['320', 'Satıcılar', '74.772,00', '74.772,00', '—', '—', '—'],
+        ['391', 'Hesaplanan KDV', '—', '35.885,80', '—', '35.885,80', 'Alacak'],
+        ['500', 'Sermaye', '—', '100.000,00', '—', '100.000,00', 'Alacak'],
+        ['600', 'Yurtiçi Satışlar', '—', '179.429,00', '—', '179.429,00', 'Alacak'],
+        ['770', 'Genel Yönetim Giderleri', '62.310,00', '—', '62.310,00', '—', 'Borç']
+      ],
+      foot: ['Genel toplam', '', '516.186,80', '516.186,80', '315.314,80', '315.314,80', 'DENK']
+    },
+    fisler: {
+      searchLabel: 'Fiş no / açıklama', note: 'Otomatik fişler belgeden üretilir; elle fiş girişi denetim kaydına yazılır.',
+      filters: [{ label: 'Tür', col: 2, options: ['Tümü', 'Otomatik', 'Manuel'] }, { label: 'Durum', col: 6, options: ['Tümü', 'Kesinleşti', 'Taslak'] }],
+      cols: [['Fiş No', 'left'], ['Tarih', 'left'], ['Tür', 'left'], ['Açıklama', 'left'], ['Borç', 'right'], ['Alacak', 'right'], ['Durum', 'left']],
+      tags: [6], nums: [4, 5],
+      rows: [
+        ['2026/08-0044', '13.08.2026', 'Otomatik', 'Satış faturası ABN…0003', '54.000,00', '54.000,00', 'Kesinleşti'],
+        ['2026/08-0042', '12.08.2026', 'Otomatik', 'Satış faturası ABN…0005', '1.184,40', '1.184,40', 'Kesinleşti'],
+        ['2026/08-0039', '11.08.2026', 'Otomatik', 'Satış faturası API…0001', '10.600,00', '10.600,00', 'Kesinleşti'],
+        ['2026/08-0031', '03.08.2026', 'Otomatik', 'Satış faturası NEX…0006', '29.880,00', '29.880,00', 'Kesinleşti'],
+        ['2026/08-0029', '05.08.2026', 'Otomatik', 'Tahsilat THS-0014', '2.983,20', '2.983,20', 'Kesinleşti'],
+        ['2026/08-0025', '01.08.2026', 'Manuel', 'Kira gideri tahakkuku', '18.500,00', '18.500,00', 'Kesinleşti'],
+        ['2026/07-0028', '22.07.2026', 'Otomatik', 'Satış faturası NEX…0005', '6.000,00', '6.000,00', 'Kesinleşti']
+      ],
+      foot: ['38 fiş · 31 otomatik · 7 elle', '', '', '', '516.186,80', '516.186,80', '']
+    },
+    denetim: {
+      searchLabel: 'Kullanıcı / kayıt', note: 'Denetim kaydı değiştirilemez; kayıtlar 10 yıl saklanır.',
+      filters: [{ label: 'Kullanıcı', col: 1, options: ['Tümü', 'admin', 'muhasebe', 'sistem'] }, { label: 'İşlem', col: 2, options: ['Tümü', 'Oluşturma', 'Değişiklik', 'Oturum'] }],
+      cols: [['Zaman', 'left'], ['Kullanıcı', 'left'], ['İşlem', 'left'], ['Kayıt', 'left'], ['Alan', 'left'], ['Eski Değer', 'left'], ['Yeni Değer', 'left']],
+      rows: [
+        ['16.08.2026 09:41', 'admin', 'Değişiklik', 'ABN2026000000003', 'Durum', 'Taslak', 'Kesildi'],
+        ['16.08.2026 09:38', 'muhasebe', 'Değişiklik', 'THS-0013', 'Eşleşme', '—', 'ABN…0001'],
+        ['16.08.2026 09:22', 'admin', 'Değişiklik', '120.01.0002', 'Risk Limiti', '250.000,00', '400.000,00'],
+        ['16.08.2026 08:57', 'sistem', 'Oluşturma', 'ABN-0003', 'Sonraki Fatura', '01.08.2026', '01.01.2027'],
+        ['16.08.2026 08:40', 'sistem', 'Oluşturma', '2026/08-0044', 'Fiş', '—', '54.000,00'],
+        ['16.08.2026 08:12', 'admin', 'Oturum', '—', 'IP', '—', '10.0.0.14']
+      ],
+      foot: ['146 kayıt · son 24 saat 6 kayıt', '', '', '', '', '', '']
+    },
+    'sistem-testi': {
+      searchLabel: 'Test / modül', note: 'Testler canlı veritabanında çalışır ve iş kurallarını doğrular.',
+      filters: [{ label: 'Sonuç', col: 4, options: ['Tümü', 'Başarılı', 'Uyarı', 'Başarısız'] }],
+      cols: [['Test', 'left'], ['Modül', 'left'], ['Beklenen', 'left'], ['Bulunan', 'left'], ['Sonuç', 'left'], ['Süre', 'right']],
+      tags: [4],
+      rows: [
+        ['Fatura toplamı KDV ile tutarlı', 'Satış', 'net + KDV = genel', 'eşit', 'Başarılı', '18 ms'],
+        ['Kesilen fatura fişi oluşturur', 'Muhasebe', 'her faturaya 1 fiş', '12 / 12', 'Başarılı', '34 ms'],
+        ['Defter borç = alacak', 'Muhasebe', 'fark 0,00', '0,00', 'Başarılı', '11 ms'],
+        ['Tahsilat cari bakiyeyi düşürür', 'Finans', 'bakiye azalır', 'doğrulandı', 'Başarılı', '22 ms'],
+        ['Eşleşmemiş tahsilat uyarısı', 'Finans', '0 kayıt', '1 kayıt', 'Uyarı', '9 ms'],
+        ['Abonelik yenileme tarihi ileri', 'Abonelik', 'gelecek tarih', '6 / 6', 'Başarılı', '15 ms'],
+        ['Rol yetkisi olmayan sayfa kapalı', 'Sistem', '403 döner', 'doğrulandı', 'Başarılı', '7 ms']
+      ],
+      foot: ['7 test · 6 başarılı · 1 uyarı', '', '', '', '', '116 ms']
+    }
+  };
+
+  stmts = {
+    bilanco: {
+      title: 'Bilanço', period: '31.08.2026 itibarıyla · TRY', cols: '1fr 1fr',
+      note: 'Dönem net kârı özkaynaklara aktarılmış olarak gösterilir. Aktif ve pasif toplamı eşittir.',
+      panels: [
+        { title: 'Aktif', total: '253.004,80', rows: [
+          ['h', 'I — Dönen Varlıklar', ''], ['r', 'Kasa', '—'], ['r', 'Bankalar', '73.456,00'], ['r', 'Alıcılar', '167.086,80'], ['r', 'İndirilecek KDV', '12.462,00'],
+          ['s', 'Dönen Varlıklar Toplamı', '253.004,80'], ['h', 'II — Duran Varlıklar', ''], ['r', 'Maddi Duran Varlıklar', '—'],
+          ['s', 'Duran Varlıklar Toplamı', '—'], ['t', 'Aktif Toplamı', '253.004,80']
+        ] },
+        { title: 'Pasif', total: '253.004,80', rows: [
+          ['h', 'I — Kısa Vadeli Yabancı Kaynaklar', ''], ['r', 'Satıcılar', '—'], ['r', 'Hesaplanan KDV', '35.885,80'],
+          ['s', 'Kısa Vadeli Toplam', '35.885,80'], ['h', 'II — Özkaynaklar', ''], ['r', 'Sermaye', '100.000,00'], ['r', 'Dönem Net Kârı', '117.119,00'],
+          ['s', 'Özkaynaklar Toplamı', '217.119,00'], ['t', 'Pasif Toplamı', '253.004,80']
+        ] }
+      ]
+    },
+    'gelir-tablosu': {
+      title: 'Gelir Tablosu', period: '01.01.2026 – 31.08.2026 · TRY', cols: '1fr',
+      note: 'KDV gelir tablosuna girmez; tutarlar KDV hariçtir.',
+      panels: [
+        { title: 'Dönem Sonucu', total: '117.119,00', rows: [
+          ['r', 'Brüt Satışlar', '179.429,00'], ['r', 'Satış İndirimleri (−)', '—'], ['s', 'Net Satışlar', '179.429,00'],
+          ['r', 'Satışların Maliyeti (−)', '—'], ['s', 'Brüt Satış Kârı', '179.429,00'],
+          ['h', 'Faaliyet Giderleri', ''], ['r', 'Genel Yönetim Giderleri (−)', '62.310,00'], ['r', 'Pazarlama, Satış ve Dağıtım (−)', '—'],
+          ['s', 'Faaliyet Kârı', '117.119,00'], ['r', 'Diğer Gelir ve Kârlar', '—'], ['r', 'Finansman Giderleri (−)', '—'],
+          ['t', 'Dönem Net Kârı', '117.119,00']
+        ] }
+      ]
+    }
+  };
+
+  darkVars = {
+    '--color-bg': '#1b1e21', '--color-text': '#e9eaeb', '--color-divider': 'rgba(233,234,235,0.20)',
+    '--color-neutral-100': '#212529', '--color-neutral-200': '#262b30', '--color-neutral-300': '#333940',
+    '--color-neutral-400': '#4b525a', '--color-neutral-500': '#6c757e', '--color-neutral-600': '#98a1aa',
+    '--color-neutral-700': '#b3bac1', '--color-neutral-800': '#ccd2d8', '--color-neutral-900': '#e9eaeb',
+    '--color-accent': '#94bce3', '--color-accent-100': '#223140', '--color-accent-200': '#2c4255',
+    '--color-accent-300': '#3c5b74', '--color-accent-400': '#5c87a9', '--color-accent-500': '#7ba3c8',
+    '--color-accent-600': '#a9cbec', '--color-accent-700': '#c0daf2', '--color-accent-800': '#d6e6f7',
+    '--color-accent-900': '#141a20', '--nx-onbar': '#e9eaeb'
+  };
+
+  componentDidMount() {
+    let saved = null;
+    try { saved = localStorage.getItem('nexus.theme'); } catch (e) {}
+    if (saved === 'dark' || saved === 'light') this.setState({ theme: saved });
+    this.tick();
+    this._t = setInterval(() => this.tick(), 30000);
+    this._k = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); if (this.searchRef.current) this.searchRef.current.focus(); }
+      if (e.key === 'Escape') this.setState({ menu: null, pq: '', notifOpen: false, profileOpen: false });
+      if (e.key === 'F2') { e.preventDefault(); this.go('doc'); }
+    };
+    window.addEventListener('keydown', this._k);
+  }
+  setTheme(mode) { this.setState({ theme: mode }); try { localStorage.setItem('nexus.theme', mode); } catch (e) {} }
+  componentWillUnmount() { clearInterval(this._t); window.removeEventListener('keydown', this._k); }
+  tick() { this.setState({ clock: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) }); }
+
+  f(n) { return n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  up(v) { return String(v).toLocaleUpperCase('tr'); }
+  num(v) { const n = parseFloat(String(v).replace(/\./g, '').replace(',', '.')); return isNaN(n) ? null : n; }
+
+  go(id) {
+    const cur = this.state.tabs, def = this.tabDefs[id];
+    const tabs = (!def || cur.some(t => t.id === id)) ? cur : [...cur, { id, label: def[0], kind: def[1] }];
+    this.setState({ tabs, active: id, menu: null, pq: '', gq: '', gridFilter: {}, gridSort: null, notifOpen: false, profileOpen: false });
+  }
+
+  perm(role, r, c) {
+    const o = this.state.permOverrides[role + '|' + r + '|' + c];
+    if (o !== undefined) return o;
+    const admin = ['Kullanıcı yönetimi', 'Sistem ayarları'].includes(r);
+    if (role === 'Yönetici') return true;
+    if (role === 'Okuyucu') return c === 'Görüntüle';
+    if (role === 'Muhasebe') return admin ? c === 'Görüntüle' : c !== 'Sil';
+    return ['Cari kartlar', 'Satış faturaları', 'Abonelikler'].includes(r) ? ['Görüntüle', 'Ekle', 'Değiştir'].includes(c) : c === 'Görüntüle';
+  }
+
+  notifs = [
+    ['n1', 'Finans', 'Vadesi geçen 2 fatura tahsil edilmedi', 'Karadeniz İnşaat 45 gün · Ege Tekstil 70 gün · 60.160,00', 'Gecikme', 'faturalar'],
+    ['n2', 'Satış', 'e-Fatura GİB yanıtı bekleniyor', '2 belge kuyrukta · son deneme 09:41', 'Entegrasyon', 'faturalar'],
+    ['n3', 'Finans', 'Eşleşmemiş tahsilat var', 'Ege Tekstil · HVL-2026-114 · 2.983,20', 'Eylem', 'tahsilatlar'],
+    ['n4', 'Muhasebe', 'Temmuz mizanı onayınızı bekliyor', 'Dönem kapanışı için gerekli · 38 fiş', 'Onay', 'mizan'],
+    ['n5', 'Abonelik', '3 abonelik 7 gün içinde yenilenecek', 'MRR etkisi 4.150,00 · otomatik fatura kesilecek', 'Bilgi', 'abonelikler'],
+    ['n6', 'Sistem', 'Sistem testinde 1 uyarı', 'Eşleşmemiş tahsilat kuralı · 09:12', 'Uyarı', 'sistem-testi']
+  ];
+
+  tagCls(v) {
+    if (['Aktif', 'Kesildi', 'Eşleşti', 'Kesinleşti', 'Başarılı', 'AKTİF'].includes(v)) return 'tag-accent';
+    if (['Riskli', 'Eşleşmedi', 'Uyarı', 'Kısmi Tahsil', 'Başarısız', 'DAVET', 'Gecikme', 'Onay'].includes(v)) return 'tag-outline';
+    if (['Entegrasyon', 'Eylem'].includes(v)) return 'tag-accent';
+    return 'tag-neutral';
+  }
+
+  filtered() {
+    const q = this.state.q.trim().toLocaleLowerCase('tr');
+    let rows = this.invoices.filter(i =>
+      (!q || i.no.toLocaleLowerCase('tr').includes(q) || i.party.toLocaleLowerCase('tr').includes(q)) &&
+      (this.state.status === 'Tümü' || i.status === this.state.status) &&
+      (this.state.type === 'Tümü' || i.type === this.state.type) &&
+      (!this.state.overdue || i.overdue));
+    const { key, dir } = this.state.sort;
+    const val = i => key === 'no' ? i.no : key === 'party' ? i.party : key === 'date' ? i.iso : key === 'gross' ? i.gross : key === 'open' ? i.open : key === 'status' ? i.status : i.due.split('.').reverse().join('-');
+    return rows.slice().sort((a, b) => { const x = val(a), y = val(b); return (x > y ? 1 : x < y ? -1 : 0) * (dir === 'asc' ? 1 : -1); });
+  }
+
+  addLine() {
+    const id = Math.max(0, ...this.state.lines.map(l => l.id)) + 1;
+    this.setState({ lines: [...this.state.lines, { id, code: '', name: '', qty: 1, unit: 'ADET', price: 0, disc: 0, vat: 20 }], docTab: 'lines' });
+  }
+  edit(id, k, v) { this.setState({ lines: this.state.lines.map(l => l.id === id ? { ...l, [k]: v } : l) }); }
+  editNum(id, k, v) { const n = this.num(v); this.edit(id, k, n === null ? 0 : n); }
+
+  renderVals() {
+    const s = this.state, S = (p) => this.setState(p);
+    const ui = s.ui;
+    const rail = ui.rail === null ? (this.props.showLeftRail ?? true) : ui.rail;
+    const fkeys = ui.fkeys === null ? (this.props.showFKeys ?? true) : ui.fkeys;
+    const colF = ui.cols === null ? (this.props.showColumnFilters ?? true) : ui.cols;
+    const a = s.active;
+    const grid = this.grids[a], stmt = this.stmts[a];
+
+    const rows = this.filtered();
+    const sel = s.sel;
+    const selRows = this.invoices.filter(i => sel.includes(i.no));
+    const foc = this.invoices.find(i => i.no === s.focus) || rows[0] || this.invoices[0];
+    const colDefs = [['no', 'Fatura No', 'left'], ['party', 'Cari', 'left'], ['type', 'Tip', 'left'], ['date', 'Tarih', 'left'], ['due', 'Vade', 'left'], ['gross', 'Genel Toplam', 'right'], ['open', 'Kalan', 'right'], ['status', 'Durum', 'left']];
+    const net = s.lines.reduce((t, l) => t + l.qty * l.price * (1 - l.disc / 100), 0);
+    const vat = s.lines.reduce((t, l) => t + l.qty * l.price * (1 - l.disc / 100) * l.vat / 100, 0);
+
+    const toolbars = {
+      dash: [['Yenile', 'F5', 0], ['Dönem kapat', 'F8', 0], ['Rapor al', '', 0], ['Yeni fatura', 'F2', 1]],
+      faturalar: [['Yeni fatura', 'F2', 1], ['Belgeyi aç', 'F4', 0], ['Kopyala', 'CTRL+D', 0], ['E-Fatura gönder', '', 0], ['Tahsilat eşleştir', '', 0], ['Excel', 'CTRL+E', 0], ['Yenile', 'F5', 0]],
+      doc: [['Kaydet', 'F9', 1], ['Faturayı kes', 'CTRL+K', 0], ['Satır ekle', 'CTRL+ENTER', 0], ['Kopyala', 'CTRL+D', 0], ['PDF', '', 0], ['İptal et', 'DEL', 0]],
+      ekstre: [['Kaydet', 'F9', 1], ['Yeni cari', 'F2', 0], ['Ekstre yazdır', 'CTRL+P', 0], ['Yeni fatura', '', 0], ['Risk limiti', '', 0], ['Pasife al', '', 0]],
+      cariler: [['Yeni cari', 'F2', 1], ['Kartı aç', 'F4', 0], ['Ekstre', '', 0], ['Excel', 'CTRL+E', 0], ['Yenile', 'F5', 0]],
+      urunler: [['Yeni ürün', 'F2', 1], ['Fiyat güncelle', '', 0], ['KDV oranı', '', 0], ['Excel', 'CTRL+E', 0]],
+      tahsilatlar: [['Yeni tahsilat', 'F2', 1], ['Fatura eşleştir', 'F4', 0], ['Eşleşmeyi kaldır', '', 0], ['Excel', 'CTRL+E', 0]],
+      yaslandirma: [['Raporu çalıştır', 'F5', 1], ['Parametreler', '', 0], ['Excel', 'CTRL+E', 0], ['PDF', '', 0], ['Zamanla', '', 0]],
+      planlar: [['Yeni plan', 'F2', 1], ['Fiyat değiştir', '', 0], ['Pasife al', '', 0], ['Excel', 'CTRL+E', 0]],
+      abonelikler: [['Yeni abonelik', 'F2', 1], ['Yenile', '', 0], ['İptal et', 'DEL', 0], ['Fatura kes', '', 0], ['Excel', 'CTRL+E', 0]],
+      'hesap-plani': [['Yeni hesap', 'F2', 1], ['Hesabı aç', 'F4', 0], ['Muavin defter', '', 0], ['Excel', 'CTRL+E', 0]],
+      fisler: [['Yeni fiş', 'F2', 1], ['Fişi aç', 'F4', 0], ['Kesinleştir', '', 0], ['Ters kayıt', '', 0], ['Excel', 'CTRL+E', 0]],
+      mizan: [['Raporu çalıştır', 'F5', 1], ['Dönem seç', '', 0], ['Excel', 'CTRL+E', 0], ['PDF', '', 0]],
+      bilanco: [['Raporu çalıştır', 'F5', 1], ['Dönem seç', '', 0], ['Karşılaştır', '', 0], ['Excel', 'CTRL+E', 0], ['PDF', '', 0]],
+      'gelir-tablosu': [['Raporu çalıştır', 'F5', 1], ['Dönem seç', '', 0], ['Karşılaştır', '', 0], ['Excel', 'CTRL+E', 0], ['PDF', '', 0]],
+      denetim: [['Yenile', 'F5', 1], ['Filtrele', '', 0], ['Excel', 'CTRL+E', 0], ['Arşiv', '', 0]],
+      kullanicilar: [['Değişiklikleri kaydet', 'F9', 1], ['Yeni rol', 'F2', 0], ['Kullanıcı davet et', '', 0], ['Rolü kopyala', 'CTRL+D', 0], ['Denetim kaydı', '', 0]],
+      'sistem-testi': [['Testleri çalıştır', 'F5', 1], ['Seçileni çalıştır', '', 0], ['Rapor indir', '', 0]],
+      ayarlar: [['Kaydet', 'F9', 1], ['Varsayılana dön', '', 0], ['Denetim kaydı', '', 0]],
+      profil: [['Kaydet', 'F9', 1], ['Parola değiştir', '', 0], ['Yetkilerim', '', 0], ['Oturumu kapat', '', 0]]
+    };
+
+    const crumbs = {
+      dash: 'GENEL BAKIŞ', cariler: 'CARİ › CARİ KARTLAR', ekstre: 'CARİ › CARİ EKSTRE › 120.01.0002',
+      faturalar: 'SATIŞ › FATURALAR', doc: 'SATIŞ › FATURALAR › NEX2026000000006', urunler: 'SATIŞ › ÜRÜN / HİZMET',
+      tahsilatlar: 'FİNANS › TAHSİLATLAR', yaslandirma: 'FİNANS › YAŞLANDIRMA RAPORU', planlar: 'ABONELİK › PLANLAR',
+      abonelikler: 'ABONELİK › ABONELİKLER', 'hesap-plani': 'MUHASEBE › HESAP PLANI', fisler: 'MUHASEBE › MUHASEBE FİŞLERİ',
+      mizan: 'MUHASEBE › MİZAN', bilanco: 'MUHASEBE › BİLANÇO', 'gelir-tablosu': 'MUHASEBE › GELİR TABLOSU',
+      denetim: 'SİSTEM › DENETİM KAYDI', kullanicilar: 'SİSTEM › KULLANICILAR › ROL YETKİLERİ', 'sistem-testi': 'SİSTEM › SİSTEM TESTİ', ayarlar: 'SİSTEM › AYARLAR', profil: 'HESAP › PROFİLİM'
+    };
+
+    let gRows = [], gFoot = [], gCount = '';
+    if (grid) {
+      const q = s.gq.trim().toLocaleLowerCase('tr');
+      gRows = grid.rows.filter(r => (!q || r.some(c => String(c).toLocaleLowerCase('tr').includes(q))) &&
+        Object.entries(s.gridFilter).every(([ci, v]) => v === 'Tümü' || String(r[ci]) === v));
+      if (s.gridSort) {
+        const { key, dir } = s.gridSort;
+        gRows = gRows.slice().sort((x, y) => {
+          const nx = this.num(x[key]), ny = this.num(y[key]);
+          const cmp = (nx !== null && ny !== null) ? nx - ny : String(x[key]).localeCompare(String(y[key]), 'tr');
+          return cmp * (dir === 'asc' ? 1 : -1);
+        });
+      }
+      gCount = gRows.length + ' / ' + grid.rows.length + ' kayıt · süre 0,03 sn';
+      gFoot = (grid.foot || []).map((t, i) => ({
+        text: t, align: (grid.cols[i] || [])[1] || 'left',
+        cls: (grid.nums || []).includes(i) ? 'nx-num' : (i === 0 ? 'nx-ico' : ''),
+        weight: (grid.nums || []).includes(i) ? '700' : '400',
+        tt: i === 0 ? 'uppercase' : 'none', ls: i === 0 ? '0.08em' : '0'
+      }));
+    }
+
+    const pqv = s.pq.trim();
+    const matches = pqv ? this.pages.filter(p => this.up(p[0]).includes(this.up(pqv)) || this.up(p[2]).includes(this.up(pqv))).slice(0, 7) : [];
+
+    const monthly = [['Nis', 12000, 4100], ['May', 5400, 3900], ['Haz', 68240, 9850], ['Tem', 6000, 5200], ['Ağu', 87789, 39260]];
+    const cum = [['Nis', 7900], ['May', 9400], ['Haz', 67790], ['Tem', 68590], ['Ağu', 117119]];
+    const mMax = 87789, cMax = 117119;
+    const trendRev = [2400, 3100, 2700, 4200, 3600, 5100, 12000, 12000, 5400, 68240, 6000, 87789];
+    const trendCol = [1900, 2400, 2100, 2800, 2200, 3400, 4300, 6800, 8400, 18900, 15200, 8500];
+    const tMax = 87789;
+    const px = i => (28.75 + 632.5 * i / 11).toFixed(1);
+    const py = v => (200 - v / tMax * 194).toFixed(1);
+    const pts = arr => arr.map((v, i) => px(i) + ',' + py(v)).join(' ');
+    const short = n => n >= 1000 ? Math.round(n / 1000) + 'B' : String(Math.round(n));
+
+    return {
+      rail, noop: () => {},
+      themeAttr: s.theme === 'dark' ? 'dark' : 'light',
+      isDash: a === 'dash', isInv: a === 'faturalar', isDoc: a === 'doc', isCard: a === 'ekstre',
+      isRep: a === 'yaslandirma', isSys: a === 'kullanicilar', isSet: a === 'ayarlar',
+      isGrid: !!grid, isStmt: !!stmt, showTabs: ui.tabs,
+      isDark: s.theme === 'dark', isLight: s.theme !== 'dark',
+      themeLabel: s.theme === 'dark' ? 'Açık' : 'Koyu',
+      themeTitle: s.theme === 'dark' ? 'Açık temaya geç' : 'Koyu temaya geç',
+      toggleTheme: () => this.setTheme(s.theme === 'dark' ? 'light' : 'dark'),
+      goTest: () => this.go('sistem-testi'),
+      resetUi: () => S({ ui: { tabs: true, rail: null, fkeys: null, cols: null, zebra: true } }),
+      settings: [
+        ['Koyu tema', 'Arayüzü koyu zemine çevirir; tercih tarayıcıda saklanır.', s.theme === 'dark', () => this.setTheme(s.theme === 'dark' ? 'light' : 'dark')],
+        ['Belge sekmeleri', 'Açılan liste ve belgeler üst şeritte sekme olarak kalır.', ui.tabs, () => S({ ui: { ...ui, tabs: !ui.tabs } })],
+        ['Sol kısayol paneli', 'Kısayollar, dönem ve kuyruk durumu solda görünür.', rail, () => S({ ui: { ...ui, rail: !rail } })],
+        ['Kolon filtre satırı', 'Fatura listesinde başlıkların altında filtre kutuları.', colF, () => S({ ui: { ...ui, cols: !colF } })],
+        ['Fonksiyon tuşu ipuçları', 'Araç çubuğu düğmelerinde F2 / F9 gibi kısayollar yazar.', fkeys, () => S({ ui: { ...ui, fkeys: !fkeys } })],
+        ['Satır gölgelendirme', 'Liste ekranlarında satırlar dönüşümlü zemin alır.', ui.zebra, () => S({ ui: { ...ui, zebra: !ui.zebra } })]
+      ].map(o => ({
+        label: o[0], desc: o[1], state: o[2] ? 'AÇIK' : 'KAPALI', toggle: o[3],
+        track: o[2] ? 'var(--color-accent-700)' : 'var(--color-neutral-300)',
+        border: o[2] ? 'var(--color-accent-700)' : 'var(--color-neutral-500)',
+        knob: o[2] ? 'var(--color-bg)' : 'var(--color-neutral-600)',
+        shift: o[2] ? '16px' : '0px'
+      })),
+      clock: s.clock, goHome: () => this.go('dash'),
+      pageTitle: (this.tabDefs[a] || ['Genel Bakış'])[0],
+      isProfile: a === 'profil', meRoleUpper: s.myRole.toLocaleUpperCase('tr'),
+      profileOpen: s.profileOpen,
+      profileBg: s.profileOpen ? 'rgba(242,242,243,0.16)' : 'transparent',
+      toggleProfile: () => S({ profileOpen: !s.profileOpen, notifOpen: false, menu: null }),
+      goProfile: () => this.go('profil'), goPerms: () => this.go('kullanicilar'), goSettings: () => this.go('ayarlar'),
+      meName: s.me.name, meMail: s.me.mail, meRole: s.myRole,
+      meInitials: s.me.name.split(' ').map(w => w[0]).slice(0, 2).join('').toLocaleUpperCase('tr'),
+      meScope: s.myRole === 'Yönetici' ? 'Tüm şirketler · dönem kapatma yetkisi' : 'Nexus Demo Yazılım A.Ş. · 2026-08',
+      meRoleDesc: {"Yönetici":"Tüm modüllerde tam yetki · dönem kapatma, kullanıcı ve rol yönetimi.","Muhasebe":"Fiş, fatura ve tahsilat girişi · kayıt silme ve kullanıcı yönetimi kapalı.","Satış":"Cari ve satış belgeleri · muhasebe ekranları salt okunur.","Okuyucu":"Tüm ekranlarda yalnızca görüntüleme · dışa aktarım kapalı."}[s.myRole],
+      meCanAdmin: s.myRole === 'Yönetici', meCannotAdmin: s.myRole !== 'Yönetici',
+      meEditTag: s.myRole === 'Yönetici' ? 'TAM YETKİ' : s.myRole === 'Okuyucu' ? 'SALT OKUNUR' : 'SINIRLI YETKİ',
+      roleSwitch: ['Yönetici', 'Muhasebe', 'Satış', 'Okuyucu'].map(r => ({
+        label: r, cls: s.myRole === r ? 'btn-primary' : 'btn-secondary', pick: () => S({ myRole: r, role: r })
+      })),
+      mePermCount: (() => {
+        const cs = ['Görüntüle', 'Ekle', 'Değiştir', 'Sil', 'Onayla'];
+        const rs = ['Cari kartlar', 'Satış faturaları', 'Alış faturaları', 'Tahsilatlar', 'Abonelikler', 'Muhasebe fişleri', 'Raporlar', 'Kullanıcı yönetimi', 'Sistem ayarları'];
+        let n = 0; rs.forEach(r => cs.forEach(c => { if (this.perm(s.myRole, r, c)) n++; }));
+        return n + ' / 45 yetki';
+      })(),
+      mePerms: ['Cari kartlar', 'Satış faturaları', 'Tahsilatlar', 'Muhasebe fişleri', 'Raporlar', 'Kullanıcı yönetimi'].map(r => {
+        const on = ['Görüntüle', 'Ekle', 'Değiştir', 'Sil', 'Onayla'].filter(c => this.perm(s.myRole, r, c));
+        return {
+          label: r, value: on.length === 5 ? 'TAM YETKİ' : on.length ? on.join(' · ').toLocaleUpperCase('tr') : 'YETKİ YOK',
+          fg: on.length ? 'var(--color-accent-800)' : 'var(--color-neutral-600)'
+        };
+      }),
+      profileNote: s.myRole === 'Okuyucu' ? 'Okuyucu rolünde yalnızca iletişim bilgilerinizi güncelleyebilirsiniz.' : 'Değişiklikler denetim kaydına yazılır.',
+      profileFields: [
+        ['Ad Soyad', 'name', 0], ['Kullanıcı Kodu', 'code', 1], ['E-posta', 'mail', 0], ['Telefon', 'phone', 0],
+        ['Unvan', 'title', s.myRole !== 'Yönetici'], ['Departman', 'dept', s.myRole !== 'Yönetici'],
+        ['Dil / Biçim', 'lang', 0], ['Saat Dilimi', 'tz', 0]
+      ].map(f => ({
+        label: f[0], value: s.me[f[1]], ro: !!f[2],
+        cls: ['phone', 'code'].includes(f[1]) ? 'nx-num' : '',
+        fg: f[2] ? 'var(--color-neutral-600)' : 'var(--color-text)',
+        set: e => S({ me: { ...s.me, [f[1]]: e.target.value } })
+      })),
+      notifOpen: s.notifOpen,
+      notifBg: s.notifOpen ? 'rgba(242,242,243,0.16)' : 'transparent',
+      toggleNotif: () => S({ notifOpen: !s.notifOpen, menu: null, profileOpen: false }),
+      readAll: () => S({ notifRead: this.notifs.map(n => n[0]) }),
+      notifCount: this.notifs.filter(n => !s.notifRead.includes(n[0])).length,
+      notifSummary: this.notifs.filter(n => !s.notifRead.includes(n[0])).length + ' okunmamış · ' + this.notifs.length + ' kayıt',
+      notifications: this.notifs.map(n => {
+        const unread = !s.notifRead.includes(n[0]);
+        return {
+          module: n[1], title: n[2], meta: n[3], tag: n[4], tagCls: this.tagCls(n[4]),
+          bg: unread ? 'transparent' : 'color-mix(in srgb, var(--color-text) 3%, transparent)',
+          mark: unread ? 'var(--color-accent)' : 'transparent',
+              go: () => { S({ notifRead: [...s.notifRead, n[0]] }); this.go(n[5]); }
+        };
+      }),
+      goInv: () => this.go('faturalar'), goRep: () => this.go('yaslandirma'),
+      goAging: () => this.go('yaslandirma'), goAudit: () => this.go('denetim'), goMizan: () => this.go('mizan'),
+      goBilanco: () => this.go('bilanco'), goPayments: () => this.go('tahsilatlar'),
+
+      pq: s.pq, searchRef: this.searchRef,
+      setPq: e => S({ pq: e.target.value }),
+      pqKey: e => { if (e.key === 'Enter' && matches.length) this.go(matches[0][1]); if (e.key === 'Escape') S({ pq: '' }); },
+      hasMatches: matches.length > 0,
+      pResults: matches.map(p => ({ label: p[0], group: p[2], go: () => this.go(p[1]) })),
+
+      modules: this.modules.map(m => ({
+        label: m.key, caret: '▾', open: s.menu === m.key,
+        bg: s.menu === m.key ? 'var(--color-bg)' : 'transparent',
+        mark: s.menu === m.key ? 'var(--color-accent)' : 'transparent',
+        toggle: () => S({ menu: s.menu === m.key ? null : m.key }),
+        items: m.items.map(it => ({ title: it[0], desc: it[1], go: () => this.go(it[2]) }))
+      })),
+      tabs: s.tabs.map(t => ({
+        label: t.label, kind: t.kind, dirty: t.id === 'doc' ? '●' : '', x: t.fixed ? '' : '×',
+        bg: a === t.id ? 'var(--color-neutral-100)' : 'transparent',
+        mark: a === t.id ? 'var(--color-accent)' : 'transparent',
+        go: () => this.go(t.id),
+        close: () => { if (t.fixed) return; const rest = s.tabs.filter(x => x.id !== t.id); S({ tabs: rest, active: a === t.id ? rest[rest.length - 1].id : a }); }
+      })),
+      tabHint: 'Ctrl+K ile sayfa ara',
+      toolbar: (toolbars[a] || []).map(t => ({
+        label: t[0], hint: fkeys ? t[1] : '', cls: t[2] ? 'btn-primary' : 'btn-secondary',
+        run: () => { if (t[0].indexOf('Yeni fatura') === 0 || t[0] === 'Belgeyi aç') this.go('doc'); if (t[0] === 'Satır ekle') this.addLine(); if (t[0] === 'Ekstre' || t[0] === 'Kartı aç') this.go('ekstre'); if (t[0] === 'Denetim kaydı') this.go('denetim'); }
+      })),
+      crumb: crumbs[a] || '',
+      favs: [['Genel bakış', '', 'dash'], ['Faturalar', '12', 'faturalar'], ['Cari kartlar', '5', 'cariler'], ['Tahsilatlar', '5', 'tahsilatlar'], ['Yaşlandırma', '4', 'yaslandirma'], ['Mizan', '9', 'mizan'], ['Fişler', '38', 'fisler'], ['Denetim', '146', 'denetim']].map(f => ({
+        label: f[0], count: f[1], go: () => this.go(f[2]),
+        bg: a === f[2] ? 'var(--color-accent-100)' : 'transparent',
+        mark: a === f[2] ? 'var(--color-accent)' : 'transparent'
+      })),
+
+      spark: [3, 4, 3, 5, 4, 6, 14, 20, 16, 68, 30, 96].map(v => ({ h: Math.max(2, v / 96 * 22).toFixed(0) + 'px' })),
+      cardsBtn: s.editCards ? 'Bitti' : 'Kartları Düzenle',
+      toggleCards: () => S({ editCards: !s.editCards }),
+      mini: [
+        ['Tahsilat Oranı', '%14,6', 'bu ay'], ['Bu Ay Tahsilat', '8.500,00', '₺'], ['Ort. Tahsil Süresi', '58,0 gün', 'DSO'],
+        ['Ortalama Fatura', '16.298,90', '₺'], ['Bu Ay Kesilen', '7', 'fatura'], ['Taslak', '0', 'bekleyen yok'],
+        ['Aktif Cari', '5', 'hareket gören'], ['Tedarikçi Borcu', '—', 'vadesi geçen yok'], ['Net Pozisyon', '167.086,80', 'alacak − borç'],
+        ['MRR', '17.946,67', '6 abonelik'], ['Vadesi Geçen', '60.160,00', '2 fatura'], ['Muhasebe Fişi', '38', 'defter denk']
+      ].map(m => ({ label: m[0], value: m[1], hint: m[2] })),
+      ledgerStats: [
+        ['Muhasebe Fişi', '38', '31 otomatik · 7 elle'], ['Defter Borç', '516.186,80', '₺'], ['Defter Alacak', '516.186,80', '₺'],
+        ['Dönem Geliri', '179.429,00', 'KDV hariç satış'], ['Dönem Gideri', '62.310,00', '₺'], ['Dönem Net Kârı', '117.119,00', 'gelir − gider'],
+        ['Bekleyen Taslak', '0', 'yok']
+      ].map(m => ({ label: m[0], value: m[1], hint: m[2] })),
+      chartTabs: [['aylik', 'Aylık Gelir / Gider'], ['kumulatif', 'Kümülatif Kâr'], ['hesap', 'Hesap Bakiyeleri']].map(c => ({
+        label: c[1], cls: s.chart === c[0] ? 'btn-primary' : 'btn-ghost', pick: () => S({ chart: c[0] })
+      })),
+      chartTitle: s.chart === 'kumulatif' ? 'KÜMÜLATİF NET KÂR' : s.chart === 'hesap' ? 'EN BÜYÜK HESAP BAKİYELERİ' : 'AYLIK GELİR VE GİDER',
+      chartHint: s.chart === 'kumulatif' ? 'Yıl başından o aya kadar biriken kâr — genel gidişat' : s.chart === 'hesap' ? 'Paranın ve borcun hangi hesaplarda toplandığı' : 'Hangi ay ne kadar kazandınız, ne kadar harcadınız (koyu: gelir · soluk: gider)',
+      isBarChart: s.chart !== 'hesap', isAcctChart: s.chart === 'hesap',
+      legend1: s.chart === 'kumulatif' ? 'Biriken net kâr' : s.chart === 'hesap' ? 'Hesap bakiyesi' : 'Gelir',
+      axisLabels: (() => {
+        const max = s.chart === 'kumulatif' ? cMax : mMax;
+        return [1, 0.75, 0.5, 0.25, 0].map(k => k === 0 ? '0' : Math.round(max * k / 1000) + 'B');
+      })(),
+      showExpenseRow: s.chart !== 'kumulatif',
+      chartBars: s.chart === 'kumulatif'
+        ? cum.map(m => ({ label: m[0], two: false, h1: (m[1] / cMax * 100).toFixed(1) + '%', h2: '0%', v1: this.f(m[1]), v2: '', net: this.f(m[1]), sub: 'biriken' }))
+        : monthly.map(m => ({
+            label: m[0], two: true,
+            h1: (m[1] / mMax * 100).toFixed(1) + '%', h2: (m[2] / mMax * 100).toFixed(1) + '%',
+            v1: this.f(m[1]), v2: this.f(m[2]), net: this.f(m[1] - m[2]),
+            sub: 'net ' + this.f(m[1] - m[2])
+          })),
+      acctBars: [['600', 'Yurtiçi Satışlar', 179429, 'alacak'], ['120', 'Alıcılar', 167086.8, 'borç'], ['500', 'Sermaye', 100000, 'alacak'], ['102', 'Bankalar', 73456, 'borç'], ['770', 'Genel Yönetim Giderleri', 62310, 'borç']].map(r => ({
+        code: r[0], name: r[1], side: r[3], value: this.f(r[2]), w: (r[2] / 179429 * 100).toFixed(1) + '%'
+      })),
+      revPts: pts(trendRev), colPts: pts(trendCol),
+      revArea: px(0) + ',200 ' + pts(trendRev) + ' ' + px(11) + ',200',
+      trendDots: trendRev.map((v, i) => ({ x: px(i), y: py(v) })),
+      trendLabels: ['Eyl', 'Eki', 'Kas', 'Ara', 'Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu'].map(m => ({ label: m })),
+      trendAxis: [1, 0.75, 0.5, 0.25, 0].map(k => ({ label: short(tMax * k) })),
+      statusRows: [['Kesildi', 8, 164306.8, 'tag-accent'], ['Kısmi Tahsil', 2, 10800, 'tag-outline'], ['Tahsil Edildi', 2, 20480, 'tag-neutral']].map(r => ({
+        label: r[0], count: r[1], amount: this.f(r[2]), cls: r[3], w: (r[2] / 195586.8 * 100).toFixed(1) + '%'
+      })),
+      debtors: [['Anadolu Lojistik A.Ş.', 5, 68063.6], ['Karadeniz İnşaat A.Ş.', 1, 59760], ['Ege Tekstil Ltd. Şti.', 4, 33263.2], ['Marmara Danışmanlık', 1, 6000]].map(d => ({
+        name: d[0], hint: d[1] + ' açık fatura', amount: this.f(d[2]), go: () => this.go('ekstre')
+      })),
+      upcoming: [['NEX…0006', 'Ege Tekstil Ltd. Şti.', '02.09.2026', 29880, 17], ['ABN…0001', 'Anadolu Lojistik A.Ş.', '08.09.2026', 2380, 23], ['API…0001', 'Anadolu Lojistik A.Ş.', '10.09.2026', 10600, 25], ['ABN…0004', 'Anadolu Lojistik A.Ş.', '11.09.2026', 1083.6, 26], ['ABN…0003', 'Anadolu Lojistik A.Ş.', '12.09.2026', 54000, 27]].map(u => ({
+        no: u[0], party: u[1], due: u[2], left: this.f(u[3]), days: u[4] + ' gün', go: () => this.go('doc')
+      })),
+
+      q: s.q, setQ: e => S({ q: e.target.value }),
+      status: s.status, setStatus: e => S({ status: e.target.value }),
+      type: s.type, setType: e => S({ type: e.target.value }),
+      overdue: s.overdue, toggleOverdue: () => S({ overdue: !s.overdue }),
+      resetFilter: () => S({ q: '', status: 'Tümü', type: 'Tümü', overdue: false }),
+      colFilters: colF,
+      resultLine: rows.length + ' / ' + this.invoices.length + ' kayıt · süre 0,04 sn',
+      cols: colDefs.map(c => ({
+        label: c[1], align: c[2], arrow: s.sort.key === c[0] ? (s.sort.dir === 'asc' ? '▲' : '▼') : '',
+        sort: () => S({ sort: { key: c[0], dir: s.sort.key === c[0] && s.sort.dir === 'desc' ? 'asc' : 'desc' } })
+      })),
+      allCheck: sel.length && sel.length === rows.length ? '✓' : '',
+      toggleAll: () => S({ sel: sel.length === rows.length ? [] : rows.map(r => r.no) }),
+      rows: rows.map(i => ({
+        no: i.no, party: i.party, type: i.type, date: i.date, due: i.due,
+        dueWeight: i.overdue ? '700' : '400', dueFlag: i.overdue ? ' ▲' + i.days + 'g' : '',
+        gross: this.f(i.gross), open_: i.open ? this.f(i.open) : '—', status: i.status,
+        tagCls: this.tagCls(i.status), check: sel.includes(i.no) ? '✓' : '',
+        bg: s.focus === i.no ? 'var(--color-accent-100)' : sel.includes(i.no) ? 'color-mix(in srgb, var(--color-accent) 6%, transparent)' : 'transparent',
+        toggle: () => S({ sel: sel.includes(i.no) ? sel.filter(x => x !== i.no) : [...sel, i.no] }),
+        focus: () => S({ focus: i.no }), open: () => this.go('doc')
+      })),
+      hasSel: sel.length > 0,
+      selLine: sel.length + ' kayıt seçildi · toplam ' + this.f(selRows.reduce((t, i) => t + i.gross, 0)) + ' · kalan ' + this.f(selRows.reduce((t, i) => t + i.open, 0)),
+      clearSel: () => S({ sel: [] }),
+      footLabel: rows.length + ' kayıt · sayfa 1 / 1',
+      footGross: this.f(rows.reduce((t, i) => t + i.gross, 0)), footOpen: this.f(rows.reduce((t, i) => t + i.open, 0)),
+      prevNo: foc.no, prevParty: foc.party, prevTax: foc.tax, prevDue: foc.due,
+      prevGross: this.f(foc.gross), prevOpen: foc.open ? this.f(foc.open) : '—', prevJournal: foc.journal,
+      openFocused: () => this.go('doc'),
+
+      gridSearchLabel: grid ? grid.searchLabel : '', gridNote: grid ? grid.note : '', gridCount: gCount,
+      gq: s.gq, setGq: e => S({ gq: e.target.value }),
+      resetGrid: () => S({ gq: '', gridFilter: {}, gridSort: null }),
+      gridFilters: grid ? grid.filters.map(f => ({
+        label: f.label, options: f.options, value: s.gridFilter[f.col] || 'Tümü',
+        set: e => S({ gridFilter: { ...s.gridFilter, [f.col]: e.target.value } })
+      })) : [],
+      gridCols: grid ? grid.cols.map((c, i) => ({
+        label: c[0], align: c[1],
+        arrow: s.gridSort && s.gridSort.key === i ? (s.gridSort.dir === 'asc' ? '▲' : '▼') : '',
+        sort: () => S({ gridSort: { key: i, dir: s.gridSort && s.gridSort.key === i && s.gridSort.dir === 'asc' ? 'desc' : 'asc' } })
+      })) : [],
+      gridRows: gRows.map((r, ri) => ({
+        bg: (ui.zebra && ri % 2) ? 'color-mix(in srgb, var(--color-text) 3%, transparent)' : 'transparent',
+        open: () => { if (grid.go) this.go(grid.go); },
+        cells: r.map((c, ci) => {
+          const isTag = (grid.tags || []).includes(ci);
+          return {
+            text: c, isTag, isText: !isTag, tagCls: this.tagCls(c),
+            align: (grid.cols[ci] || [])[1] || 'left',
+            cls: (grid.nums || []).includes(ci) ? 'nx-num' : '',
+            weight: ci === 0 ? '500' : '400',
+            fg: c === '—' ? 'var(--color-neutral-600)' : 'var(--color-text)'
+          };
+        })
+      })),
+      hasGridFoot: !!(grid && grid.foot), gridFoot: gFoot,
+
+      stmtTitle: stmt ? stmt.title : '', stmtPeriod: stmt ? stmt.period : '', stmtNote: stmt ? stmt.note : '',
+      stmtCols: stmt ? stmt.cols : '1fr',
+      stmtPanels: stmt ? stmt.panels.map(p => ({
+        title: p.title, total: p.total,
+        rows: p.rows.map(r => ({
+          label: r[1], value: r[2],
+          bg: r[0] === 't' ? 'var(--color-accent-100)' : 'transparent',
+          pad: r[0] === 't' ? '6px' : '3px',
+          indent: r[0] === 'r' ? '22px' : '9px',
+          font: r[0] === 'r' ? 'var(--font-body)' : 'var(--font-heading)',
+          tt: r[0] === 'h' ? 'uppercase' : 'none',
+          ls: r[0] === 'h' ? '0.08em' : '0',
+          size: r[0] === 't' ? '14px' : r[0] === 'h' ? '11px' : '12px',
+          weight: r[0] === 'r' ? '400' : '700'
+        }))
+      })) : [],
+
+      docNo: 'NEX2026000000006', docStatus: 'KESİLDİ',
+      docTabs: [['lines', 'Satırlar', s.lines.length], ['journal', 'Muhasebe Fişi', 4], ['pay', 'Tahsilatlar', 0], ['files', 'Belgeler', 2], ['log', 'Geçmiş', 6]].map(d => ({
+        label: d[1], n: d[2],
+        bg: s.docTab === d[0] ? 'var(--color-neutral-100)' : 'transparent',
+        fg: s.docTab === d[0] ? 'var(--color-text)' : 'var(--color-neutral-700)',
+        go: () => S({ docTab: d[0] })
+      })),
+      docLines: s.docTab === 'lines', docJournal: s.docTab === 'journal',
+      docOther: ['pay', 'files', 'log'].includes(s.docTab),
+      docOtherTitle: s.docTab === 'pay' ? 'Bu faturaya bağlı tahsilat yok' : s.docTab === 'files' ? 'Ekli belgeler' : 'Belge geçmişi',
+      docOtherHint: s.docTab === 'pay' ? 'Finans › Tahsilatlar ekranından eşleştirme yapılır.' : s.docTab === 'files' ? 'e-Fatura XML ve PDF çıktısı arşivde saklanıyor.' : 'Alan bazlı değişiklik kaydı denetim modülünden okunur.',
+      lines: s.lines.map((l, idx) => ({
+        n: idx + 1, code: l.code, name: l.name, qty: this.f(l.qty), unit: l.unit,
+        price: this.f(l.price), disc: l.disc, vat: l.vat, total: this.f(l.qty * l.price * (1 - l.disc / 100)),
+        setCode: e => this.edit(l.id, 'code', e.target.value), setName: e => this.edit(l.id, 'name', e.target.value),
+        setQty: e => this.editNum(l.id, 'qty', e.target.value), setPrice: e => this.editNum(l.id, 'price', e.target.value),
+        setDisc: e => this.editNum(l.id, 'disc', e.target.value), del: () => S({ lines: s.lines.filter(x => x.id !== l.id) })
+      })),
+      lineCount: s.lines.length + ' satır', addLine: () => this.addLine(),
+      tSub: this.f(s.lines.reduce((t, l) => t + l.qty * l.price, 0)),
+      tDisc: this.f(s.lines.reduce((t, l) => t + l.qty * l.price * l.disc / 100, 0)),
+      tBase: this.f(net), tVat: this.f(vat), tWht: '0,00', tGross: this.f(net + vat),
+
+      cardGroups: [
+        ['Kimlik', [['Unvan', 'title'], ['Cari Kodu', 'code', 1], ['Vergi No', 'tax'], ['Vergi Dairesi', 'office'], ['Cari Tipi', 'kind'], ['Durum', 'state']]],
+        ['Adres ve İletişim', [['Adres', 'addr'], ['İl / İlçe', 'city'], ['Telefon', 'phone'], ['E-posta', 'mail'], ['Yetkili', 'contact'], ['Web', 'web']]],
+        ['Ticari Koşullar', [['Ödeme Vadesi', 'term'], ['İskonto', 'disc'], ['Risk Limiti', 'limit'], ['Para Birimi', 'ccy'], ['Fiyat Listesi', 'pricelist'], ['Temsilci', 'rep']]],
+        ['Muhasebe', [['Muhasebe Hesabı', 'acct', 1], ['KDV Muafiyeti', 'vatex'], ['e-Fatura Durumu', 'einv', 1], ['GİB Etiketi', 'gib', 1], ['Tevkifat', 'wht'], ['Masraf Merkezi', 'cc']]]
+      ].map(g => ({
+        title: g[0],
+        fields: g[1].map(fl => ({
+          label: fl[0], value: s.card[fl[1]], ro: !!fl[2],
+          cls: ['tax', 'code', 'limit', 'acct', 'phone'].includes(fl[1]) ? 'nx-num' : '',
+          fg: fl[2] ? 'var(--color-neutral-700)' : 'var(--color-text)',
+          set: e => S({ card: { ...s.card, [fl[1]]: e.target.value } })
+        }))
+      })),
+      ledger: [
+        ['08.05.2026', 'NEX…0002', 'Satış faturası', '5.400,00', '—', '5.400,00'],
+        ['02.06.2026', 'THS-0010', 'Havale tahsilatı', '—', '5.000,00', '400,00'],
+        ['03.08.2026', 'NEX…0006', 'Satış faturası', '29.880,00', '—', '30.280,00'],
+        ['05.08.2026', 'THS-0014', 'Havale tahsilatı', '—', '2.983,20', '27.296,80'],
+        ['10.08.2026', 'ABN…0002', 'Abonelik faturası', '1.798,80', '—', '29.095,60'],
+        ['12.08.2026', 'ABN…0005', 'Abonelik faturası', '4.167,60', '—', '33.263,20']
+      ].map(e => ({ date: e[0], doc: e[1], desc: e[2], debit: e[3], credit: e[4], balance: e[5] })),
+
+      repGroup: s.repGroup, setRepGroup: e => S({ repGroup: e.target.value }),
+      aging: [
+        ['Anadolu Lojistik A.Ş.', '120.01.0001', 68063.6, 0, 0, 0, 0],
+        ['Karadeniz İnşaat A.Ş.', '120.01.0004', 0, 0, 59760, 0, 0],
+        ['Ege Tekstil Ltd. Şti.', '120.01.0002', 32863.2, 0, 0, 400, 0],
+        ['Marmara Danışmanlık', '120.01.0003', 6000, 0, 0, 0, 0]
+      ].map(r => {
+        const t = r[2] + r[3] + r[4] + r[5] + r[6], d = n => n ? this.f(n) : '—';
+        return {
+          name: r[0], code: r[1], b0: d(r[2]), b1: d(r[3]), b2: d(r[4]), b3: d(r[5]), b4: d(r[6]),
+          w2: r[4] ? '700' : '400', w3: r[5] ? '700' : '400',
+          total: this.f(t), share: '%' + (t / 167086.8 * 100).toFixed(1).replace('.', ','),
+          open: () => this.go('ekstre')
+        };
+      }),
+
+      roles: [['Yönetici', 2, 'Tüm modüller · dönem kapatma ve kullanıcı yönetimi'], ['Muhasebe', 3, 'Fiş, fatura ve tahsilat · silme yetkisi yok'], ['Satış', 4, 'Cari ve satış belgeleri · muhasebe salt okunur'], ['Okuyucu', 6, 'Yalnızca görüntüleme · dışa aktarım kapalı']].map(r => ({
+        name: r[0], users: r[1], desc: r[2],
+        bg: s.role === r[0] ? 'var(--color-accent-100)' : 'transparent',
+        mark: s.role === r[0] ? 'var(--color-accent)' : 'transparent',
+        pick: () => S({ role: r[0] })
+      })),
+      roleName: s.role,
+      roleScope: s.role === 'Yönetici' ? 'TÜM ŞİRKETLER' : 'NEXUS DEMO YAZILIM A.Ş.',
+      roleUsers: ({
+        'Yönetici': [['SY', 'Sistem Yöneticisi', 'admin@nexuserp.local', 'AKTİF'], ['MK', 'Merve Koç', 'merve@nexus.local', 'AKTİF']],
+        'Muhasebe': [['AT', 'Ahmet Tuna', 'ahmet@nexus.local', 'AKTİF'], ['ZD', 'Zeynep Demir', 'zeynep@nexus.local', 'AKTİF'], ['HS', 'Hakan Sarı', 'hakan@nexus.local', 'PASİF']],
+        'Satış': [['BY', 'Burak Yalçın', 'burak@nexus.local', 'AKTİF'], ['EÖ', 'Elif Öztürk', 'elif@nexus.local', 'AKTİF'], ['CK', 'Can Kaya', 'can@nexus.local', 'AKTİF'], ['NA', 'Nur Aksoy', 'nur@nexus.local', 'DAVET']]
+      }[s.role] || [['DG', 'Denetim Görevlisi', 'denetim@nexus.local', 'AKTİF']]).map(u => ({
+        ini: u[0], name: u[1], mail: u[2], state: u[3], tagCls: this.tagCls(u[3])
+      })),
+      permCols: ['Görüntüle', 'Ekle', 'Değiştir', 'Sil', 'Onayla'],
+      permRows: ['Cari kartlar', 'Satış faturaları', 'Alış faturaları', 'Tahsilatlar', 'Abonelikler', 'Muhasebe fişleri', 'Raporlar', 'Kullanıcı yönetimi', 'Sistem ayarları'].map(r => ({
+        label: r,
+        cells: ['Görüntüle', 'Ekle', 'Değiştir', 'Sil', 'Onayla'].map(c => {
+          const on = this.perm(s.role, r, c);
+          return {
+            mark: on ? '✓' : '', bg: on ? 'var(--color-accent-700)' : 'var(--color-bg)',
+            bc: on ? 'var(--color-accent-700)' : 'var(--color-neutral-500)',
+            toggle: () => S({ permOverrides: { ...s.permOverrides, [s.role + '|' + r + '|' + c]: !on } })
+          };
+        })
+      })),
+      permCount: (() => {
+        const cs = ['Görüntüle', 'Ekle', 'Değiştir', 'Sil', 'Onayla'];
+        const rs = ['Cari kartlar', 'Satış faturaları', 'Alış faturaları', 'Tahsilatlar', 'Abonelikler', 'Muhasebe fişleri', 'Raporlar', 'Kullanıcı yönetimi', 'Sistem ayarları'];
+        let n = 0; rs.forEach(r => cs.forEach(c => { if (this.perm(s.role, r, c)) n++; }));
+        return n + ' / ' + rs.length * cs.length + ' yetki açık';
+      })(),
+
+      statusRecords: stmt ? stmt.title + ' · ' + stmt.period : grid ? gRows.length + ' kayıt yüklendi' : a === 'faturalar' ? rows.length + ' kayıt yüklendi' : a === 'doc' ? s.lines.length + ' satır' : '12 fatura · 5 cari',
+      statusSel: sel.length ? sel.length + ' seçili' : 'seçim yok',
+      statusHint: ['doc', 'ekstre', 'kullanicilar'].includes(a) ? 'F9 kaydet · ESC vazgeç · CTRL+K ara' : 'F2 yeni · F4 aç · F5 yenile · CTRL+K ara'
+    };
+  }
+}
+</script>
+</body>
+</html>
