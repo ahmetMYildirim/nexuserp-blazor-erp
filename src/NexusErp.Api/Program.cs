@@ -26,8 +26,20 @@ builder.Services.AddApplication();
 builder.Services.AddApiIdentityContext();   // tenant/kullanıcı JWT claim'lerinden
 
 var jwt = builder.Configuration.GetSection("Jwt");
-var signingKey = new SymmetricSecurityKey(
-    Encoding.UTF8.GetBytes(jwt["Key"] ?? throw new InvalidOperationException("Jwt:Key eksik.")));
+var jwtKey = jwt["Key"] ?? throw new InvalidOperationException("Jwt:Key eksik.");
+
+// ⚠️ appsettings.Development.json'daki imza anahtarı repo'da AÇIK duruyor — geliştirmede
+// sorun değil ama o anahtarla canlıya çıkılırsa repoyu okuyan herkes istediği kullanıcı
+// ve rol için geçerli jeton üretebilir. Bu yüzden geliştirme dışında açıkça reddediyoruz:
+// sessizce güvensiz çalışmaktansa açılışta patlamak yeğdir.
+if (!builder.Environment.IsDevelopment() && jwtKey.Contains("gelistirme-ortami-icin", StringComparison.OrdinalIgnoreCase))
+{
+    throw new InvalidOperationException(
+        "Jwt:Key hâlâ geliştirme anahtarı. Üretimde ortam değişkeni (Jwt__Key) ile " +
+        "en az 32 karakterlik gizli bir anahtar verin.");
+}
+
+var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
 
 // Web tarafı cookie kullanıyor, API JWT. İkisi de aynı Identity kullanıcılarını okuyor.
 //

@@ -206,6 +206,12 @@ Rol ayrımını görmek için `satis@` ile girip bir faturayı kesmeye çalış�
 doğrudan URL ile denerseniz **403** alırsınız. Yetki yalnızca arayüzde gizlenmiyor,
 sunucuda da uygulanıyor.
 
+> **Not:** Bu hesaplar ve demo verisi yalnızca `Development` ortamında kurulur. Parolası
+> burada yazılı bir yönetici hesabının canlıya çıkmaması için tohumlama başka ortamlarda
+> çalışmaz; bilerek istenirse `Seed:DemoData=true` ile açılır. Aynı şekilde
+> `appsettings.Development.json`'daki JWT imza anahtarı geliştirme dışında reddedilir —
+> `Jwt__Key` ortam değişkeniyle gerçek bir anahtar verilmelidir.
+
 ---
 
 ## Fonksiyonları doğrulama

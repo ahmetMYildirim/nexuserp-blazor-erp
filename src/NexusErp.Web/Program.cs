@@ -1,4 +1,5 @@
 using System.Globalization;
+using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
 using NexusErp.Application;
 using NexusErp.Application.Accounting;
@@ -48,18 +49,35 @@ builder.Services.AddHostedService<NotificationConsumer>();
 
 var app = builder.Build();
 
-// Migration + tohum verisi (geliştirme ortamı)
+// ⚠️ Demo tohum verisi, PAROLASI README'de yazılı olan Admin hesabını da kurar
+// (IdentitySeeder.DemoPassword). Bu yüzden yalnızca geliştirmede — ya da başka bir
+// ortamda bilinçli olarak Seed:DemoData=true dendiğinde — çalışır. Koşulsuz
+// çalışsaydı canlıya çıkan her kurulum herkesin bildiği bir yönetici parolasıyla
+// açılırdı.
+var seedDemoData = app.Environment.IsDevelopment()
+                   || app.Configuration.GetValue("Seed:DemoData", false);
+
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await DatabaseSeeder.SeedAsync(db);
 
-    await IdentitySeeder.SeedAsync(
-        scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>(),
+    // Şema ve roller her ortamda kurulmalı — tohum verisinden bağımsız.
+    // (Rol kaydı yoksa RequireRole kontrolleri hiç kimseyi geçirmez.)
+    await db.Database.MigrateAsync();
+    await IdentitySeeder.SeedRolesAsync(
         scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>());
 
-    // Demo fatura/tahsilat verisi — gerçek servisler üzerinden üretilir
-    await scope.ServiceProvider.GetRequiredService<DemoDataSeeder>().SeedAsync();
+    if (seedDemoData)
+    {
+        await DatabaseSeeder.SeedAsync(db);
+
+        await IdentitySeeder.SeedDemoUsersAsync(
+            scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>(),
+            scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>());
+
+        // Demo fatura/tahsilat verisi — gerçek servisler üzerinden üretilir
+        await scope.ServiceProvider.GetRequiredService<DemoDataSeeder>().SeedAsync();
+    }
 
     // ⚠️ Otomatik muhasebe fişi bu sürümle geldi; ondan ÖNCE kesilmiş faturaların
     // ve tahsilatların fişi yok. Geri doldurulmazsa mizan ve bilanço yalnızca yeni
