@@ -16,8 +16,12 @@ public static class IdentitySeeder
         ("bakis@nexusdemo.com.tr",    "Zeynep Görüntüleyici", AppRoles.Goruntuleyici),
     ];
 
-    public static async Task SeedAsync(
-        UserManager<AppUser> userManager,
+    /// <summary>
+    /// Rolleri kurar. Roller demo verisi DEĞİL — şemanın parçası gibi düşünülmeli:
+    /// <c>RequireRole("Admin")</c> kontrolleri rol kaydı yoksa hiç kimseye geçit vermez.
+    /// Bu yüzden <see cref="SeedDemoUsersAsync"/>'ten ayrı ve her ortamda çalışır.
+    /// </summary>
+    public static async Task SeedRolesAsync(
         RoleManager<IdentityRole<Guid>> roleManager,
         CancellationToken ct = default)
     {
@@ -27,6 +31,18 @@ public static class IdentitySeeder
                 {
                     Id = Guid.CreateVersion7()
                 });
+    }
+
+    /// <summary>
+    /// Demo hesaplarını kurar. ⚠️ Parolası (<see cref="DemoPassword"/>) README'de açık
+    /// yazılı — yalnızca geliştirmede/bilinçli olarak çağrılmalı, bkz. Web/Program.cs.
+    /// </summary>
+    public static async Task SeedDemoUsersAsync(
+        UserManager<AppUser> userManager,
+        RoleManager<IdentityRole<Guid>> roleManager,
+        CancellationToken ct = default)
+    {
+        await SeedRolesAsync(roleManager, ct);
 
         foreach (var (email, fullName, role) in Users)
         {
